@@ -124,6 +124,26 @@
     .setup-save:hover { background:var(--teal-dark); }
     .setup-link { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; margin-top:12px; text-decoration:underline; font-family:'DM Sans',sans-serif; }
     .setup-link:hover { color:var(--teal); }
+    .history-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-top: 32px; overflow: hidden; }
+    .history-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; border-bottom: 1px solid var(--border); }
+    .history-header h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); margin: 0; }
+    .history-toggle { font-size: 12px; color: var(--muted); }
+    .history-body { display: none; }
+    .history-body.open { display: block; }
+    .history-row { display: grid; grid-template-columns: 90px 1fr 1fr 80px; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center; cursor: pointer; transition: background 0.1s; }
+    .history-row:last-child { border-bottom: none; }
+    .history-row:hover { background: var(--teal-light); }
+    .history-row .h-date { color: var(--muted); font-size: 11px; }
+    .history-row .h-site { font-weight: 600; color: var(--dark); }
+    .history-row .h-prod { color: var(--mid); }
+    .history-row .h-sender { color: var(--muted); font-size: 11px; text-align: right; }
+    .history-empty { padding: 20px; font-size: 13px; color: var(--muted); text-align: center; }
+    .draft-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+    .draft-btn { flex: 1; padding: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
+    .draft-save { background: var(--teal-light); color: var(--teal); border: 1px solid var(--teal-mid); }
+    .draft-save:hover { background: #cdeee8; }
+    .draft-load { background: var(--bg); color: var(--mid); border: 1px solid var(--border); }
+    .draft-load:hover { border-color: var(--teal); color: var(--teal); }
   </style>
 </head>
 <body>
@@ -326,6 +346,11 @@
       </label>
     </div>
 
+    <div class="draft-bar">
+      <button class="draft-btn draft-save" onclick="saveDraft()">💾 Save draft</button>
+      <button class="draft-btn draft-load" onclick="loadDraft()">↩ Load last draft</button>
+    </div>
+
     <button class="send-btn" id="sendBtn" onclick="sendEmail()">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
       Send booking confirmation
@@ -350,6 +375,18 @@
         <tr><td><code>Site Map URL</code></td><td>Text</td><td>Squarespace or Dropbox image URL</td></tr>
         <tr><td><code>QR Required</code></td><td>Checkbox</td><td>Tick to show QR upload on form</td></tr>
       </table>
+    </div>
+
+    <!-- Booking history -->
+    <div class="history-panel">
+      <div class="history-header" onclick="toggleHistory()">
+        <h2>Booking history</h2>
+        <span class="history-toggle" id="historyToggle">▼ Show</span>
+      </div>
+      <div class="history-body" id="historyBody">
+        <div class="history-empty" id="historyEmpty">Loading history…</div>
+        <div id="historyList"></div>
+      </div>
     </div>
 
   </div>
@@ -846,13 +883,14 @@
       +'</td></tr></table></td></tr></table></body></html>';
   }
 
-  // ── Send ──
+  var WORKER_URL = 'https://basecamp-proxy.bt7frcbfh2.workers.dev';
+
   async function sendEmail() {
     var required = ['to_email','contact_name','booking_ref','production_name','prod_company','start_date','end_date'];
     var missing  = false;
     required.forEach(function(id) {
       var el = document.getElementById(id);
-      if (!el.value.trim()) { el.classList.add('required-empty'); missing = true; }
+      if (!el || !el.value.trim()) { if(el) el.classList.add('required-empty'); missing = true; }
       else { el.classList.remove('required-empty'); }
     });
     if (!currentSite) { showToast('Please select a site first', 'error'); return; }
@@ -861,8 +899,6 @@
     var toEmails  = g('to_email').split(',').map(function(e){ return e.trim(); }).filter(Boolean);
     var fromEmail = document.getElementById('from_email').value;
     var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
-    var keys      = getKeys();
-    if (!keys.resend) { showToast('Resend API key not set — click ⚙ API Keys', 'error'); return; }
 
     var d = {
       to_emails:          toEmails,
@@ -880,7 +916,7 @@
       your_role:          g('your_role') || sender.title,
       your_phone:         g('your_phone') || sender.mobile,
       emergency_phone:    '0203 369 2273',
-      emergency_note:     g('emergency_note')  || 'Access issues only',
+      emergency_note:     g('emergency_note') || 'Access issues only',
       extra_contacts:     getExtraContacts(),
       site_name:          currentSite.site_name,
       address:            currentSite.address,
@@ -901,7 +937,32 @@
       from:    sender.name + ' <' + fromEmail + '>',
       to:      d.to_emails,
       subject: g('email_subject') || 'Unit Base Booking Confirmed — ' + d.production_name + ' | Ref: ' + d.booking_ref,
-      html:    buildEmailHTML(d)
+      html:    buildEmailHTML(d),
+      bookingMeta: {
+        booking_ref:     d.booking_ref,
+        site_name:       d.site_name,
+        production_name: d.production_name,
+        prod_company:    d.prod_company,
+        to_emails:       d.to_emails,
+        sender_name:     sender.name,
+        start_date:      d.start_date,
+        end_date:        d.end_date,
+        reminder_data: {
+          booking_ref:   d.booking_ref,
+          contact_name:  d.contact_name,
+          site_name:     d.site_name,
+          address:       d.address,
+          w3w:           d.w3w,
+          start_date:    d.start_date,
+          end_date:      d.end_date,
+          steps:         d.steps,
+          your_name:     sender.name,
+          your_phone:    sender.mobile,
+          sender_name:   sender.name,
+          sender_email:  sender.email,
+          sender_mobile: sender.mobile
+        }
+      }
     };
     if (attachments.length) payload.attachments = attachments;
 
@@ -909,17 +970,20 @@
     document.getElementById('sendBtn').disabled = true;
 
     try {
-      var res  = await fetch('https://api.resend.com/emails', {
+      var res  = await fetch(WORKER_URL + '/send', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + keys.resend, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       var json = await res.json();
       if (res.ok) {
         showToast('Confirmation sent to ' + d.to_emails.join(', '), 'success');
-        ['to_email','contact_name','booking_ref','production_name','prod_company','prod_title','start_date','end_date',
-         'prod_contact_name','prod_contact_role','prod_contact_phone','your_name','your_role','your_phone',
-         'emergency_phone','emergency_note','email_subject','qr_form_url'].forEach(function(id){
+        ['to_email','contact_name','booking_ref','production_name','prod_company','prod_title',
+         'prod_contact_name','prod_contact_role','prod_contact_phone',
+         'emergency_note','email_subject','qr_form_url'].forEach(function(id){
+          var el = document.getElementById(id); if(el) el.value = '';
+        });
+        ['start_date_picker','start_time_picker','end_date_picker','end_time_picker','start_date','end_date'].forEach(function(id){
           var el = document.getElementById(id); if(el) el.value = '';
         });
         uploadedFiles  = [];
@@ -930,15 +994,104 @@
         document.getElementById('qrImagePlaceholder').style.display = 'block';
         renderAttachmentChips();
         updatePreview();
+        loadHistory();
       } else {
         showToast('Send failed: ' + (json.message || 'Unknown error'), 'error');
       }
     } catch(e) {
-      showToast('Network error — check API key and connection', 'error');
+      showToast('Network error — check connection', 'error');
     }
 
     document.getElementById('loadingOverlay').classList.remove('show');
     document.getElementById('sendBtn').disabled = false;
+  }
+
+  // ── Draft save / load ──
+  async function saveDraft() {
+    var draft = {
+      to_email:           g('to_email'),
+      contact_name:       g('contact_name'),
+      booking_ref:        g('booking_ref'),
+      production_name:    g('production_name'),
+      prod_company:       g('prod_company'),
+      prod_title:         g('prod_title'),
+      start_date_picker:  (document.getElementById('start_date_picker')||{}).value||'',
+      start_time_picker:  (document.getElementById('start_time_picker')||{}).value||'',
+      end_date_picker:    (document.getElementById('end_date_picker')||{}).value||'',
+      end_time_picker:    (document.getElementById('end_time_picker')||{}).value||'',
+      email_subject:      g('email_subject'),
+      prod_contact_name:  g('prod_contact_name'),
+      prod_contact_role:  g('prod_contact_role'),
+      prod_contact_phone: g('prod_contact_phone'),
+      emergency_note:     g('emergency_note'),
+      note_text:          g('note_text'),
+      site_index:         (document.getElementById('siteSelect')||{}).value||'',
+      from_email:         (document.getElementById('from_email')||{}).value||''
+    };
+    try {
+      await fetch(WORKER_URL + '/draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) });
+      showToast('Draft saved', 'success');
+    } catch(e) { showToast('Could not save draft', 'error'); }
+  }
+
+  async function loadDraft() {
+    try {
+      var res  = await fetch(WORKER_URL + '/draft');
+      var json = await res.json();
+      if (!json.draft) { showToast('No saved draft found', ''); return; }
+      var d = json.draft;
+      var fields = ['to_email','contact_name','booking_ref','production_name','prod_company','prod_title',
+                    'email_subject','prod_contact_name','prod_contact_role','prod_contact_phone','emergency_note','note_text'];
+      fields.forEach(function(id){ var el = document.getElementById(id); if(el && d[id]) el.value = d[id]; });
+      ['start_date_picker','start_time_picker','end_date_picker','end_time_picker'].forEach(function(id){
+        var el = document.getElementById(id); if(el && d[id]) el.value = d[id];
+      });
+      updateDateTime();
+      if (d.from_email) { var fe = document.getElementById('from_email'); if(fe) fe.value = d.from_email; }
+      if (d.site_index !== '' && sites[parseInt(d.site_index)]) {
+        document.getElementById('siteSelect').value = d.site_index;
+        onSiteChange();
+      }
+      updatePreview();
+      showToast('Draft loaded', 'success');
+    } catch(e) { showToast('Could not load draft', 'error'); }
+  }
+
+  // ── Booking history ──
+  function toggleHistory() {
+    var body    = document.getElementById('historyBody');
+    var toggle  = document.getElementById('historyToggle');
+    var isOpen  = body.classList.contains('open');
+    body.classList.toggle('open');
+    toggle.textContent = isOpen ? '▼ Show' : '▲ Hide';
+    if (!isOpen) loadHistory();
+  }
+
+  async function loadHistory() {
+    try {
+      var res  = await fetch(WORKER_URL + '/history');
+      var json = await res.json();
+      var list = document.getElementById('historyList');
+      var empty = document.getElementById('historyEmpty');
+      if (!json.bookings || !json.bookings.length) {
+        empty.textContent = 'No bookings sent yet.';
+        list.innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+      list.innerHTML = json.bookings.map(function(b) {
+        var date = new Date(b.sent_at);
+        var dateStr = date.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' });
+        return '<div class="history-row" title="Sent to: ' + escHtml(b.recipient) + '">'
+          + '<span class="h-date">' + dateStr + '</span>'
+          + '<span class="h-site">' + escHtml(b.site_name || '') + '</span>'
+          + '<span class="h-prod">' + escHtml(b.production || '') + ' · ' + escHtml(b.booking_ref || '') + '</span>'
+          + '<span class="h-sender">' + escHtml((b.sender || '').split(' ')[0]) + '</span>'
+          + '</div>';
+      }).join('');
+    } catch(e) {
+      document.getElementById('historyEmpty').textContent = 'Could not load history.';
+    }
   }
 
   function showToast(msg, type) {
@@ -956,4 +1109,3 @@
 </script>
 </body>
 </html>
-
