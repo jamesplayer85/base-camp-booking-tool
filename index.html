@@ -231,13 +231,21 @@
       <div class="field-row">
         <div class="field">
           <label>Start date &amp; time *</label>
-          <input type="text" id="start_date" placeholder="01/06/2026 — 06:00" oninput="updateSubject(); updatePreview();">
+          <div style="display:flex; gap:8px;">
+            <input type="date" id="start_date_picker" style="flex:1;" onchange="updateDateTime(); updateSubject(); updatePreview();">
+            <input type="time" id="start_time_picker" style="width:100px;" onchange="updateDateTime(); updatePreview();">
+          </div>
         </div>
         <div class="field">
           <label>End date &amp; time *</label>
-          <input type="text" id="end_date" placeholder="03/06/2026 — 22:00" oninput="updateSubject(); updatePreview();">
+          <div style="display:flex; gap:8px;">
+            <input type="date" id="end_date_picker" style="flex:1;" onchange="updateDateTime(); updateSubject(); updatePreview();">
+            <input type="time" id="end_time_picker" style="width:100px;" onchange="updateDateTime(); updatePreview();">
+          </div>
         </div>
       </div>
+      <input type="hidden" id="start_date">
+      <input type="hidden" id="end_date">
       <div class="field" style="margin-bottom:0;">
         <label>Email subject line — auto-filled, edit if needed</label>
         <input type="text" id="email_subject" placeholder="Unit Base Booking Confirmation - Site Name - Production (Dates)">
@@ -252,17 +260,25 @@
         <div class="field"><label>Role</label><input type="text" id="prod_contact_role" placeholder="Unit Manager" oninput="updatePreview()"></div>
         <div class="field"><label>Phone</label><input type="text" id="prod_contact_phone" placeholder="+44 7700 900000" oninput="updatePreview()"></div>
       </div>
+
+      <!-- Additional contacts -->
+      <div id="extraContactsContainer"></div>
+      <button class="add-step-btn" onclick="addExtraContact()" type="button" style="margin-top:10px;">
+        <span style="font-size:18px;line-height:1;">+</span> Add contact
+      </button>
+
       <div class="contact-label" style="margin-top:16px;">The Base Camp Co. contact</div>
       <div class="contact-row">
-        <div class="field"><label>Name</label><input type="text" id="your_name" placeholder="James Player" oninput="updatePreview()"></div>
+        <div class="field"><label>Name</label><input type="text" id="your_name" placeholder="James Player" oninput="updatePreview()" readonly style="background:#F8F7F4; color:var(--muted);"></div>
         <div class="field"><label>Role</label><input type="text" id="your_role" placeholder="Director" oninput="updatePreview()"></div>
-        <div class="field"><label>Phone</label><input type="text" id="your_phone" placeholder="+44 7843 421278" oninput="updatePreview()"></div>
+        <div class="field"><label>Phone</label><input type="text" id="your_phone" placeholder="+44 7843 421278" oninput="updatePreview()" readonly style="background:#F8F7F4; color:var(--muted);"></div>
       </div>
       <div class="contact-label" style="margin-top:16px;">24hr emergency line</div>
-      <div class="field-row">
-        <div class="field"><label>Phone</label><input type="text" id="emergency_phone" placeholder="+44 203 369 2273" oninput="updatePreview()"></div>
-        <div class="field"><label>Note</label><input type="text" id="emergency_note" placeholder="Access issues only" oninput="updatePreview()"></div>
+      <div class="field" style="max-width:200px;">
+        <label>Note</label>
+        <input type="text" id="emergency_note" placeholder="Access issues only" oninput="updatePreview()">
       </div>
+      <p style="font-size:12px; color:var(--muted); margin-top:6px;" id="emergency_display">Emergency line: 0203 369 2273</p>
     </div>
 
     <div class="form-card">
@@ -571,7 +587,57 @@
     reader.readAsDataURL(file);
   }
 
-  // ── Site change ──
+  // ── Date/time pickers ──
+  function updateDateTime() {
+    function fmt(datePicker, timePicker, hiddenId) {
+      var d = document.getElementById(datePicker).value;
+      var t = document.getElementById(timePicker).value;
+      if (!d) { document.getElementById(hiddenId).value = ''; return; }
+      var parts = d.split('-');
+      var formatted = parts[2] + '/' + parts[1] + '/' + parts[0].slice(2);
+      document.getElementById(hiddenId).value = formatted + (t ? ' — ' + t : '');
+    }
+    fmt('start_date_picker', 'start_time_picker', 'start_date');
+    fmt('end_date_picker',   'end_time_picker',   'end_date');
+  }
+
+  // ── Extra contacts ──
+  var extraContactCounter = 0;
+  function addExtraContact(name, role, phone) {
+    extraContactCounter++;
+    var id = 'extra_contact_' + extraContactCounter;
+    var container = document.getElementById('extraContactsContainer');
+    var row = document.createElement('div');
+    row.className = 'contact-row';
+    row.dataset.contactId = id;
+    row.style.marginTop = '10px';
+    row.innerHTML = '<div class="field"><label>Name</label><input type="text" id="'+id+'_name" value="'+escHtml(name||'')+'" placeholder="Contact name" oninput="updatePreview()"></div>'
+      + '<div class="field"><label>Role</label><input type="text" id="'+id+'_role" value="'+escHtml(role||'')+'" placeholder="Role" oninput="updatePreview()"></div>'
+      + '<div class="field" style="position:relative;">'
+      + '<label>Phone</label>'
+      + '<div style="display:flex;gap:6px;align-items:center;">'
+      + '<input type="text" id="'+id+'_phone" value="'+escHtml(phone||'')+'" placeholder="+44 7700 900000" oninput="updatePreview()" style="flex:1;">'
+      + '<button class="step-remove" type="button" onclick="removeExtraContact(\''+id+'\')" title="Remove">×</button>'
+      + '</div></div>';
+    container.appendChild(row);
+    updatePreview();
+  }
+
+  function removeExtraContact(id) {
+    var row = document.querySelector('[data-contact-id="' + id + '"]');
+    if (row) { row.remove(); updatePreview(); }
+  }
+
+  function getExtraContacts() {
+    return Array.from(document.querySelectorAll('#extraContactsContainer .contact-row')).map(function(row) {
+      var id = row.dataset.contactId;
+      return {
+        name:  (document.getElementById(id+'_name')||{}).value||'',
+        role:  (document.getElementById(id+'_role')||{}).value||'',
+        phone: (document.getElementById(id+'_phone')||{}).value||''
+      };
+    }).filter(function(c){ return c.name || c.phone; });
+  }
   function onSiteChange() {
     var idx = document.getElementById('siteSelect').value;
     if (idx === '') { currentSite = null; return; }
@@ -630,6 +696,12 @@
 
     var fromEmail = (document.getElementById('from_email')||{}).value || 'james@thebasecampco.com';
     var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
+
+    // Auto-fill Base Camp Co. contact fields from sender
+    var yourNameEl  = document.getElementById('your_name');
+    var yourPhoneEl = document.getElementById('your_phone');
+    if (yourNameEl)  yourNameEl.value  = sender.name;
+    if (yourPhoneEl) yourPhoneEl.value = sender.mobile;
     var footer    = document.getElementById('pv_footer');
     if (footer) {
       footer.style.display = 'block';
@@ -706,7 +778,16 @@
         +'<p style="font-size:12px;color:#888880;margin:0 0 20px;">All vehicle registrations must be logged by scanning the QR code with your phone camera.'
         +(d.qr_form_url ? ' A direct link to the form can be found <a href="'+d.qr_form_url+'" style="color:#1E7B6B;">here</a>.' : '')+'</p>' : '';
 
-    var footerHtml = '';
+    var extraContactsHtml = (d.extra_contacts||[]).map(function(c){
+      return '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+c.name+'</td>'
+        +'<td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+c.role+'</td>'
+        +'<td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+c.phone+'</td></tr>';
+    }).join('');
+
+    var contactsHtml = '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.prod_contact_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.prod_contact_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.prod_contact_phone+'</td></tr>'
+      + extraContactsHtml
+      + '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.your_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.your_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.your_phone+'</td></tr>'
+      + '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;">24hr emergency line</td><td style="font-size:13px;color:#888880;padding:7px 8px;">'+d.emergency_note+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;white-space:nowrap;">0203 369 2273</td></tr>';
     if (d.sender) {
       footerHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #EAE8E2;padding-top:20px;"><tr><td>'
         +'<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="120" style="display:block;width:120px;height:auto;margin-bottom:14px;">'
@@ -757,9 +838,7 @@
       +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Key contacts</p>'
       +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
       +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
-      +'<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.prod_contact_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.prod_contact_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.prod_contact_phone+'</td></tr>'
-      +'<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.your_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.your_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.your_phone+'</td></tr>'
-      +'<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;">24hr emergency line</td><td style="font-size:13px;color:#888880;padding:7px 8px;">'+d.emergency_note+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;white-space:nowrap;">'+d.emergency_phone+'</td></tr>'
+      + contactsHtml
       +'</table></td></tr></table>'
       +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0;"><tr><td style="border-top:1px solid #EAE8E2;font-size:0;">&nbsp;</td></tr></table>'
       +'<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 20px;">If anything changes with your hire, please get in touch as soon as possible so we can check availability and update your booking.</p>'
@@ -800,8 +879,9 @@
       your_name:          sender.name,
       your_role:          g('your_role') || sender.title,
       your_phone:         g('your_phone') || sender.mobile,
-      emergency_phone:    g('emergency_phone') || '[PHONE]',
+      emergency_phone:    '0203 369 2273',
       emergency_note:     g('emergency_note')  || 'Access issues only',
+      extra_contacts:     getExtraContacts(),
       site_name:          currentSite.site_name,
       address:            currentSite.address,
       w3w:                currentSite.w3w,
@@ -829,9 +909,9 @@
     document.getElementById('sendBtn').disabled = true;
 
     try {
-      var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev', {
+      var res  = await fetch('https://api.resend.com/emails', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Authorization': 'Bearer ' + keys.resend, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       var json = await res.json();
@@ -844,6 +924,8 @@
         });
         uploadedFiles  = [];
         qrUploadedFile = null;
+        document.getElementById('extraContactsContainer').innerHTML = '';
+        extraContactCounter = 0;
         document.getElementById('qrImagePreview').style.display = 'none';
         document.getElementById('qrImagePlaceholder').style.display = 'block';
         renderAttachmentChips();
@@ -869,10 +951,8 @@
 
   // Init
   addStep(''); addStep(''); addStep('');
+  updatePreview();
   if (checkSetup()) loadSites();
 </script>
 </body>
 </html>
-
-
-
