@@ -829,9 +829,9 @@
     document.getElementById('sendBtn').disabled = true;
 
     try {
-      var res  = await fetch('https://api.resend.com/emails', {
+      var res  = await fetch('https://basecamp-proxy.vercel.app/api/send', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + keys.resend, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       var json = await res.json();
