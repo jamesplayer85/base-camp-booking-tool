@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Base Camp Co. — Booking Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal:       #1E7B6B;
+      --teal-dark:  #165C50;
+      --teal-light: #E6F5F2;
+      --teal-mid:   #A8D9D0;
+      --dark:       #0F1F1C;
+      --mid:        #3A4A47;
+      --muted:      #7A8C89;
+      --border:     #D4DDD9;
+      --bg:         #F0F4F3;
+      --card:       #ffffff;
+      --amber:      #E8A020;
+      --red:        #DC3545;
+      --green:      #28A745;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; }
+
+    header { background: var(--dark); padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+    header img { height: 32px; width: auto; }
+    header .pipe { width: 1px; height: 24px; background: #2A3C38; }
+    header span { font-size: 12px; color: var(--teal-mid); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+    .header-status { margin-left: auto; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .status-dot.live { background: var(--green); }
+
+    .layout { display: grid; grid-template-columns: 1fr 400px; min-height: calc(100vh - 60px); }
+
+    .form-panel { padding: 36px 44px; overflow-y: auto; }
+    .panel-header { margin-bottom: 28px; }
+    .panel-header h1 { font-size: 22px; font-weight: 600; color: var(--dark); margin-bottom: 4px; }
+    .panel-header p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .site-selector { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    .site-selector label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); display: block; margin-bottom: 8px; }
+    .site-selector select { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--dark); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 11px 14px; outline: none; cursor: pointer; transition: border-color 0.15s; }
+    .site-selector select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(30,123,107,0.1); }
+    .site-loaded { margin-top: 12px; display: none; }
+    .site-loaded-inner { background: var(--teal-light); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: var(--teal); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+
+    .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 20px; }
+    .form-card h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--teal-light); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label { font-size: 12px; font-weight: 500; color: var(--mid); }
+    .field input, .field textarea { font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--dark); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+    .field input:focus, .field textarea:focus { border-color: var(--teal); background: #fff; box-shadow: 0 0 0 3px rgba(30,123,107,0.1); }
+    .field input.required-empty { border-color: var(--red); background: #fff8f8; }
+
+    .contact-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; align-items: end; }
+    .contact-row:last-child { margin-bottom: 0; }
+    .contact-row .field { margin-bottom: 0; }
+    .contact-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+
+    .steps-list { display: flex; flex-direction: column; gap: 10px; }
+    .step-row { display: flex; align-items: center; gap: 10px; }
+    .step-circle { width: 20px; height: 20px; min-width: 20px; background: var(--teal); border-radius: 50%; flex-shrink: 0; }
+    .step-row .field { flex: 1; margin: 0; }
+    .step-remove { width: 26px; height: 26px; min-width: 26px; background: none; border: 1px solid var(--border); border-radius: 50%; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s, color 0.15s; flex-shrink: 0; padding: 0; }
+    .step-remove:hover { border-color: var(--red); color: var(--red); }
+    .add-step-btn { display: flex; align-items: center; gap: 8px; background: none; border: 1px dashed var(--border); border-radius: 6px; padding: 9px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; width: 100%; margin-top: 4px; transition: border-color 0.15s, color 0.15s; }
+    .add-step-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .attachment-chip { display: flex; align-items: center; gap: 8px; background: var(--teal-light); border-radius: 6px; padding: 8px 12px; font-size: 12px; color: var(--teal); }
+    .attachment-chip span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .attachment-chip .chip-size { color: var(--muted); flex-shrink: 0; }
+    .attachment-chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; flex-shrink: 0; }
+    .attachment-chip button:hover { color: var(--red); }
+    .sender-select { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--dark); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; outline: none; transition: border-color 0.15s; cursor: pointer; }
+    .sender-select:focus { border-color: var(--teal); background: #fff; box-shadow: 0 0 0 3px rgba(30,123,107,0.1); }
+
+    .send-btn { width: 100%; padding: 15px; background: var(--teal); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.15s, transform 0.1s; margin-top: 8px; }
+    .send-btn:hover:not(:disabled) { background: var(--teal-dark); transform: translateY(-1px); }
+    .send-btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--dark); color: #fff; font-size: 13px; font-weight: 500; padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 10px; transition: transform 0.3s ease; z-index: 999; white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--teal); }
+    .toast.error   { background: var(--red); }
+
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(15,31,28,0.5); z-index: 200; align-items: center; justify-content: center; }
+    .loading-overlay.show { display: flex; }
+    .loading-card { background: #fff; border-radius: 12px; padding: 28px 36px; text-align: center; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--teal-light); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-card p { font-size: 14px; color: var(--mid); }
+
+    .preview-panel { background: #E4EDEA; border-left: 1px solid var(--border); padding: 28px 20px; overflow-y: auto; position: sticky; top: 60px; height: calc(100vh - 60px); }
+    .preview-panel h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; }
+    .ep { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); font-family: Arial, Helvetica, sans-serif; }
+    .ep-hdr { background: #fff; padding: 14px 18px; text-align: center; border-bottom: 1px solid #E8E6E0; }
+    .ep-hdr img { width: 130px; height: auto; margin: 0 auto; display: block; }
+    .ep-banner { background: #1E7B6B; padding: 12px 16px; }
+    .ep-banner h3 { font-size: 13px; font-weight: 700; color: #fff; margin: 0 0 3px; }
+    .ep-banner p  { font-size: 11px; color: #A8D9D0; margin: 0; }
+    .ep-body { padding: 14px 16px; font-size: 12px; }
+    .ep-sec { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin: 0 0 5px; }
+    .ep-box { background: #F8F7F4; border-radius: 4px; border: 1px solid #E8E6E0; padding: 9px 11px; margin-bottom: 10px; }
+    .ep-row { display: flex; gap: 6px; padding: 2px 0; font-size: 11px; }
+    .ep-rl  { color: #888; min-width: 36%; }
+    .ep-rv  { font-weight: 700; color: #1A1A1A; word-break: break-word; }
+    .ep-rv a{ color: #1E7B6B; }
+    .ep-note{ background: #FFF8EC; border-left: 3px solid #E8A020; border-radius: 0 4px 4px 0; padding: 7px 9px; margin-bottom: 10px; font-size: 11px; color: #6A4A10; line-height: 1.4; }
+    .ep-map { background: #F0EEE8; border: 1px dashed #C8C6C0; border-radius: 4px; padding: 10px; text-align: center; margin-bottom: 10px; }
+    .ep-map img { max-width: 80%; height: auto; border-radius: 3px; margin: 0 auto; display: block; }
+    .ep-map-ph { font-size: 11px; color: #888; }
+    .setup-overlay { display:none; position:fixed; inset:0; background:rgba(15,31,28,0.7); z-index:300; align-items:center; justify-content:center; }
+    .setup-overlay.show { display:flex; }
+    .setup-card { background:#fff; border-radius:12px; padding:36px 40px; width:100%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+    .setup-card h2 { font-size:18px; font-weight:600; color:var(--dark); margin-bottom:6px; }
+    .setup-card p  { font-size:13px; color:var(--muted); margin-bottom:24px; line-height:1.6; }
+    .setup-card .field { margin-bottom:16px; }
+    .setup-card .field:last-of-type { margin-bottom:24px; }
+    .setup-save { width:100%; padding:13px; background:var(--teal); color:#fff; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; border:none; border-radius:8px; cursor:pointer; transition:background 0.15s; }
+    .setup-save:hover { background:var(--teal-dark); }
+    .setup-link { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; margin-top:12px; text-decoration:underline; font-family:'DM Sans',sans-serif; }
+    .setup-link:hover { color:var(--teal); }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-card"><div class="spinner"></div><p>Sending confirmation email…</p></div>
+</div>
+<div class="toast" id="toast"><span id="toastMsg">Email sent</span></div>
+
+<!-- Setup modal -->
+<div class="setup-overlay" id="setupOverlay">
+  <div class="setup-card">
+    <h2>Welcome to The Base Camp Co. Booking Tool</h2>
+    <p>Enter your API keys below. These are stored only in your browser and never shared or uploaded anywhere.</p>
+    <div class="field">
+      <label>Resend API key</label>
+      <input type="password" id="setup_resend" placeholder="re_..." style="font-family:'DM Mono',monospace; font-size:13px;">
+    </div>
+    <div class="field">
+      <label>Monday.com API key</label>
+      <input type="password" id="setup_monday" placeholder="eyJhbGci...">
+    </div>
+    <button class="setup-save" onclick="saveSetup()">Save &amp; continue</button>
+    <br>
+    <button class="setup-link" onclick="clearSetup()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      Clear saved keys
+    </button>
+  </div>
+</div>
+
+<header>
+  <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co.">
+  <div class="pipe"></div>
+  <span>Booking Confirmation Tool</span>
+  <div class="header-status">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Loading sites…</span>
+    <button onclick="document.getElementById('setupOverlay').classList.add('show')" style="margin-left:12px; background:none; border:1px solid #2A3C38; border-radius:6px; color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.15s, color 0.15s;" onmouseover="this.style.color='var(--teal-mid)';this.style.borderColor='var(--teal)';" onmouseout="this.style.color='';this.style.borderColor='';">⚙ API Keys</button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="form-panel">
+    <div class="panel-header">
+      <h1>New Booking Confirmation</h1>
+      <p>Select a site, fill in the booking details, and send directly via Resend.</p>
+    </div>
+
+    <div class="site-selector">
+      <label>Select unit base site</label>
+      <select id="siteSelect" onchange="onSiteChange()">
+        <option value="">— Loading sites… —</option>
+      </select>
+      <div class="site-loaded" id="siteLoaded">
+        <div class="site-loaded-inner">
+          <span>✓</span>
+          <div id="siteLoadedText"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Recipient</h2>
+      <div class="field">
+        <label>From: sender</label>
+        <select class="sender-select" id="from_email" onchange="updatePreview(); updateSubject();">
+          <option value="james@thebasecampco.com">James Player — james@thebasecampco.com</option>
+          <option value="tom@thebasecampco.com">Tom Bosanquet — tom@thebasecampco.com</option>
+          <option value="ben@thebasecampco.com">Ben Frost — ben@thebasecampco.com</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>To: email address(es) * <span style="font-weight:400;color:var(--muted);">— separate multiple with commas</span></label>
+        <input type="text" id="to_email" placeholder="sarah@production.com, unit@studioworks.com" oninput="updatePreview()">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Contact first name *</label>
+        <input type="text" id="contact_name" placeholder="Sarah" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Booking Details</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Booking reference *</label>
+          <input type="text" id="booking_ref" placeholder="TBC-2026-001" oninput="updatePreview()">
+        </div>
+        <div class="field">
+          <label>Production name *</label>
+          <input type="text" id="production_name" placeholder="The Long Road" oninput="updateSubject(); updatePreview();">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Production company *</label>
+          <input type="text" id="prod_company" placeholder="Studioworks Ltd" oninput="updatePreview()">
+        </div>
+        <div class="field">
+          <label>Production title</label>
+          <input type="text" id="prod_title" placeholder="The Long Road" oninput="updatePreview()">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Start date &amp; time *</label>
+          <input type="text" id="start_date" placeholder="01/06/2026 — 06:00" oninput="updateSubject(); updatePreview();">
+        </div>
+        <div class="field">
+          <label>End date &amp; time *</label>
+          <input type="text" id="end_date" placeholder="03/06/2026 — 22:00" oninput="updateSubject(); updatePreview();">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Email subject line — auto-filled, edit if needed</label>
+        <input type="text" id="email_subject" placeholder="Unit Base Booking Confirmation - Site Name - Production (Dates)">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Key Contacts</h2>
+      <div class="contact-label">Production contact</div>
+      <div class="contact-row">
+        <div class="field"><label>Name</label><input type="text" id="prod_contact_name" placeholder="Unit Manager name" oninput="updatePreview()"></div>
+        <div class="field"><label>Role</label><input type="text" id="prod_contact_role" placeholder="Unit Manager" oninput="updatePreview()"></div>
+        <div class="field"><label>Phone</label><input type="text" id="prod_contact_phone" placeholder="+44 7700 900000" oninput="updatePreview()"></div>
+      </div>
+      <div class="contact-label" style="margin-top:16px;">The Base Camp Co. contact</div>
+      <div class="contact-row">
+        <div class="field"><label>Name</label><input type="text" id="your_name" placeholder="James Player" oninput="updatePreview()"></div>
+        <div class="field"><label>Role</label><input type="text" id="your_role" placeholder="Director" oninput="updatePreview()"></div>
+        <div class="field"><label>Phone</label><input type="text" id="your_phone" placeholder="+44 7843 421278" oninput="updatePreview()"></div>
+      </div>
+      <div class="contact-label" style="margin-top:16px;">24hr emergency line</div>
+      <div class="field-row">
+        <div class="field"><label>Phone</label><input type="text" id="emergency_phone" placeholder="+44 203 369 2273" oninput="updatePreview()"></div>
+        <div class="field"><label>Note</label><input type="text" id="emergency_note" placeholder="Access issues only" oninput="updatePreview()"></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Site Information — pre-filled from site template, edit if needed</h2>
+      <div class="steps-list" id="stepsContainer"></div>
+      <button class="add-step-btn" onclick="addStep('')" type="button">
+        <span style="font-size:18px;line-height:1;">+</span> Add step
+      </button>
+    </div>
+
+    <div class="form-card">
+      <h2>Important Note — leave blank to hide</h2>
+      <div class="field">
+        <textarea id="note_text" rows="3" placeholder="Gate must be kept shut at all times…" oninput="updatePreview()"></textarea>
+      </div>
+    </div>
+
+    <div class="form-card" id="qrCard" style="display:none;">
+      <h2>QR Code — required for this site</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.6;">Upload the QR code image for this booking and provide the direct form link.</p>
+      <div class="field">
+        <label>QR code image</label>
+        <label class="add-step-btn" style="cursor:pointer; margin-top:0;">
+          <span style="font-size:18px;line-height:1;">+</span> Upload QR code image
+          <input type="file" id="qr_image_upload" accept="image/*" style="display:none;" onchange="handleQRUpload(this)">
+        </label>
+        <div style="margin-top:8px; text-align:center;">
+          <img id="qrImagePreview" src="" alt="QR Code" style="display:none; max-width:120px; height:auto; border-radius:6px; border:1px solid var(--border);">
+          <p id="qrImagePlaceholder" style="font-size:12px; color:var(--muted); margin:0;">No image uploaded yet</p>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Direct link to registration form</label>
+        <input type="text" id="qr_form_url" placeholder="https://forms.example.com/vehicle-reg" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Additional Attachments</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.6;">Upload files to attach to this email (hire agreement, invoice, etc.).</p>
+      <div id="attachmentList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;"></div>
+      <label class="add-step-btn" style="cursor:pointer;">
+        <span style="font-size:18px;line-height:1;">+</span> Add attachment
+        <input type="file" id="attachmentInput" multiple style="display:none;" onchange="handleAttachments(this)">
+      </label>
+    </div>
+
+    <button class="send-btn" id="sendBtn" onclick="sendEmail()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+      Send booking confirmation
+    </button>
+
+    <div class="form-card" style="margin-top:32px;">
+      <h2>Monday.com board reference</h2>
+      <p style="font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:14px;">
+        Board: <strong>Unit Base Sites</strong> · ID: <code style="font-family:'DM Mono',monospace; background:var(--bg); padding:1px 5px; border-radius:3px;">18411582352</code>
+      </p>
+      <table class="guide-table">
+        <tr><th>Column name</th><th>Type</th><th>Notes</th></tr>
+        <tr><td><code>Name</code></td><td>Item name</td><td>Default Monday column</td></tr>
+        <tr><td><code>Address</code></td><td>Text</td><td>Full address</td></tr>
+        <tr><td><code>What3Words</code></td><td>Text</td><td>Three words only, no ///</td></tr>
+        <tr><td><code>Google Maps URL</code></td><td>Text</td><td>Full maps link</td></tr>
+        <tr><td><code>Step 1</code></td><td>Text</td><td>Access instructions</td></tr>
+        <tr><td><code>Step 2</code></td><td>Text</td><td>Access instructions</td></tr>
+        <tr><td><code>Step 3</code></td><td>Text</td><td>Access instructions</td></tr>
+        <tr><td><code>Step 4</code></td><td>Text</td><td>Leave blank to hide</td></tr>
+        <tr><td><code>Important Note</code></td><td>Long Text</td><td>Leave blank to hide amber box</td></tr>
+        <tr><td><code>Site Map URL</code></td><td>Text</td><td>Squarespace or Dropbox image URL</td></tr>
+        <tr><td><code>QR Required</code></td><td>Checkbox</td><td>Tick to show QR upload on form</td></tr>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="preview-panel">
+    <h2>Email preview</h2>
+    <div class="ep">
+      <div class="ep-hdr">
+        <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co.">
+      </div>
+      <div class="ep-banner">
+        <h3>Your Unit Base booking is confirmed ✓</h3>
+        <p>Booking ref: <strong id="pv_ref" style="color:#fff;">[BOOKING REF]</strong></p>
+      </div>
+      <div class="ep-body">
+        <p style="font-size:12px; color:#1A1A1A; margin:0 0 6px;">Hi <strong id="pv_name">[NAME]</strong>,</p>
+        <p style="font-size:11px; color:#444; line-height:1.5; margin:0 0 12px;">Your unit base booking for <strong id="pv_prod">[PRODUCTION]</strong> at <strong id="pv_site_inline">[SITE]</strong> is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.</p>
+        <p class="ep-sec">Booking summary</p>
+        <div class="ep-box">
+          <div class="ep-row"><span class="ep-rl">Site</span><span class="ep-rv" id="pv_site">[SITE]</span></div>
+          <div class="ep-row"><span class="ep-rl">Address</span><span class="ep-rv" id="pv_addr">[ADDRESS]</span></div>
+          <div class="ep-row"><span class="ep-rl">What3Words</span><span class="ep-rv"><a id="pv_w3w" href="#">[///words]</a></span></div>
+          <div class="ep-row"><span class="ep-rl">Start</span><span class="ep-rv" id="pv_start">[START]</span></div>
+          <div class="ep-row"><span class="ep-rl">End</span><span class="ep-rv" id="pv_end">[END]</span></div>
+          <div class="ep-row"><span class="ep-rl">Company</span><span class="ep-rv" id="pv_company">[COMPANY]</span></div>
+          <div class="ep-row"><span class="ep-rl">Title</span><span class="ep-rv" id="pv_title">[TITLE]</span></div>
+        </div>
+        <p class="ep-sec">Site information</p>
+        <div class="ep-box" style="font-size:11px; color:#333; line-height:1.6;">
+          <div id="pv_steps">Select a site to see steps</div>
+        </div>
+        <div class="ep-note" id="pv_note_box" style="display:none;">
+          <strong>Important:</strong> <span id="pv_note"></span>
+        </div>
+        <p class="ep-sec">Site map</p>
+        <div class="ep-map">
+          <img id="pv_map_img" src="" alt="Site map" style="display:none;">
+          <p class="ep-map-ph" id="pv_map_ph">Site map from Monday</p>
+        </div>
+        <div id="pv_qr_block" style="display:none;">
+          <p class="ep-sec" style="margin-top:10px;">QR Code</p>
+          <div class="ep-map">
+            <img id="pv_qr_img" src="" alt="QR Code" style="max-width:100px; height:auto; margin:0 auto; display:block;">
+          </div>
+          <p style="font-size:10px; color:#888; margin:4px 0 10px; line-height:1.5;">All vehicle registrations must be logged by scanning the QR code with your phone camera. A direct link to the form can be found <a id="pv_qr_link" href="#" style="color:#1E7B6B;">here</a>.</p>
+        </div>
+        <p class="ep-sec" style="margin-top:10px;">Key contacts</p>
+        <div class="ep-box" style="font-size:11px;">
+          <div class="ep-row"><span class="ep-rv" id="pv_pc_name">[PROD CONTACT]</span><span class="ep-rl" style="padding-left:6px;" id="pv_pc_role">Production</span><span style="color:#1E7B6B; font-weight:700; margin-left:auto;" id="pv_pc_phone">[PHONE]</span></div>
+          <div class="ep-row" style="margin-top:4px;"><span class="ep-rv" id="pv_your_name">[YOUR NAME]</span><span class="ep-rl" style="padding-left:6px;" id="pv_your_role">The Base Camp Co.</span><span style="color:#1E7B6B; font-weight:700; margin-left:auto;" id="pv_your_phone">[PHONE]</span></div>
+          <div class="ep-row" style="margin-top:4px;"><span class="ep-rv">24hr emergency</span><span class="ep-rl" style="padding-left:6px;" id="pv_em_note">Access issues only</span><span style="color:#1E7B6B; font-weight:700; margin-left:auto;" id="pv_em_phone">[PHONE]</span></div>
+        </div>
+        <div id="pv_footer" style="margin-top:16px; padding-top:14px; border-top:1px solid #EAE8E2; display:none;">
+          <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." style="width:80px; height:auto; margin-bottom:8px; display:block;">
+          <p style="font-size:12px; font-weight:700; color:#1A1A1A; margin:0 0 1px;" id="pv_footer_name">[NAME]</p>
+          <p style="font-size:11px; color:#888; margin:0 0 8px;" id="pv_footer_title">Director · The Base Camp Co.</p>
+          <table style="font-size:10px; border-collapse:collapse;">
+            <tr><td style="color:#888; padding:1px 8px 1px 0;">Email</td><td style="font-weight:600;"><a id="pv_footer_email" href="#" style="color:#1E7B6B;">[EMAIL]</a></td></tr>
+            <tr><td style="color:#888; padding:1px 8px 1px 0;">Office</td><td style="font-weight:600; color:#1A1A1A;" id="pv_footer_office">[OFFICE]</td></tr>
+            <tr><td style="color:#888; padding:1px 8px 1px 0;">Mobile</td><td style="font-weight:600; color:#1A1A1A;" id="pv_footer_mobile">[MOBILE]</td></tr>
+            <tr><td style="color:#888; padding:1px 8px 1px 0;">Web</td><td style="font-weight:600;"><a href="https://thebasecampco.com" style="color:#1E7B6B;">thebasecampco.com</a></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // CONFIG — loaded from browser storage, never hardcoded
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  var MONDAY_BOARD_ID = '18411582352';
+
+  var SENDERS = {
+    'james@thebasecampco.com': { name: 'James Player',  title: 'Director', email: 'james@thebasecampco.com', office: '0203 369 2273', mobile: '07843 421278', website: 'thebasecampco.com' },
+    'tom@thebasecampco.com':   { name: 'Tom Bosanquet', title: 'Director', email: 'tom@thebasecampco.com',   office: '0203 369 2273', mobile: '07762 067059', website: 'thebasecampco.com' },
+    'ben@thebasecampco.com':   { name: 'Ben Frost',     title: 'Director', email: 'ben@thebasecampco.com',   office: '0203 369 2273', mobile: '07980 210904', website: 'thebasecampco.com' }
+  };
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  function getKeys() {
+    return {
+      resend: localStorage.getItem('tbc_resend_key') || '',
+      monday: localStorage.getItem('tbc_monday_key') || ''
+    };
+  }
+
+  function saveSetup() {
+    var resend = document.getElementById('setup_resend').value.trim();
+    var monday = document.getElementById('setup_monday').value.trim();
+    if (!resend || !monday) { alert('Please enter both API keys.'); return; }
+    localStorage.setItem('tbc_resend_key', resend);
+    localStorage.setItem('tbc_monday_key', monday);
+    document.getElementById('setupOverlay').classList.remove('show');
+    loadSites();
+  }
+
+  function clearSetup() {
+    if (!confirm('Clear saved API keys? You will need to re-enter them.')) return;
+    localStorage.removeItem('tbc_resend_key');
+    localStorage.removeItem('tbc_monday_key');
+    document.getElementById('setup_resend').value = '';
+    document.getElementById('setup_monday').value = '';
+    alert('Keys cleared. Reload the page to re-enter them.');
+  }
+
+  function checkSetup() {
+    var keys = getKeys();
+    if (!keys.resend || !keys.monday) {
+      document.getElementById('setupOverlay').classList.add('show');
+      return false;
+    }
+    // Pre-fill setup fields with masked values so user knows they're set
+    document.getElementById('setup_resend').value = keys.resend;
+    document.getElementById('setup_monday').value = keys.monday;
+    return true;
+  }
+
+  var sites        = [];
+  var currentSite  = null;
+  var stepCounter  = 0;
+  var uploadedFiles = [];
+  var qrUploadedFile = null;
+
+  // ── Monday.com ──
+  async function loadSites() {
+    var keys = getKeys();
+    if (!keys.monday) { setStatus(false, 'API key required'); return; }
+    setStatus(false, 'Loading from Monday.com…');
+    var query = '{ boards(ids: ' + MONDAY_BOARD_ID + ') { items_page(limit: 100) { items { name column_values { column { title } text ... on CheckboxValue { checked } } } } } }';
+    try {
+      var res  = await fetch('https://api.monday.com/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': keys.monday, 'API-Version': '2024-01' },
+        body: JSON.stringify({ query: query })
+      });
+      var json = await res.json();
+      if (json.errors) { setStatus(false, 'Monday.com error — check API key'); return; }
+      var items = json.data.boards[0].items_page.items;
+      sites = items.map(function(item) {
+        var s = { site_name: item.name };
+        item.column_values.forEach(function(col) {
+          var t = col.column.title.toLowerCase().trim();
+          if (t === 'address')         s.address        = col.text  || '';
+          if (t === 'what3words')      s.w3w            = col.text  || '';
+          if (t === 'google maps url') s.maps_url       = col.text  || '';
+          if (t === 'step 1')          s.step1          = col.text  || '';
+          if (t === 'step 2')          s.step2          = col.text  || '';
+          if (t === 'step 3')          s.step3          = col.text  || '';
+          if (t === 'step 4')          s.step4          = col.text  || '';
+          if (t === 'important note')  s.important_note = col.text  || '';
+          if (t === 'site map url')    s.site_map_url   = col.text  || '';
+          if (t === 'qr required')     s.qr_required    = col.checked || false;
+        });
+        return s;
+      }).filter(function(s){ return s.site_name; });
+      populateSelect();
+      setStatus(true, sites.length + ' sites loaded from Monday.com');
+    } catch(e) {
+      setStatus(false, 'Could not reach Monday.com');
+      document.getElementById('siteSelect').innerHTML = '<option value="">— Connection failed —</option>';
+    }
+  }
+
+  function populateSelect() {
+    var sel = document.getElementById('siteSelect');
+    sel.innerHTML = '<option value="">— Select a site —</option>';
+    sites.forEach(function(s, i) {
+      var opt = document.createElement('option');
+      opt.value = i; opt.textContent = s.site_name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function setStatus(ok, msg) {
+    document.getElementById('statusDot').className = 'status-dot' + (ok ? ' live' : '');
+    document.getElementById('statusText').textContent = msg;
+  }
+
+  // ── Steps ──
+  function addStep(value) {
+    stepCounter++;
+    var id  = 'step_' + stepCounter;
+    var row = document.createElement('div');
+    row.className = 'step-row';
+    row.dataset.stepId = id;
+    row.innerHTML = '<div class="step-circle"></div>'
+      + '<div class="field" style="flex:1;margin:0;"><input type="text" id="' + id + '" value="' + escHtml(value) + '" placeholder="Enter access step…" oninput="updatePreview()"></div>'
+      + '<button class="step-remove" type="button" onclick="removeStep(\'' + id + '\')" title="Remove">×</button>';
+    document.getElementById('stepsContainer').appendChild(row);
+    updatePreview();
+  }
+  function removeStep(id) { var r = document.querySelector('[data-step-id="' + id + '"]'); if(r) { r.remove(); updatePreview(); } }
+  function clearSteps()   { document.getElementById('stepsContainer').innerHTML = ''; stepCounter = 0; }
+  function getSteps()     { return Array.from(document.querySelectorAll('#stepsContainer input')).map(function(i){ return i.value.trim(); }).filter(Boolean); }
+  function escHtml(str)   { return (str||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Attachments ──
+  function handleAttachments(input) {
+    Array.from(input.files).forEach(function(file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedFiles.push({ name: file.name, size: file.size, base64: e.target.result.split(',')[1], type: file.type });
+        renderAttachmentChips();
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  }
+  function removeAttachment(idx) { uploadedFiles.splice(idx, 1); renderAttachmentChips(); }
+  function renderAttachmentChips() {
+    document.getElementById('attachmentList').innerHTML = uploadedFiles.map(function(f, i) {
+      return '<div class="attachment-chip">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+        + '<span>' + escHtml(f.name) + '</span>'
+        + '<span class="chip-size">' + (f.size/1024).toFixed(0) + ' KB</span>'
+        + '<button type="button" onclick="removeAttachment(' + i + ')">×</button>'
+        + '</div>';
+    }).join('');
+  }
+
+  // ── QR upload ──
+  function handleQRUpload(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      qrUploadedFile = { base64: e.target.result.split(',')[1], type: file.type, name: file.name, dataUrl: e.target.result };
+      document.getElementById('qrImagePreview').src = e.target.result;
+      document.getElementById('qrImagePreview').style.display = 'block';
+      document.getElementById('qrImagePlaceholder').style.display = 'none';
+      updatePreview();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Site change ──
+  function onSiteChange() {
+    var idx = document.getElementById('siteSelect').value;
+    if (idx === '') { currentSite = null; return; }
+    currentSite = sites[parseInt(idx)];
+    clearSteps();
+    ['step1','step2','step3','step4'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addStep(currentSite[k]); });
+    if (getSteps().length === 0) { addStep(''); addStep(''); addStep(''); }
+    document.getElementById('note_text').value = currentSite.important_note || '';
+    var qrCard = document.getElementById('qrCard');
+    if (currentSite.qr_required) {
+      qrCard.style.display = 'block';
+    } else {
+      qrCard.style.display = 'none';
+      qrUploadedFile = null;
+      document.getElementById('qrImagePreview').style.display = 'none';
+      document.getElementById('qrImagePlaceholder').style.display = 'block';
+    }
+    document.getElementById('siteLoaded').style.display = 'block';
+    document.getElementById('siteLoadedText').innerHTML = '<strong>' + currentSite.site_name + '</strong><br>' + currentSite.address;
+    updateSubject();
+    updatePreview();
+  }
+
+  // ── Subject auto-fill ──
+  function updateSubject() {
+    var site  = currentSite ? currentSite.site_name : '';
+    var prod  = g('production_name');
+    if (!site && !prod) return;
+    var start = g('start_date').replace(/\s*[—–-]+\s*\d+:\d+/,'').trim();
+    var end   = g('end_date').replace(/\s*[—–-]+\s*\d+:\d+/,'').trim();
+    var dates = (start && end && start !== end) ? ' (' + start + ' - ' + end + ')' : (start ? ' (' + start + ')' : '');
+    document.getElementById('email_subject').value = 'Unit Base Booking Confirmation' + (site ? ' - ' + site : '') + (prod ? ' - ' + prod : '') + dates;
+  }
+
+  function g(id)       { return (document.getElementById(id)||{}).value||''; }
+  function pv(id, val) { var el = document.getElementById(id); if(el) el.textContent = val; }
+
+  // ── Preview ──
+  function updatePreview() {
+    pv('pv_ref',      g('booking_ref')        || '[BOOKING REF]');
+    pv('pv_name',     g('contact_name')       || '[NAME]');
+    pv('pv_prod',     g('production_name')    || '[PRODUCTION]');
+    pv('pv_start',    g('start_date')         || '[START]');
+    pv('pv_end',      g('end_date')           || '[END]');
+    pv('pv_company',  g('prod_company')       || '[COMPANY]');
+    pv('pv_title',    g('prod_title')         || '[TITLE]');
+    pv('pv_pc_name',  g('prod_contact_name')  || '[PROD CONTACT]');
+    pv('pv_pc_role',  g('prod_contact_role')  || 'Production');
+    pv('pv_pc_phone', g('prod_contact_phone') || '[PHONE]');
+    pv('pv_your_name',g('your_name')          || '[YOUR NAME]');
+    pv('pv_your_role',g('your_role')          || 'The Base Camp Co.');
+    pv('pv_your_phone',g('your_phone')        || '[PHONE]');
+    pv('pv_em_phone', g('emergency_phone')    || '[PHONE]');
+    pv('pv_em_note',  g('emergency_note')     || 'Access issues only');
+    pv('pv_site_inline', currentSite ? currentSite.site_name : '[SITE]');
+
+    var fromEmail = (document.getElementById('from_email')||{}).value || 'james@thebasecampco.com';
+    var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
+    var footer    = document.getElementById('pv_footer');
+    if (footer) {
+      footer.style.display = 'block';
+      pv('pv_footer_name',   sender.name);
+      pv('pv_footer_title',  sender.title + ' · The Base Camp Co.');
+      pv('pv_footer_office', sender.office);
+      pv('pv_footer_mobile', sender.mobile);
+      var el = document.getElementById('pv_footer_email');
+      if (el) { el.textContent = sender.email; el.href = 'mailto:' + sender.email; }
+    }
+
+    if (currentSite) {
+      pv('pv_site', currentSite.site_name);
+      pv('pv_addr', currentSite.address);
+      var w3w = document.getElementById('pv_w3w');
+      if (w3w) { w3w.textContent = '///' + currentSite.w3w; w3w.href = 'https://w3w.co/' + currentSite.w3w; }
+
+      var steps = getSteps();
+      document.getElementById('pv_steps').innerHTML = steps.length
+        ? steps.map(function(s){ return '<div style="display:flex;gap:8px;align-items:flex-start;padding:3px 0;"><span style="background:#1E7B6B;border-radius:50%;width:14px;height:14px;min-width:14px;display:inline-block;margin-top:2px;"></span><span>'+s+'</span></div>'; }).join('')
+        : '<span style="color:#888;">Steps will appear here</span>';
+
+      var noteBox = document.getElementById('pv_note_box');
+      var note = g('note_text');
+      if (note) { noteBox.style.display = 'block'; pv('pv_note', note); } else { noteBox.style.display = 'none'; }
+
+      var mapImg = document.getElementById('pv_map_img');
+      if (currentSite.site_map_url) { mapImg.src = currentSite.site_map_url; mapImg.style.display = 'block'; document.getElementById('pv_map_ph').style.display = 'none'; }
+      else { mapImg.style.display = 'none'; document.getElementById('pv_map_ph').style.display = 'block'; }
+
+      var qrBlock = document.getElementById('pv_qr_block');
+      if (currentSite.qr_required) {
+        qrBlock.style.display = 'block';
+        var qrImg = document.getElementById('pv_qr_img');
+        if (qrUploadedFile) { qrImg.src = qrUploadedFile.dataUrl; qrImg.style.display = 'block'; } else { qrImg.style.display = 'none'; }
+        var qrLink = document.getElementById('pv_qr_link');
+        var qrUrl  = g('qr_form_url');
+        if (qrUrl) { qrLink.href = qrUrl; qrLink.style.display = 'inline'; } else { qrLink.style.display = 'none'; }
+      } else {
+        qrBlock.style.display = 'none';
+      }
+    }
+  }
+
+  // ── Email HTML builder ──
+  function buildEmailHTML(d) {
+    var stepsHtml = (d.steps||[]).map(function(s){
+      return '<tr><td style="padding:8px 0;border-bottom:1px solid #EEECEA;vertical-align:top;">'
+        +'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        +'<td style="width:20px;min-width:20px;vertical-align:top;padding-right:11px;padding-top:2px;">'
+        +'<div style="background:#1E7B6B;border-radius:50%;width:16px;height:16px;font-size:0;line-height:0;">&nbsp;</div>'
+        +'</td><td style="font-size:13px;color:#333330;line-height:1.55;">'+s+'</td>'
+        +'</tr></table></td></tr>';
+    }).join('');
+
+    var noteHtml = d.important_note
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>'
+        +'<td width="3" style="background:#E8A020;border-radius:3px 0 0 3px;">&nbsp;</td>'
+        +'<td style="background:#FFF8EC;border-radius:0 6px 6px 0;padding:12px 14px;font-size:13px;color:#6A4A10;line-height:1.55;">'
+        +'<strong style="color:#4A3008;">Important:</strong> '+d.important_note+'</td></tr></table>' : '';
+
+    var mapHtml = d.site_map_url
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
+        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
+        +'<img src="'+d.site_map_url+'" alt="Site map" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
+        +'</td></tr></table>' : '';
+
+    var qrHtml = d.qr_data_url
+      ? '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 10px;">QR Code</p>'
+        +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
+        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
+        +'<img src="'+d.qr_data_url+'" alt="QR Code" width="160" style="display:block;width:160px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
+        +'</td></tr></table>'
+        +'<p style="font-size:12px;color:#888880;margin:0 0 20px;">All vehicle registrations must be logged by scanning the QR code with your phone camera.'
+        +(d.qr_form_url ? ' A direct link to the form can be found <a href="'+d.qr_form_url+'" style="color:#1E7B6B;">here</a>.' : '')+'</p>' : '';
+
+    var footerHtml = '';
+    if (d.sender) {
+      footerHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #EAE8E2;padding-top:20px;"><tr><td>'
+        +'<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="120" style="display:block;width:120px;height:auto;margin-bottom:14px;">'
+        +'<p style="font-size:14px;font-weight:700;color:#1A1A1A;margin:0 0 2px;">'+d.sender.name+'</p>'
+        +'<p style="font-size:13px;color:#888880;margin:0 0 12px;">'+d.sender.title+' &nbsp;·&nbsp; The Base Camp Co.</p>'
+        +'<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">'
+        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Email</td><td style="font-size:12px;font-weight:600;"><a href="mailto:'+d.sender.email+'" style="color:#1E7B6B;text-decoration:none;">'+d.sender.email+'</a></td></tr>'
+        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Office</td><td style="font-size:12px;font-weight:600;color:#1A1A1A;">'+d.sender.office+'</td></tr>'
+        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Mobile</td><td style="font-size:12px;font-weight:600;color:#1A1A1A;">'+d.sender.mobile+'</td></tr>'
+        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Web</td><td style="font-size:12px;font-weight:600;"><a href="https://'+d.sender.website+'" style="color:#1E7B6B;text-decoration:none;">'+d.sender.website+'</a></td></tr>'
+        +'</table>'
+        +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
+        +'<td style="background:#F4F7F6;border-radius:6px;padding:10px 14px;font-size:11px;color:#888880;line-height:1.6;">'
+        +'The Base Camp Co. &nbsp;·&nbsp; Registered in England &nbsp;·&nbsp; <a href="https://thebasecampco.com" style="color:#1E7B6B;text-decoration:none;">thebasecampco.com</a>'
+        +'</td></tr></table></td></tr></table>';
+    }
+
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
+      +'<body style="margin:0;padding:0;background:#F2F1ED;font-family:Arial,Helvetica,sans-serif;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F2F1ED;padding:24px 12px;"><tr><td align="center">'
+      +'<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #E0DED8;">'
+      +'<tr><td align="center" style="background:#ffffff;padding:24px 32px;border-bottom:1px solid #E8E6E0;">'
+      +'<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="200" style="display:block;width:200px;max-width:200px;height:auto;margin:0 auto;"></td></tr>'
+      +'<tr><td style="background:#1E7B6B;padding:16px 28px;">'
+      +'<h1 style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 5px;line-height:1.3;">Your Unit Base booking is confirmed &#10003;</h1>'
+      +'<p style="font-size:13px;color:#A8D9D0;margin:0;">Booking ref: <strong style="color:#ffffff;">'+d.booking_ref+'</strong></p></td></tr>'
+      +'<tr><td style="padding:24px 28px;">'
+      +'<p style="font-size:15px;color:#1A1A1A;margin:0 0 10px;">Hi '+d.contact_name+',</p>'
+      +'<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 22px;">Your unit base booking for <strong>'+d.production_name+'</strong> at <strong>'+d.site_name+'</strong> is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.</p>'
+      +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Booking summary</p>'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Site name</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+d.site_name+'</td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Address</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+d.address+'</td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">What3Words</td><td style="font-size:13px;font-weight:700;padding:5px 0;vertical-align:top;"><a href="https://w3w.co/'+d.w3w+'" style="color:#1E7B6B;text-decoration:none;">///'+d.w3w+'</a></td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Google Maps</td><td style="font-size:13px;font-weight:700;padding:5px 0;vertical-align:top;"><a href="'+d.maps_url+'" style="color:#1E7B6B;text-decoration:none;">View map pin &rarr;</a></td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Start date</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+d.start_date+'</td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">End date</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+d.end_date+'</td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Production company</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+d.prod_company+'</td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Production title</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+d.prod_title+'</td></tr>'
+      +'</table></td></tr></table>'
+      +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Site information</p>'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'+stepsHtml+'</table></td></tr></table>'
+      + noteHtml
+      +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Site map</p>'
+      + mapHtml + qrHtml
+      +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Key contacts</p>'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+      +'<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.prod_contact_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.prod_contact_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.prod_contact_phone+'</td></tr>'
+      +'<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.your_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.your_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.your_phone+'</td></tr>'
+      +'<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;">24hr emergency line</td><td style="font-size:13px;color:#888880;padding:7px 8px;">'+d.emergency_note+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;white-space:nowrap;">'+d.emergency_phone+'</td></tr>'
+      +'</table></td></tr></table>'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0;"><tr><td style="border-top:1px solid #EAE8E2;font-size:0;">&nbsp;</td></tr></table>'
+      +'<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 20px;">If anything changes with your hire, please get in touch as soon as possible so we can check availability and update your booking.</p>'
+      + footerHtml
+      +'</td></tr></table></td></tr></table></body></html>';
+  }
+
+  // ── Send ──
+  async function sendEmail() {
+    var required = ['to_email','contact_name','booking_ref','production_name','prod_company','start_date','end_date'];
+    var missing  = false;
+    required.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el.value.trim()) { el.classList.add('required-empty'); missing = true; }
+      else { el.classList.remove('required-empty'); }
+    });
+    if (!currentSite) { showToast('Please select a site first', 'error'); return; }
+    if (missing)       { showToast('Please fill in all required fields', 'error'); return; }
+
+    var toEmails  = g('to_email').split(',').map(function(e){ return e.trim(); }).filter(Boolean);
+    var fromEmail = document.getElementById('from_email').value;
+    var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
+    var keys      = getKeys();
+    if (!keys.resend) { showToast('Resend API key not set — click ⚙ API Keys', 'error'); return; }
+
+    var d = {
+      to_emails:          toEmails,
+      contact_name:       g('contact_name'),
+      booking_ref:        g('booking_ref'),
+      production_name:    g('production_name'),
+      prod_company:       g('prod_company'),
+      prod_title:         g('prod_title') || g('production_name'),
+      start_date:         g('start_date'),
+      end_date:           g('end_date'),
+      prod_contact_name:  g('prod_contact_name')  || '[PROD CONTACT NAME]',
+      prod_contact_role:  g('prod_contact_role')  || 'Production',
+      prod_contact_phone: g('prod_contact_phone') || '[PHONE]',
+      your_name:          sender.name,
+      your_role:          g('your_role') || sender.title,
+      your_phone:         g('your_phone') || sender.mobile,
+      emergency_phone:    g('emergency_phone') || '[PHONE]',
+      emergency_note:     g('emergency_note')  || 'Access issues only',
+      site_name:          currentSite.site_name,
+      address:            currentSite.address,
+      w3w:                currentSite.w3w,
+      maps_url:           currentSite.maps_url,
+      steps:              getSteps(),
+      important_note:     g('note_text'),
+      site_map_url:       currentSite.site_map_url,
+      qr_data_url:        qrUploadedFile ? qrUploadedFile.dataUrl : '',
+      qr_form_url:        g('qr_form_url'),
+      sender:             sender
+    };
+
+    var attachments = [];
+    uploadedFiles.forEach(function(f){ attachments.push({ filename: f.name, content: f.base64, type: f.type }); });
+
+    var payload = {
+      from:    sender.name + ' <' + fromEmail + '>',
+      to:      d.to_emails,
+      subject: g('email_subject') || 'Unit Base Booking Confirmed — ' + d.production_name + ' | Ref: ' + d.booking_ref,
+      html:    buildEmailHTML(d)
+    };
+    if (attachments.length) payload.attachments = attachments;
+
+    document.getElementById('loadingOverlay').classList.add('show');
+    document.getElementById('sendBtn').disabled = true;
+
+    try {
+      var res  = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + keys.resend, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var json = await res.json();
+      if (res.ok) {
+        showToast('Confirmation sent to ' + d.to_emails.join(', '), 'success');
+        ['to_email','contact_name','booking_ref','production_name','prod_company','prod_title','start_date','end_date',
+         'prod_contact_name','prod_contact_role','prod_contact_phone','your_name','your_role','your_phone',
+         'emergency_phone','emergency_note','email_subject','qr_form_url'].forEach(function(id){
+          var el = document.getElementById(id); if(el) el.value = '';
+        });
+        uploadedFiles  = [];
+        qrUploadedFile = null;
+        document.getElementById('qrImagePreview').style.display = 'none';
+        document.getElementById('qrImagePlaceholder').style.display = 'block';
+        renderAttachmentChips();
+        updatePreview();
+      } else {
+        showToast('Send failed: ' + (json.message || 'Unknown error'), 'error');
+      }
+    } catch(e) {
+      showToast('Network error — check API key and connection', 'error');
+    }
+
+    document.getElementById('loadingOverlay').classList.remove('show');
+    document.getElementById('sendBtn').disabled = false;
+  }
+
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.className = 'toast ' + (type||'');
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 4000);
+  }
+
+  // Init
+  addStep(''); addStep(''); addStep('');
+  if (checkSetup()) loadSites();
+</script>
+</body>
+</html>
