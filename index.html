@@ -2180,11 +2180,38 @@
     // -- Authorised by --
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
     doc.text('AUTHORISED BY', ml, y);
-    y += 14;
+    y += 8;
+
+    // Load Dancing Script for signature
+    var sigName = authoriser.split(' - ')[0]; // Just the name, not the title
+    var sigLoaded = false;
+    try {
+      // Fetch font as base64
+      var fontRes = await fetch('https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMSo3ROp6.woff2');
+      if (fontRes.ok) {
+        var fontBuf  = await fontRes.arrayBuffer();
+        var fontB64  = btoa(String.fromCharCode.apply(null, new Uint8Array(fontBuf)));
+        doc.addFileToVFS('DancingScript.woff2', fontB64);
+        doc.addFont('DancingScript.woff2', 'DancingScript', 'normal');
+        doc.setFont('DancingScript', 'normal');
+        doc.setFontSize(22);
+        doc.setTextColor(30, 30, 30);
+        doc.text(sigName, ml, y + 10);
+        sigLoaded = true;
+      }
+    } catch(e) { sigLoaded = false; }
+
+    if (!sigLoaded) {
+      // Fallback: italic helvetica
+      doc.setFont('helvetica','italic'); doc.setFontSize(16); doc.setTextColor(30,30,30);
+      doc.text(sigName, ml, y + 10);
+    }
+
+    y += 18;
     doc.setDrawColor(26,26,26);
-    doc.line(ml, y, ml + 60, y);
+    doc.line(ml, y, ml + 65, y);
     y += 6;
-    doc.setFont('helvetica','normal');
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
     doc.text(authoriser, ml, y);
     y += 6;
     doc.text(dateStr, ml, y);
