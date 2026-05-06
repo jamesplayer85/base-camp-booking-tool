@@ -1888,6 +1888,65 @@
 
   function fmt2(n) { return '£' + (parseFloat(n)||0).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
+  function buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total) {
+    return '<div style="background:#ffffff; font-family:Arial,Helvetica,sans-serif; border-radius:6px; overflow:hidden; border:1px solid #E0DED8;">'
+      // Header — white with logo, matching booking confirmation
+      + '<div style="background:#ffffff; padding:20px 28px; border-bottom:1px solid #E8E6E0; text-align:center;">'
+      + '<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" style="height:44px; width:auto; display:block; margin:0 auto;">'
+      + '</div>'
+      // Teal banner — matching booking confirmation
+      + '<div style="background:#1E7B6B; padding:14px 28px; display:flex; justify-content:space-between; align-items:center;">'
+      + '<span style="font-size:16px; font-weight:700; color:#ffffff; letter-spacing:0.05em;">PURCHASE ORDER</span>'
+      + '<table style="border-collapse:collapse;">'
+      + '<tr><td style="font-size:12px; color:#A8D9D0; padding:1px 10px 1px 0; text-align:right;">PO #</td><td style="font-size:12px; font-weight:700; color:#ffffff;">' + escHtml(poNumber) + '</td></tr>'
+      + '<tr><td style="font-size:12px; color:#A8D9D0; padding:1px 10px 1px 0; text-align:right;">Date</td><td style="font-size:12px; font-weight:700; color:#ffffff;">' + dateStr + '</td></tr>'
+      + '</table>'
+      + '</div>'
+      // Body
+      + '<div style="padding:20px 28px;">'
+      // From / Supplier side by side
+      + '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">'
+      + '<div style="background:#F8F7F4; border-radius:6px; border:1px solid #E8E6E0; padding:12px 16px;">'
+      + '<p style="font-size:10px; font-weight:700; color:#888880; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 8px;">From</p>'
+      + '<p style="font-weight:700; font-size:13px; color:#1A1A1A; margin:0 0 4px;">Base Camp Services Ltd</p>'
+      + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">Kingsley House, 22-34 Elm Road<br>Leigh On Sea, Essex, SS19 1SN<br>info@thebasecampco.com<br>0203 369 2273</p>'
+      + '</div>'
+      + '<div style="background:#F8F7F4; border-radius:6px; border:1px solid #E8E6E0; padding:12px 16px;">'
+      + '<p style="font-size:10px; font-weight:700; color:#888880; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 8px;">Supplier</p>'
+      + (currentSite ? '<p style="font-size:11px; color:#888880; margin:0 0 4px;">' + escHtml(currentSite.site_name) + '</p>' : '')
+      + '<p style="font-weight:700; font-size:13px; color:#1A1A1A; margin:0 0 2px;">' + escHtml(supName) + '</p>'
+      + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">' + supAddr + '</p>'
+      + '</div>'
+      + '</div>'
+      // Line items table
+      + '<p style="font-size:10px; font-weight:700; color:#888880; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 8px;">Line Items</p>'
+      + '<table style="width:100%; border-collapse:collapse; background:#F8F7F4; border-radius:6px; border:1px solid #E8E6E0; margin-bottom:16px; overflow:hidden;">'
+      + '<thead><tr>'
+      + '<th style="padding:8px 12px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888880; border-bottom:1px solid #E8E6E0; font-weight:600;">Item</th>'
+      + '<th style="padding:8px 12px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888880; border-bottom:1px solid #E8E6E0; font-weight:600;">Description</th>'
+      + '<th style="padding:8px 12px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888880; border-bottom:1px solid #E8E6E0; font-weight:600;">Unit Price</th>'
+      + '<th style="padding:8px 12px; text-align:center; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888880; border-bottom:1px solid #E8E6E0; font-weight:600;">Qty</th>'
+      + '<th style="padding:8px 12px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888880; border-bottom:1px solid #E8E6E0; font-weight:600;">Total Net</th>'
+      + '</tr></thead>'
+      + '<tbody style="background:#ffffff;">' + rowsHtml + '</tbody>'
+      + '</table>'
+      // Totals
+      + '<div style="display:flex; justify-content:flex-end; margin-bottom:16px;">'
+      + '<table style="border-collapse:collapse; background:#F8F7F4; border-radius:6px; border:1px solid #E8E6E0; min-width:240px;">'
+      + '<tr><td style="padding:7px 16px; font-size:13px; color:#888880; border-bottom:1px solid #E8E6E0;">Total Net</td><td style="padding:7px 16px; font-size:13px; font-weight:700; color:#1A1A1A; text-align:right; border-bottom:1px solid #E8E6E0;">' + fmt2(totalNet) + '</td></tr>'
+      + '<tr><td style="padding:7px 16px; font-size:13px; color:#888880; border-bottom:1px solid #E8E6E0;">VAT (20%)</td><td style="padding:7px 16px; font-size:13px; font-weight:700; color:#1A1A1A; text-align:right; border-bottom:1px solid #E8E6E0;">' + fmt2(vat) + '</td></tr>'
+      + '<tr><td style="padding:9px 16px; font-size:14px; font-weight:700; color:#1A1A1A;">Total</td><td style="padding:9px 16px; font-size:14px; font-weight:700; color:#1E7B6B; text-align:right;">' + fmt2(total) + '</td></tr>'
+      + '</table>'
+      + '</div>'
+      // Authorised by
+      + '<div style="background:#F8F7F4; border-radius:6px; border:1px solid #E8E6E0; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">'
+      + '<div><p style="font-size:10px; font-weight:700; color:#888880; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 4px;">Authorised by</p><p style="font-weight:700; font-size:13px; color:#1A1A1A; margin:0;">' + escHtml(authoriser) + '</p><p style="font-size:12px; color:#888880; margin:2px 0 0;">' + dateStr + '</p></div>'
+      + '<div style="font-size:10px; color:#888880; text-align:right; line-height:1.8;">Base Camp Services Ltd &nbsp;·&nbsp; Reg: 12764362<br>VAT Reg: 356 3014 18</div>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+
   function updatePOPreview() {
     var poNumber   = (document.getElementById('po_number')||{}).value || '[PO NUMBER]';
     var dateVal    = (document.getElementById('po_date')||{}).value || '';
@@ -1902,72 +1961,46 @@
 
     var rowsHtml = items.length ? items.map(function(item){
       return '<tr>'
-        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px;">UNIT BASE HIRE FEE</td>'
-        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px;">' + escHtml(item.desc) + '</td>'
-        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
-        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px; text-align:center;">' + item.qty + '</td>'
-        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px; text-align:right; font-weight:700;">' + fmt2(item.total) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A;">UNIT BASE HIRE FEE</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A;">' + escHtml(item.desc) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:center;">' + item.qty + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; font-weight:700; color:#1A1A1A; text-align:right;">' + fmt2(item.total) + '</td>'
         + '</tr>';
-    }).join('') : '<tr><td colspan="5" style="padding:12px 10px; color:#888; font-size:12px;">Add line items above</td></tr>';
+    }).join('') : '<tr><td colspan="5" style="padding:12px; color:#888; font-size:12px; background:#fff;">Add line items above</td></tr>';
 
-    document.getElementById('poPreview').innerHTML = '<div style="border:1px solid #E0DED8; border-radius:6px; overflow:hidden;">'
-      + '<div style="background:#744210; padding:14px 20px;">'
-      + '<span style="font-size:18px; font-weight:700; color:#fff; letter-spacing:0.1em;">PURCHASE ORDER</span>'
-      + '</div>'
-      + '<div style="padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">'
-      + '<div>'
-      + '<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" style="height:40px; width:auto; display:block; margin-bottom:10px;">'
-      + '<p style="font-weight:700; font-size:13px; margin:0 0 4px;">Base Camp Services Ltd</p>'
-      + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">Kingsley House, 22-34 Elm Road<br>Leigh On Sea, Essex, SS19 1SN<br>info@thebasecampco.com<br>0203 369 2273</p>'
-      + '</div>'
-      + '<div style="text-align:right;">'
-      + '<table style="margin-left:auto; font-size:12px; border-collapse:collapse;">'
-      + '<tr><td style="color:#888; padding:3px 12px 3px 0;">PO #</td><td style="font-weight:700;">' + escHtml(poNumber) + '</td></tr>'
-      + '<tr><td style="color:#888; padding:3px 12px 3px 0;">Date</td><td style="font-weight:700;">' + dateStr + '</td></tr>'
-      + '</table>'
-      + '</div>'
-      + '</div>'
-      + '<div style="padding:0 20px 16px; background:#F8F7F4; margin:0 20px; border-radius:6px;">'
-      + '<p style="font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.08em; padding-top:14px; margin:0 0 6px;">Supplier</p>'
-      + (currentSite ? '<p style="font-size:11px; color:#888; margin:0 0 4px;">' + escHtml(currentSite.site_name) + '</p>' : '')
-      + '<p style="font-weight:700; font-size:13px; margin:0 0 2px;">' + escHtml(supName) + '</p>'
-      + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">' + supAddr + '</p>'
-      + '</div>'
-      + '<div style="padding:16px 20px;">'
-      + '<table style="width:100%; border-collapse:collapse;">'
-      + '<thead><tr style="background:#F8F7F4;">'
-      + '<th style="padding:8px 10px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Item</th>'
-      + '<th style="padding:8px 10px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Description</th>'
-      + '<th style="padding:8px 10px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Unit Price</th>'
-      + '<th style="padding:8px 10px; text-align:center; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Qty</th>'
-      + '<th style="padding:8px 10px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Total</th>'
-      + '</tr></thead>'
-      + '<tbody>' + rowsHtml + '</tbody>'
-      + '</table>'
-      + '<table style="margin-left:auto; margin-top:12px; border-collapse:collapse; font-size:13px;">'
-      + '<tr><td style="padding:5px 20px 5px 0; color:#888;">Total Net</td><td style="padding:5px 0; font-weight:700; text-align:right;">' + fmt2(totalNet) + '</td></tr>'
-      + '<tr><td style="padding:5px 20px 5px 0; color:#888;">VAT (20%)</td><td style="padding:5px 0; font-weight:700; text-align:right;">' + fmt2(vat) + '</td></tr>'
-      + '<tr style="border-top:2px solid #1A1A1A;"><td style="padding:8px 20px 5px 0; font-weight:700; font-size:14px;">Total</td><td style="padding:8px 0; font-weight:700; font-size:14px; color:#744210; text-align:right;">' + fmt2(total) + '</td></tr>'
-      + '</table>'
-      + '</div>'
-      + '<div style="padding:14px 20px; border-top:1px solid #E8E6E0; background:#F8F7F4; display:flex; justify-content:space-between; align-items:center;">'
-      + '<div><p style="font-size:11px; color:#888; margin:0 0 2px; text-transform:uppercase; letter-spacing:0.06em;">Authorised by</p><p style="font-weight:700; font-size:13px; margin:0;">' + escHtml(authoriser) + '</p><p style="font-size:12px; color:#888; margin:2px 0 0;">' + dateStr + '</p></div>'
-      + '<div style="font-size:10px; color:#888; text-align:right; line-height:1.6;">Base Camp Services Ltd &nbsp;·&nbsp; Reg: 12764362<br>VAT: 356 3014 18</div>'
-      + '</div>'
-      + '</div>';
+    var el = document.getElementById('poPreview');
+    if (el) el.innerHTML = buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total);
   }
 
   function downloadPO() {
-    var poNumber = (document.getElementById('po_number')||{}).value.trim() || 'PO';
-    var preview  = document.getElementById('poPreview');
-    if (!preview.innerHTML) { showToast('Fill in the PO details first', 'error'); return; }
+    var poNumber   = (document.getElementById('po_number')||{}).value.trim() || 'PO';
+    var dateVal    = (document.getElementById('po_date')||{}).value || '';
+    var dateStr    = dateVal ? (function(){ var p=dateVal.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; })() : '';
+    var authoriser = (document.getElementById('po_authoriser')||{}).value || '';
+    var supName    = (document.getElementById('po_supplier_name')||{}).value || '';
+    var supAddr    = ((document.getElementById('po_supplier_address')||{}).value || '').replace(/\n/g,'<br>');
+    var items      = getPOItems();
+    var totalNet   = items.reduce(function(s,i){ return s+i.total; }, 0);
+    var vat        = totalNet * 0.2;
+    var total      = totalNet + vat;
+
+    var rowsHtml = items.length ? items.map(function(item){
+      return '<tr>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px;">UNIT BASE HIRE FEE</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px;">' + escHtml(item.desc) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; text-align:center;">' + item.qty + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; font-weight:700; text-align:right;">' + fmt2(item.total) + '</td>'
+        + '</tr>';
+    }).join('') : '';
 
     var win = window.open('', '_blank');
     win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
       + '<title>Purchase Order ' + escHtml(poNumber) + '</title>'
-      + '<style>body{margin:40px; font-family:Arial,sans-serif;} @media print{body{margin:20px;}}</style>'
+      + '<style>body{margin:32px; background:#fff; font-family:Arial,Helvetica,sans-serif;} @media print{body{margin:16px;} @page{margin:12mm;}}</style>'
       + '</head><body>'
-      + preview.innerHTML
+      + buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total)
       + '<script>window.onload=function(){window.print();}<\/script>'
       + '</body></html>');
     win.document.close();
