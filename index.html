@@ -1704,10 +1704,21 @@
 
   // ── QR Card Generator ──
   var qrCardTimeout = null;
+  var qrLib = null;
+
+  function loadQRLib() {
+    return new Promise(function(resolve) {
+      if (window.QRCode) { resolve(); return; }
+      var script  = document.createElement('script');
+      script.src  = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      script.onload = resolve;
+      document.head.appendChild(script);
+    });
+  }
 
   function updateQRCard() {
     clearTimeout(qrCardTimeout);
-    qrCardTimeout = setTimeout(renderQRCard, 400);
+    qrCardTimeout = setTimeout(renderQRCard, 500);
   }
 
   async function renderQRCard() {
@@ -1716,102 +1727,145 @@
     var production = (document.getElementById('qrgen_production')||{}).value.trim() || 'PRODUCTION';
     var date       = (document.getElementById('qrgen_date')||{}).value.trim()       || '';
 
+    await loadQRLib();
+
+    // Generate QR code to a hidden div then grab its canvas/image
+    var qrContainer = document.getElementById('qrgen_hidden');
+    if (!qrContainer) {
+      qrContainer = document.createElement('div');
+      qrContainer.id = 'qrgen_hidden';
+      qrContainer.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:400px;height:400px;';
+      document.body.appendChild(qrContainer);
+    }
+    qrContainer.innerHTML = '';
+
+    var qrDataUrl = null;
+    if (url) {
+      await new Promise(function(resolve) {
+        var qr = new QRCode(qrContainer, {
+          text:          url,
+          width:         400,
+          height:        400,
+          colorDark:     '#000000',
+          colorLight:    '#ffffff',
+          correctLevel:  QRCode.CorrectLevel.H
+        });
+        setTimeout(function() {
+          var qrCanvas = qrContainer.querySelector('canvas');
+          var qrImg    = qrContainer.querySelector('img');
+          if (qrCanvas)      qrDataUrl = qrCanvas.toDataURL('image/png');
+          else if (qrImg)    qrDataUrl = qrImg.src;
+          resolve();
+        }, 300);
+      });
+    }
+
+    // Now draw the card
     var canvas = document.getElementById('qrCardCanvas');
     var ctx    = canvas.getContext('2d');
-
-    // Canvas dimensions — match template proportions
     var W = 800, H = 900;
     canvas.width = W; canvas.height = H;
 
-    // Background
+    // White background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // ── Top white section with logo ──
+    // ── Logo area (top white section) ──
+    var logoAreaH = 160;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, logoAreaH);
+
+    // Draw logo text as fallback (always works, no CORS issues)
+    ctx.fillStyle = '#1E7B6B';
+    ctx.font = 'bold 52px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('THE BASE CAMP CO.', W / 2, 100);
+
+    // Try loading the logo image over the text
     var logoImg = new Image();
     logoImg.crossOrigin = 'anonymous';
     logoImg.src = 'https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w';
-
-    await new Promise(function(resolve) {
-      logoImg.onload  = resolve;
-      logoImg.onerror = resolve;
-      setTimeout(resolve, 3000);
-    });
-
-    // Logo area
-    var logoH = 160;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, logoH);
-
-    // Draw logo centered
-    if (logoImg.complete && logoImg.naturalWidth > 0) {
-      var lw = 320, lh = 100;
-      ctx.drawImage(logoImg, (W - lw) / 2, (logoH - lh) / 2, lw, lh);
-    }
+    logoImg.onload = function() {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, logoAreaH);
+      var lw = 340, lh = 106;
+      ctx.drawImage(logoImg, (W - lw) / 2, (logoAreaH - lh) / 2, lw, lh);
+    };
 
     // ── Teal header bar ──
-    var barY = logoH;
+    var barY = logoAreaH;
     ctx.fillStyle = '#1E7B6B';
     ctx.fillRect(0, barY, W, 80);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 28px Arial, sans-serif';
+    ctx.font = 'bold 24px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('SCAN THIS QR CODE TO REGISTER YOUR VEHICLE', W / 2, barY + 50);
 
-    // ── QR code section ──
-    var qrY   = barY + 80;
-    var qrH   = 480;
+    // ── QR code area ──
+    var qrAreaY = barY + 80;
+    var qrAreaH = 480;
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, qrY, W, qrH);
+    ctx.fillRect(0, qrAreaY, W, qrAreaH);
 
-    // Teal border around QR area
+    // Teal border
     ctx.strokeStyle = '#1E7B6B';
-    ctx.lineWidth   = 6;
-    ctx.strokeRect(3, qrY + 3, W - 6, qrH - 6);
+    ctx.lineWidth   = 8;
+    ctx.strokeRect(4, qrAreaY + 4, W - 8, qrAreaH - 8);
 
-    if (url) {
-      // Fetch QR code image via Google Charts API
-      var qrApiUrl = 'https://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=' + encodeURIComponent(url) + '&choe=UTF-8';
-      var qrImg    = new Image();
-      qrImg.crossOrigin = 'anonymous';
-      qrImg.src = qrApiUrl;
-      await new Promise(function(resolve) {
-        qrImg.onload  = resolve;
-        qrImg.onerror = resolve;
-        setTimeout(resolve, 5000);
-      });
-      if (qrImg.complete && qrImg.naturalWidth > 0) {
+    if (qrDataUrl) {
+      var qrDrawImg = new Image();
+      qrDrawImg.onload = function() {
         var qrSize = 380;
-        ctx.drawImage(qrImg, (W - qrSize) / 2, qrY + (qrH - qrSize) / 2, qrSize, qrSize);
-      }
+        var qrX    = (W - qrSize) / 2;
+        var qrY2   = qrAreaY + (qrAreaH - qrSize) / 2;
+        ctx.drawImage(qrDrawImg, qrX, qrY2, qrSize, qrSize);
+      };
+      qrDrawImg.src = qrDataUrl;
     } else {
-      ctx.fillStyle = '#cccccc';
-      ctx.font = '20px Arial, sans-serif';
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = '22px Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Enter a URL to generate QR code', W / 2, qrY + qrH / 2);
+      ctx.fillText('Enter a URL above to generate QR code', W / 2, qrAreaY + qrAreaH / 2);
     }
 
     // ── Footer bar ──
-    var footY = qrY + qrH;
-    var footH = H - footY;
+    var footY = qrAreaY + qrAreaH;
     ctx.fillStyle = '#1E7B6B';
-    ctx.fillRect(0, footY, W, footH);
+    ctx.fillRect(0, footY, W, H - footY);
 
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
-    ctx.font = 'bold 30px Arial, sans-serif';
-    ctx.fillText(siteName.toUpperCase(), W / 2, footY + 54);
+    ctx.font = 'bold 28px Arial, sans-serif';
+    // Wrap long site names
+    var maxW = W - 60;
+    wrapText(ctx, siteName.toUpperCase(), W / 2, footY + 52, maxW, 36);
 
-    ctx.font = '26px Arial, sans-serif';
+    ctx.font = '24px Arial, sans-serif';
     var prodLine = 'PRODUCTION: ' + production + (date ? '   DATE: ' + date : '');
-    ctx.fillText(prodLine, W / 2, footY + 96);
+    ctx.fillText(prodLine, W / 2, footY + 100);
+  }
+
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    var words = text.split(' ');
+    var line  = '';
+    for (var i = 0; i < words.length; i++) {
+      var test = line + words[i] + ' ';
+      if (ctx.measureText(test).width > maxWidth && i > 0) {
+        ctx.fillText(line.trim(), x, y);
+        line = words[i] + ' ';
+        y   += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    ctx.fillText(line.trim(), x, y);
   }
 
   function downloadQRCard() {
     var canvas = document.getElementById('qrCardCanvas');
-    var site   = (document.getElementById('qrgen_site')||{}).value.trim() || 'QR-Card';
+    var site   = (document.getElementById('qrgen_site')||{}).value.trim()       || 'QR-Card';
     var prod   = (document.getElementById('qrgen_production')||{}).value.trim() || '';
-    var fname  = (site + (prod ? '-' + prod : '')).replace(/[^a-z0-9]/gi,'_') + '_QR.png';
+    var fname  = (site + (prod ? '-' + prod : '')).replace(/[^a-z0-9]/gi, '_') + '_QR.png';
     var link   = document.createElement('a');
     link.download = fname;
     link.href     = canvas.toDataURL('image/png');
