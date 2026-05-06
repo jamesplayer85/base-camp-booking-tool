@@ -1817,6 +1817,8 @@
     link.href     = canvas.toDataURL('image/png');
     link.click();
   }
+
+  function showToast(msg, type) {
     var t = document.getElementById('toast');
     document.getElementById('toastMsg').textContent = msg;
     t.className = 'toast ' + (type||'');
