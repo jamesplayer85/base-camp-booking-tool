@@ -2057,33 +2057,37 @@
 
     var y = mt + 28;
 
-    // -- From / PO details row --
-    // Left: company address
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
+    // -- From (left) and PO#/Date (right) --
+    doc.setFontSize(9); doc.setTextColor(26,26,26);
     var fromLines = ['Base Camp Services Ltd','Kingsley House, 22-34 Elm Road','Leigh On Sea, Essex','SS19 1SN','info@thebasecampco.com','0203 369 2273'];
     fromLines.forEach(function(line, i) {
-      if (i === 0) { doc.setFont('helvetica','bold'); } else { doc.setFont('helvetica','normal'); }
-      doc.text(line, ml, y + (i * 5));
+      doc.setFont('helvetica', i === 0 ? 'bold' : 'normal');
+      doc.text(line, ml, y + (i * 5.5));
     });
 
-    // Right: PO # and Date
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
-    doc.text('PO #', pw - mr - 40, y); doc.setFont('helvetica','bold'); doc.text(poNumber, pw - mr, y, { align: 'right' });
-    doc.setFont('helvetica','normal'); doc.text('DATE:', pw - mr - 40, y + 6); doc.setFont('helvetica','bold'); doc.text(dateStr, pw - mr, y + 6, { align: 'right' });
+    // PO # and Date - right aligned
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,26,26);
+    var poColX = pw - mr - 35;
+    doc.text('PO #', poColX, y);
+    doc.setFont('helvetica','bold');
+    doc.text(poNumber, pw - mr, y, { align: 'right' });
+    doc.setFont('helvetica','normal');
+    doc.text('DATE:', poColX, y + 6);
+    doc.setFont('helvetica','bold');
+    doc.text(dateStr, pw - mr, y + 6, { align: 'right' });
 
-    y += 36;
+    y += 38;
 
-    // -- Supplier box --
+    // -- Supplier (right-aligned, same row level) --
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,123,107);
     doc.text('SUPPLIER', pw - mr, y, { align: 'right' });
-    y += 5;
-    doc.setFont('helvetica','normal'); doc.setTextColor(26,26,26);
+    doc.setTextColor(26,26,26);
     var supLines = supName ? [supName].concat(supAddr.split('\n').filter(Boolean)) : ['[Supplier name]'];
     supLines.forEach(function(line, i) {
-      if (i === 0) doc.setFont('helvetica','bold'); else doc.setFont('helvetica','normal');
-      doc.text(line, pw - mr, y + (i * 5), { align: 'right' });
+      doc.setFont('helvetica', i === 0 ? 'bold' : 'normal');
+      doc.text(line, pw - mr, y + 5 + (i * 5.5), { align: 'right' });
     });
-    y += (supLines.length * 5) + 8;
+    y += 6 + (supLines.length * 5.5) + 8;
 
     // -- Hire description --
     if (hireDesc) {
@@ -2094,22 +2098,20 @@
     }
 
     // -- Line items table --
-    var colX   = [ml, ml+38, ml+100, ml+128, ml+148];
-    var colW   = [38, 62, 28, 20, cw-(colX[4]-ml)];
+    var colX   = [ml, ml+38, ml+105, ml+130, ml+150];
+    var colW   = [38, 67, 25, 20, cw-(colX[4]-ml)];
     var headers = ['ITEM','DESCRIPTION','UNIT PRICE','QTY','TOTAL'];
     var rowH    = 8;
     var numRows = Math.max(items.length, 5);
 
-    // Header row -- all centred
-    doc.setFillColor(248,247,244);
-    doc.rect(ml, y, cw, rowH, 'F');
-    doc.setDrawColor(232,230,224);
-    doc.rect(ml, y, cw, rowH, 'S');
+    // Header row - bold, centered, dark border
+    doc.setDrawColor(26,26,26);
+    doc.setFillColor(245,245,245);
+    doc.rect(ml, y, cw, rowH, 'FD');
     colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + rowH); });
     doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,26,26);
     headers.forEach(function(h, i) {
-      var cx = colX[i] + colW[i] / 2;
-      doc.text(h, cx, y + 5.5, { align: 'center' });
+      doc.text(h, colX[i] + colW[i]/2, y + 5.5, { align: 'center' });
     });
     y += rowH;
 
@@ -2131,45 +2133,59 @@
       var maxLines = Math.max(itemLines.length, descLines.length, 1);
       var cellH = Math.max(rowH * 2, maxLines * 5 + 6);
 
-      doc.setDrawColor(232,230,224);
+      doc.setDrawColor(26,26,26);
       doc.rect(ml, y, cw, cellH, 'S');
       colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + cellH); });
 
       if (item) {
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(26,26,26);
-        doc.text(itemLines, colX[0] + 2, y + 5);
-        doc.text(descLines, colX[1] + 2, y + 5);
+        doc.text(itemLines, colX[0] + 3, y + 5);
+        doc.text(descLines, colX[1] + 3, y + 5);
         doc.text(fmt2(item.unitPrice), colX[2] + colW[2] - 2, y + 5, { align: 'right' });
         doc.text(String(item.qty), colX[3] + colW[3]/2, y + 5, { align: 'center' });
+        doc.setFont('helvetica','bold');
         doc.text(fmt2(item.total), colX[4] + colW[4] - 2, y + 5, { align: 'right' });
       }
       y += cellH;
     }
-    y += 6;
+    y += 8;
 
     // -- Totals --
-    var totY = y;
-    var totLabelX = pw - mr - 50, totValX = pw - mr;
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
-    doc.text('TOTAL NET', totLabelX, totY, { align: 'right' }); doc.text(fmt2(totalNet), totValX, totY, { align: 'right' });
-    doc.text('VAT', totLabelX, totY + 6, { align: 'right' }); doc.text(fmt2(vat), totValX, totY + 6, { align: 'right' });
+    var totLabelX = pw - mr - 45, totValX = pw - mr;
+    doc.setFontSize(9); doc.setTextColor(26,26,26);
+    doc.setFont('helvetica','normal');
+    doc.text('TOTAL NET', totLabelX, y, { align: 'right' });
     doc.setFont('helvetica','bold');
-    doc.text('TOTAL', totLabelX, totY + 12, { align: 'right' }); doc.text(fmt2(total), totValX, totY + 12, { align: 'right' });
-    y = totY + 22;
+    doc.text(fmt2(totalNet), totValX, y, { align: 'right' });
+    y += 7;
+    doc.setFont('helvetica','normal');
+    doc.text('VAT', totLabelX, y, { align: 'right' });
+    doc.setFont('helvetica','bold');
+    doc.text(fmt2(vat), totValX, y, { align: 'right' });
+    y += 2;
+    doc.setDrawColor(26,26,26);
+    doc.line(totLabelX - 20, y, totValX, y);
+    y += 5;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text('TOTAL', totLabelX, y, { align: 'right' });
+    doc.text(fmt2(total), totValX, y, { align: 'right' });
+    y += 16;
 
     // -- Authorised by --
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,26,26);
     doc.text('AUTHORISED BY', ml, y);
-    // Signature line
-    doc.line(ml + 32, y + 8, ml + 80, y + 8);
-    y += 10;
+    y += 14;
+    doc.setDrawColor(26,26,26);
+    doc.line(ml, y, ml + 60, y);
+    y += 6;
     doc.setFont('helvetica','normal');
-    doc.text(authoriser, ml + 32, y + 4);
-    doc.text(dateStr, ml + 32, y + 9);
-    y += 20;
+    doc.text(authoriser, ml, y);
+    y += 6;
+    doc.text(dateStr, ml, y);
+    y += 16;
 
     // -- Footer --
-    doc.setDrawColor(232,230,224);
+    doc.setDrawColor(200,200,200);
     doc.line(ml, y, pw - mr, y);
     y += 5;
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(136,136,128);
