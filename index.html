@@ -131,6 +131,7 @@
     .mode-tab.active-prod { background: #1E7B6B; color: #fff; }
     .mode-tab.active-land { background: #1A3A5C; color: #fff; }
     .mode-tab.active-qrgen { background: #2D3748; color: #fff; }
+    .mode-tab.active-po    { background: #744210; color: #fff; }
     .mode-tab:not(.active-prod):not(.active-land):not(.active-info):hover { background: #1A2A26; color: #fff; }
     .mode-section { display: none; }
     .mode-section.active { display: block; }
@@ -207,11 +208,12 @@
     </div>
 
     <!-- Mode tabs -->
-    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr;">
       <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production</button>
       <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord</button>
       <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
       <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Card</button>
+      <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 Purchase Order</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -595,7 +597,82 @@
       </button>
 
     </div><!-- /section-qrgen -->
-    <div class="history-panel">
+
+    <!-- ══════════════════════════════════
+         PURCHASE ORDER MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-po">
+
+      <div class="form-card">
+        <h2>Purchase Order Details</h2>
+        <div class="field-row">
+          <div class="field">
+            <label>PO number *</label>
+            <input type="text" id="po_number" placeholder="UB3072" oninput="updatePOPreview()">
+          </div>
+          <div class="field">
+            <label>Date *</label>
+            <input type="date" id="po_date" oninput="updatePOPreview()">
+          </div>
+        </div>
+        <div class="field">
+          <label>Authorised by *</label>
+          <select class="sender-select" id="po_authoriser" onchange="updatePOPreview()">
+            <option value="James Player - Director">James Player — Director</option>
+            <option value="Tom Bosanquet - Director">Tom Bosanquet — Director</option>
+            <option value="Ben Frost - Director">Ben Frost — Director</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Supplier Details</h2>
+        <div class="field">
+          <label>Supplier name *</label>
+          <input type="text" id="po_supplier_name" placeholder="LookingForCarPark Ltd" oninput="updatePOPreview()">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Supplier address</label>
+          <textarea id="po_supplier_address" rows="3" placeholder="Langley House, Park Road&#10;London&#10;N2 8EY" oninput="updatePOPreview()"></textarea>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Line Items</h2>
+        <div id="poLineItems" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;"></div>
+        <button class="add-step-btn" onclick="addPOItem()" type="button">
+          <span style="font-size:18px;line-height:1;">+</span> Add line item
+        </button>
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+          <div style="display:flex; flex-direction:column; gap:8px; max-width:320px; margin-left:auto;">
+            <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--border);">
+              <span style="color:var(--muted);">Total Net</span>
+              <span style="font-weight:600;" id="po_total_net_display">£0.00</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--border);">
+              <span style="color:var(--muted);">VAT (20%)</span>
+              <span style="font-weight:600;" id="po_vat_display">£0.00</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:700; padding:8px 0;">
+              <span>Total</span>
+              <span id="po_total_display" style="color:var(--teal);">£0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live PO preview -->
+      <div class="form-card" id="poPreviewCard">
+        <h2>Preview</h2>
+        <div id="poPreview" style="font-family: Arial, sans-serif; font-size:12px; line-height:1.5; color:#1A1A1A; padding:10px;"></div>
+      </div>
+
+      <button class="send-btn" style="background:#744210;" onclick="downloadPO()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download purchase order as PDF
+      </button>
+
+    </div><!-- /section-po -->
       <div class="history-header" onclick="toggleHistory()">
         <h2>Booking history</h2>
         <span class="history-toggle" id="historyToggle">▼ Show</span>
@@ -1406,17 +1483,18 @@
   var currentMode = 'prod';
   function switchMode(mode) {
     currentMode = mode;
-    ['prod','land','info','qrgen'].forEach(function(m) {
+    ['prod','land','info','qrgen','po'].forEach(function(m) {
       document.getElementById('section-' + m).classList.toggle('active', m === mode);
       var tab = document.getElementById('tab-' + m);
       tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'New Booking Confirmation', land: 'Landlord Fee Summary', info: 'Site Info Sheet', qrgen: 'QR Card Generator' };
-    var subs   = { prod: 'Select a site, fill in the booking details, and send directly via Resend.', land: 'Send a fee breakdown to the property landlord.', info: 'Send site access information without hire details.', qrgen: 'Generate a branded QR card for vehicle registration.' };
+    var titles = { prod: 'New Booking Confirmation', land: 'Landlord Fee Summary', info: 'Site Info Sheet', qrgen: 'QR Card Generator', po: 'Purchase Order' };
+    var subs   = { prod: 'Select a site, fill in the booking details, and send directly via Resend.', land: 'Send a fee breakdown to the property landlord.', info: 'Send site access information without hire details.', qrgen: 'Generate a branded QR card for vehicle registration.', po: 'Generate and download a purchase order as PDF.' };
     document.getElementById('modeTitle').textContent    = titles[mode];
     document.getElementById('modeSubtitle').textContent = subs[mode];
     if (currentSite) populateModeFromSite();
     if (mode === 'qrgen') updateQRCard();
+    if (mode === 'po')    updatePOPreview();
   }
 
   function populateModeFromSite() {
@@ -1702,7 +1780,156 @@
     document.getElementById('infoSendBtn').disabled = false;
   }
 
-  // ── QR Card Generator ──
+  // ── Purchase Order ──
+  var poItemCounter = 0;
+
+  function addPOItem(desc, qty, unitPrice) {
+    poItemCounter++;
+    var id  = 'po_item_' + poItemCounter;
+    var row = document.createElement('div');
+    row.dataset.poItemId = id;
+    row.style.cssText = 'display:grid; grid-template-columns:1fr 70px 120px 120px 30px; gap:8px; align-items:center;';
+    row.innerHTML = '<input type="text" id="' + id + '_desc" value="' + escHtml(desc||'') + '" placeholder="Description" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Sans\',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
+      + '<input type="number" id="' + id + '_qty" value="' + (qty||1) + '" min="1" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:center; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 6px; outline:none;">'
+      + '<input type="number" id="' + id + '_price" value="' + (unitPrice||'') + '" placeholder="Unit £" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:right; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
+      + '<div id="' + id + '_total" style="font-family:\'DM Mono\',monospace; font-size:13px; font-weight:600; color:var(--teal); text-align:right; padding:8px 10px; background:#F8F7F4; border:1px solid var(--border); border-radius:6px;">£0.00</div>'
+      + '<button class="step-remove" type="button" onclick="removePOItem(\'' + id + '\')">×</button>';
+
+    // Column headers on first item
+    if (poItemCounter === 1) {
+      var header = document.createElement('div');
+      header.style.cssText = 'display:grid; grid-template-columns:1fr 70px 120px 120px 30px; gap:8px; margin-bottom:4px;';
+      header.innerHTML = '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Description</span>'
+        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:center;">Qty</span>'
+        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:right;">Unit price</span>'
+        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:right;">Total</span>'
+        + '<span></span>';
+      document.getElementById('poLineItems').appendChild(header);
+    }
+    document.getElementById('poLineItems').appendChild(row);
+    calcPOTotals();
+    updatePOPreview();
+  }
+
+  function removePOItem(id) {
+    var row = document.querySelector('[data-po-item-id="' + id + '"]');
+    if (row) { row.remove(); calcPOTotals(); updatePOPreview(); }
+  }
+
+  function getPOItems() {
+    return Array.from(document.querySelectorAll('[data-po-item-id]')).map(function(row) {
+      var id    = row.dataset.poItemId;
+      var desc  = (document.getElementById(id + '_desc') ||{}).value || '';
+      var qty   = parseFloat((document.getElementById(id + '_qty')  ||{}).value) || 1;
+      var price = parseFloat((document.getElementById(id + '_price')||{}).value) || 0;
+      return { desc: desc, qty: qty, unitPrice: price, total: qty * price };
+    }).filter(function(i){ return i.desc; });
+  }
+
+  function calcPOTotals() {
+    var items    = getPOItems();
+    var totalNet = items.reduce(function(s, i){ return s + i.total; }, 0);
+    var vat      = totalNet * 0.2;
+    var total    = totalNet + vat;
+
+    // Update row totals
+    Array.from(document.querySelectorAll('[data-po-item-id]')).forEach(function(row) {
+      var id    = row.dataset.poItemId;
+      var qty   = parseFloat((document.getElementById(id + '_qty')  ||{}).value) || 1;
+      var price = parseFloat((document.getElementById(id + '_price')||{}).value) || 0;
+      var el    = document.getElementById(id + '_total');
+      if (el) el.textContent = '£' + (qty * price).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+    });
+
+    document.getElementById('po_total_net_display').textContent = '£' + totalNet.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('po_vat_display').textContent       = '£' + vat.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('po_total_display').textContent     = '£' + total.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function fmt2(n) { return '£' + (parseFloat(n)||0).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+  function updatePOPreview() {
+    var poNumber   = (document.getElementById('po_number')||{}).value || '[PO NUMBER]';
+    var dateVal    = (document.getElementById('po_date')||{}).value || '';
+    var dateStr    = dateVal ? (function(){ var p=dateVal.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; })() : '[DATE]';
+    var authoriser = (document.getElementById('po_authoriser')||{}).value || '';
+    var supName    = (document.getElementById('po_supplier_name')||{}).value || '[SUPPLIER NAME]';
+    var supAddr    = ((document.getElementById('po_supplier_address')||{}).value || '').replace(/\n/g,'<br>');
+    var items      = getPOItems();
+    var totalNet   = items.reduce(function(s,i){ return s+i.total; }, 0);
+    var vat        = totalNet * 0.2;
+    var total      = totalNet + vat;
+
+    var rowsHtml = items.length ? items.map(function(item){
+      return '<tr>'
+        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px;">UNIT BASE HIRE FEE</td>'
+        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px;">' + escHtml(item.desc) + '</td>'
+        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
+        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px; text-align:center;">' + item.qty + '</td>'
+        + '<td style="padding:8px 10px; border-bottom:1px solid #E8E6E0; font-size:12px; text-align:right; font-weight:700;">' + fmt2(item.total) + '</td>'
+        + '</tr>';
+    }).join('') : '<tr><td colspan="5" style="padding:12px 10px; color:#888; font-size:12px;">Add line items above</td></tr>';
+
+    document.getElementById('poPreview').innerHTML = '<div style="border:1px solid #E0DED8; border-radius:6px; overflow:hidden;">'
+      + '<div style="background:#744210; padding:14px 20px;">'
+      + '<span style="font-size:18px; font-weight:700; color:#fff; letter-spacing:0.1em;">PURCHASE ORDER</span>'
+      + '</div>'
+      + '<div style="padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">'
+      + '<div>'
+      + '<p style="font-weight:700; font-size:13px; margin:0 0 4px;">Base Camp Services Ltd</p>'
+      + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">Kingsley House, 22-34 Elm Road<br>Leigh On Sea, Essex, SS19 1SN<br>info@thebasecampco.com<br>0203 369 2273</p>'
+      + '</div>'
+      + '<div style="text-align:right;">'
+      + '<table style="margin-left:auto; font-size:12px; border-collapse:collapse;">'
+      + '<tr><td style="color:#888; padding:3px 12px 3px 0;">PO #</td><td style="font-weight:700;">' + escHtml(poNumber) + '</td></tr>'
+      + '<tr><td style="color:#888; padding:3px 12px 3px 0;">Date</td><td style="font-weight:700;">' + dateStr + '</td></tr>'
+      + '</table>'
+      + '</div>'
+      + '</div>'
+      + '<div style="padding:0 20px 16px; background:#F8F7F4; margin:0 20px; border-radius:6px;">'
+      + '<p style="font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.08em; padding-top:14px; margin:0 0 6px;">Supplier</p>'
+      + '<p style="font-weight:700; font-size:13px; margin:0 0 2px;">' + escHtml(supName) + '</p>'
+      + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">' + supAddr + '</p>'
+      + '</div>'
+      + '<div style="padding:16px 20px;">'
+      + '<table style="width:100%; border-collapse:collapse;">'
+      + '<thead><tr style="background:#F8F7F4;">'
+      + '<th style="padding:8px 10px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Item</th>'
+      + '<th style="padding:8px 10px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Description</th>'
+      + '<th style="padding:8px 10px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Unit Price</th>'
+      + '<th style="padding:8px 10px; text-align:center; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Qty</th>'
+      + '<th style="padding:8px 10px; text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#888; border-bottom:2px solid #E0DED8;">Total</th>'
+      + '</tr></thead>'
+      + '<tbody>' + rowsHtml + '</tbody>'
+      + '</table>'
+      + '<table style="margin-left:auto; margin-top:12px; border-collapse:collapse; font-size:13px;">'
+      + '<tr><td style="padding:5px 20px 5px 0; color:#888;">Total Net</td><td style="padding:5px 0; font-weight:700; text-align:right;">' + fmt2(totalNet) + '</td></tr>'
+      + '<tr><td style="padding:5px 20px 5px 0; color:#888;">VAT (20%)</td><td style="padding:5px 0; font-weight:700; text-align:right;">' + fmt2(vat) + '</td></tr>'
+      + '<tr style="border-top:2px solid #1A1A1A;"><td style="padding:8px 20px 5px 0; font-weight:700; font-size:14px;">Total</td><td style="padding:8px 0; font-weight:700; font-size:14px; color:#744210; text-align:right;">' + fmt2(total) + '</td></tr>'
+      + '</table>'
+      + '</div>'
+      + '<div style="padding:14px 20px; border-top:1px solid #E8E6E0; background:#F8F7F4; display:flex; justify-content:space-between; align-items:center;">'
+      + '<div><p style="font-size:11px; color:#888; margin:0 0 2px; text-transform:uppercase; letter-spacing:0.06em;">Authorised by</p><p style="font-weight:700; font-size:13px; margin:0;">' + escHtml(authoriser) + '</p><p style="font-size:12px; color:#888; margin:2px 0 0;">' + dateStr + '</p></div>'
+      + '<div style="font-size:10px; color:#888; text-align:right; line-height:1.6;">Base Camp Services Ltd &nbsp;·&nbsp; Reg: 12764362<br>VAT: 356 3014 18</div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function downloadPO() {
+    var poNumber = (document.getElementById('po_number')||{}).value.trim() || 'PO';
+    var preview  = document.getElementById('poPreview');
+    if (!preview.innerHTML) { showToast('Fill in the PO details first', 'error'); return; }
+
+    var win = window.open('', '_blank');
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      + '<title>Purchase Order ' + escHtml(poNumber) + '</title>'
+      + '<style>body{margin:40px; font-family:Arial,sans-serif;} @media print{body{margin:20px;}}</style>'
+      + '</head><body>'
+      + preview.innerHTML
+      + '<script>window.onload=function(){window.print();}<\/script>'
+      + '</body></html>');
+    win.document.close();
+  }
   var qrCardTimeout = null;
   var qrLib = null;
 
@@ -1882,6 +2109,11 @@
 
   // Init
   addStep(''); addStep(''); addStep('');
+  // Set PO date to today by default
+  var todayStr = new Date().toISOString().slice(0,10);
+  var poDateEl = document.getElementById('po_date');
+  if (poDateEl) poDateEl.value = todayStr;
+  addPOItem();
   updatePreview();
   if (checkSetup()) loadSites();
 </script>
