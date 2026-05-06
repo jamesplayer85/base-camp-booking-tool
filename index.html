@@ -1818,14 +1818,16 @@
     var id  = 'po_item_' + poItemCounter;
     var row = document.createElement('div');
     row.dataset.poItemId = id;
-    row.style.cssText = 'display:grid; grid-template-columns:140px 1fr 60px 110px 110px 110px 30px; gap:8px; align-items:center;';
-    row.innerHTML = '<input type="text" id="' + id + '_item" value="UNIT BASE HIRE FEE" placeholder="Item" oninput="updatePOPreview();" style="font-family:\'DM Sans\',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
-      + '<input type="text" id="' + id + '_desc" value="' + escHtml(desc||'') + '" placeholder="Description" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Sans\',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
-      + '<input type="number" id="' + id + '_qty" value="' + (qty||1) + '" min="1" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:center; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 6px; outline:none;">'
-      + '<input type="number" id="' + id + '_ex" value="' + (unitPrice||'') + '" placeholder="Ex VAT £" oninput="onPOExChange(\'' + id + '\'); calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:right; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
-      + '<input type="number" id="' + id + '_inc" value="' + (unitPrice ? (unitPrice*1.2).toFixed(2) : '') + '" placeholder="Inc VAT £" oninput="onPOIncChange(\'' + id + '\'); calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:right; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
+    row.style.cssText = 'display:grid; grid-template-columns:140px 1fr 60px 110px 110px 110px 30px; gap:8px; align-items:start;';
+    var taStyle = 'font-family:\'DM Sans\',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none; resize:vertical; min-height:70px; width:100%;';
+    var numStyle = 'font-family:\'DM Mono\',monospace; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none; width:100%;';
+    row.innerHTML = '<textarea id="' + id + '_item" placeholder="Item" oninput="updatePOPreview();" style="' + taStyle + '">' + escHtml('UNIT BASE HIRE FEE') + '</textarea>'
+      + '<textarea id="' + id + '_desc" placeholder="Description (use Enter for new lines)" oninput="calcPOTotals(); updatePOPreview();" style="' + taStyle + '">' + escHtml(desc||'') + '</textarea>'
+      + '<input type="number" id="' + id + '_qty" value="' + (qty||1) + '" min="1" oninput="calcPOTotals(); updatePOPreview();" style="' + numStyle + ' text-align:center; margin-top:0;">'
+      + '<input type="number" id="' + id + '_ex" value="' + (unitPrice||'') + '" placeholder="Ex VAT £" oninput="onPOExChange(\'' + id + '\'); calcPOTotals(); updatePOPreview();" style="' + numStyle + ' text-align:right;">'
+      + '<input type="number" id="' + id + '_inc" value="' + (unitPrice ? (unitPrice*1.2).toFixed(2) : '') + '" placeholder="Inc VAT £" oninput="onPOIncChange(\'' + id + '\'); calcPOTotals(); updatePOPreview();" style="' + numStyle + ' text-align:right;">'
       + '<div id="' + id + '_total" style="font-family:\'DM Mono\',monospace; font-size:13px; font-weight:600; color:var(--teal); text-align:right; padding:8px 10px; background:#F8F7F4; border:1px solid var(--border); border-radius:6px;">£0.00</div>'
-      + '<button class="step-remove" type="button" onclick="removePOItem(\'' + id + '\')">×</button>';
+      + '<button class="step-remove" type="button" onclick="removePOItem(\'' + id + '\')" style="margin-top:4px;">×</button>';
 
     if (poItemCounter === 1) {
       var header = document.createElement('div');
@@ -1970,11 +1972,11 @@
 
     var rowsHtml = items.length ? items.map(function(item){
       return '<tr>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A;">' + escHtml(item.item) + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A;">' + escHtml(item.desc) + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:center;">' + item.qty + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; font-weight:700; color:#1A1A1A; text-align:right;">' + fmt2(item.total) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; vertical-align:top; white-space:pre-line;">' + escHtml(item.item) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; vertical-align:top; white-space:pre-line;">' + escHtml(item.desc) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:right; vertical-align:top;">' + fmt2(item.unitPrice) + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:center; vertical-align:top;">' + item.qty + '</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; font-weight:700; color:#1A1A1A; text-align:right; vertical-align:top;">' + fmt2(item.total) + '</td>'
         + '</tr>';
     }).join('') : '<tr><td colspan="5" style="padding:12px; color:#888; font-size:12px; background:#fff;">Add line items above</td></tr>';
 
@@ -2086,46 +2088,52 @@
     var colW   = [38, 62, 28, 20, cw-(colX[4]-ml)];
     var headers = ['ITEM','DESCRIPTION','UNIT PRICE','QTY','TOTAL'];
     var rowH    = 8;
-    var numRows = Math.max(items.length, 5); // at least 5 rows like the template
+    var numRows = Math.max(items.length, 5);
 
-    // Header row
+    // Header row — all centred
     doc.setFillColor(...light);
     doc.rect(ml, y, cw, rowH, 'F');
     doc.setDrawColor(...border);
     doc.rect(ml, y, cw, rowH, 'S');
+    colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + rowH); });
     doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...dark);
     headers.forEach(function(h, i) {
-      var x = i === 4 ? colX[4] + colW[4] - 2 : colX[i] + 2;
-      var align = i >= 2 ? 'right' : 'left';
-      doc.text(h, x, y + 5.5, { align: align });
+      var cx = colX[i] + colW[i] / 2;
+      doc.text(h, cx, y + 5.5, { align: 'center' });
     });
-    // Vertical borders in header
-    colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + rowH); });
     y += rowH;
 
-    // Data rows
-    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    // Data rows — multi-line support
     for (var ri = 0; ri < numRows; ri++) {
       var item = items[ri];
-      doc.setDrawColor(...border);
-      doc.rect(ml, y, cw, rowH * 2, 'S');
-      colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + rowH * 2); });
+      // Calculate row height based on content
+      var itemLines = item ? doc.splitTextToSize(item.item || '', colW[0] - 4) : [''];
+      var descLines = item ? doc.splitTextToSize(item.desc || '', colW[1] - 4) : [''];
+      // Also split on manual newlines
       if (item) {
-        doc.setTextColor(...dark);
-        // Item — wrap to 2 lines
-        var itemLines = doc.splitTextToSize(item.item || '', colW[0] - 4);
-        doc.text(itemLines.slice(0,2), colX[0] + 2, y + 5.5);
-        // Description
-        var descLines = doc.splitTextToSize(item.desc || '', colW[1] - 4);
-        doc.text(descLines.slice(0,2), colX[1] + 2, y + 5.5);
-        // Unit price
-        doc.text(fmt2(item.unitPrice), colX[2] + colW[2] - 2, y + 5.5, { align: 'right' });
-        // Qty
-        doc.text(String(item.qty), colX[3] + colW[3] - 2, y + 5.5, { align: 'right' });
-        // Total
-        doc.text(fmt2(item.total), colX[4] + colW[4] - 2, y + 5.5, { align: 'right' });
+        itemLines = (item.item || '').split('\n').reduce(function(acc, l) {
+          return acc.concat(doc.splitTextToSize(l, colW[0] - 4));
+        }, []);
+        descLines = (item.desc || '').split('\n').reduce(function(acc, l) {
+          return acc.concat(doc.splitTextToSize(l, colW[1] - 4));
+        }, []);
       }
-      y += rowH * 2;
+      var maxLines = Math.max(itemLines.length, descLines.length, 1);
+      var cellH = Math.max(rowH * 2, maxLines * 5 + 6);
+
+      doc.setDrawColor(...border);
+      doc.rect(ml, y, cw, cellH, 'S');
+      colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + cellH); });
+
+      if (item) {
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...dark);
+        doc.text(itemLines, colX[0] + 2, y + 5);
+        doc.text(descLines, colX[1] + 2, y + 5);
+        doc.text(fmt2(item.unitPrice), colX[2] + colW[2] - 2, y + 5, { align: 'right' });
+        doc.text(String(item.qty), colX[3] + colW[3]/2, y + 5, { align: 'center' });
+        doc.text(fmt2(item.total), colX[4] + colW[4] - 2, y + 5, { align: 'right' });
+      }
+      y += cellH;
     }
     y += 6;
 
