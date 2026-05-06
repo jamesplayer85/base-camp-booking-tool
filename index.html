@@ -666,7 +666,7 @@
 
       <button class="send-btn" style="background:#744210;" onclick="downloadPO()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download purchase order as PDF
+        Download PO as PDF
       </button>
 
     </div><!-- /section-po -->
@@ -1982,42 +1982,183 @@
     if (el) el.innerHTML = buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total, hireDesc);
   }
 
-  function downloadPO() {
+  async function downloadPO() {
     var poNumber   = (document.getElementById('po_number')||{}).value.trim() || 'PO';
     var dateVal    = (document.getElementById('po_date')||{}).value || '';
     var dateStr    = dateVal ? (function(){ var p=dateVal.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; })() : '';
     var authoriser = (document.getElementById('po_authoriser')||{}).value || '';
     var supName    = (document.getElementById('po_supplier_name')||{}).value || '';
-    var supAddr    = ((document.getElementById('po_supplier_address')||{}).value || '').replace(/\n/g,'<br>');
-    var hireDesc   = ((document.getElementById('po_hire_desc')||{}).value || '').replace(/\n/g,'<br>');
+    var supAddr    = (document.getElementById('po_supplier_address')||{}).value || '';
+    var hireDesc   = (document.getElementById('po_hire_desc')||{}).value || '';
     var items      = getPOItems();
     var totalNet   = items.reduce(function(s,i){ return s+i.total; }, 0);
     var vat        = totalNet * 0.2;
     var total      = totalNet + vat;
 
-    var rowsHtml = items.length ? items.map(function(item){
-      return '<tr>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px;">' + escHtml(item.item) + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px;">' + escHtml(item.desc) + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; text-align:center;">' + item.qty + '</td>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; font-weight:700; text-align:right;">' + fmt2(item.total) + '</td>'
-        + '</tr>';
-    }).join('') : '';
+    // Load jsPDF
+    if (!window.jspdf) {
+      await new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
 
-    var win = window.open('', '_blank');
-    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
-      + '<title> </title>'
-      + '<style>'
-      + 'html,body{margin:0;padding:0;background:#fff;font-family:Arial,Helvetica,sans-serif;}'
-      + 'body{padding:24px;}'
-      + '@media print{html,body{padding:0;margin:0;}@page{margin:10mm;size:A4;}}'
-      + '</style>'
-      + '</head><body>'
-      + buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total, hireDesc)
-      + '<script>window.onload=function(){window.print();}<\/script>'
-      + '</body></html>');
-    win.document.close();
+    var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    var pw = 210, ph = 297;
+    var ml = 15, mr = 15, mt = 15;
+    var cw = pw - ml - mr; // content width = 180mm
+
+    // ── Colours ──
+    var teal   = [30, 123, 107];
+    var dark   = [26, 26, 26];
+    var grey   = [136, 136, 128];
+    var light  = [248, 247, 244];
+    var border = [232, 230, 224];
+
+    // ── Logo ──
+    var logoLoaded = false;
+    try {
+      var logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.src = 'https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w';
+      await new Promise(function(resolve) { logoImg.onload = resolve; logoImg.onerror = resolve; setTimeout(resolve, 3000); });
+      if (logoImg.naturalWidth > 0) {
+        var cvs = document.createElement('canvas');
+        cvs.width = logoImg.naturalWidth; cvs.height = logoImg.naturalHeight;
+        cvs.getContext('2d').drawImage(logoImg, 0, 0);
+        var logoData = cvs.toDataURL('image/jpeg', 0.95);
+        var logoW = 45, logoH = logoW * (logoImg.naturalHeight / logoImg.naturalWidth);
+        doc.addImage(logoData, 'JPEG', ml, mt, logoW, logoH);
+        logoLoaded = true;
+      }
+    } catch(e) {}
+    if (!logoLoaded) {
+      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(...teal);
+      doc.text('THE BASE CAMP CO.', ml, mt + 10);
+    }
+
+    // ── PURCHASE ORDER title ──
+    doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(...teal);
+    doc.text('PURCHASE ORDER', pw - mr, mt + 10, { align: 'right' });
+
+    var y = mt + 28;
+
+    // ── From / PO details row ──
+    // Left: company address
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    var fromLines = ['Base Camp Services Ltd','Kingsley House, 22-34 Elm Road','Leigh On Sea, Essex','SS19 1SN','info@thebasecampco.com','0203 369 2273'];
+    fromLines.forEach(function(line, i) {
+      if (i === 0) { doc.setFont('helvetica','bold'); } else { doc.setFont('helvetica','normal'); }
+      doc.text(line, ml, y + (i * 5));
+    });
+
+    // Right: PO # and Date
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    doc.text('PO #', pw - mr - 40, y); doc.setFont('helvetica','bold'); doc.text(poNumber, pw - mr, y, { align: 'right' });
+    doc.setFont('helvetica','normal'); doc.text('DATE:', pw - mr - 40, y + 6); doc.setFont('helvetica','bold'); doc.text(dateStr, pw - mr, y + 6, { align: 'right' });
+
+    y += 36;
+
+    // ── Supplier box ──
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...teal);
+    doc.text('SUPPLIER', pw - mr, y, { align: 'right' });
+    y += 5;
+    doc.setFont('helvetica','normal'); doc.setTextColor(...dark);
+    var supLines = supName ? [supName].concat(supAddr.split('\n').filter(Boolean)) : ['[Supplier name]'];
+    supLines.forEach(function(line, i) {
+      if (i === 0) doc.setFont('helvetica','bold'); else doc.setFont('helvetica','normal');
+      doc.text(line, pw - mr, y + (i * 5), { align: 'right' });
+    });
+    y += (supLines.length * 5) + 8;
+
+    // ── Hire description ──
+    if (hireDesc) {
+      doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(...grey);
+      var hireLines = doc.splitTextToSize(hireDesc, cw);
+      doc.text(hireLines, ml, y);
+      y += (hireLines.length * 5) + 4;
+    }
+
+    // ── Line items table ──
+    var colX   = [ml, ml+38, ml+100, ml+128, ml+148];
+    var colW   = [38, 62, 28, 20, cw-(colX[4]-ml)];
+    var headers = ['ITEM','DESCRIPTION','UNIT PRICE','QTY','TOTAL'];
+    var rowH    = 8;
+    var numRows = Math.max(items.length, 5); // at least 5 rows like the template
+
+    // Header row
+    doc.setFillColor(...light);
+    doc.rect(ml, y, cw, rowH, 'F');
+    doc.setDrawColor(...border);
+    doc.rect(ml, y, cw, rowH, 'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...dark);
+    headers.forEach(function(h, i) {
+      var x = i === 4 ? colX[4] + colW[4] - 2 : colX[i] + 2;
+      var align = i >= 2 ? 'right' : 'left';
+      doc.text(h, x, y + 5.5, { align: align });
+    });
+    // Vertical borders in header
+    colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + rowH); });
+    y += rowH;
+
+    // Data rows
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    for (var ri = 0; ri < numRows; ri++) {
+      var item = items[ri];
+      doc.setDrawColor(...border);
+      doc.rect(ml, y, cw, rowH * 2, 'S');
+      colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + rowH * 2); });
+      if (item) {
+        doc.setTextColor(...dark);
+        // Item — wrap to 2 lines
+        var itemLines = doc.splitTextToSize(item.item || '', colW[0] - 4);
+        doc.text(itemLines.slice(0,2), colX[0] + 2, y + 5.5);
+        // Description
+        var descLines = doc.splitTextToSize(item.desc || '', colW[1] - 4);
+        doc.text(descLines.slice(0,2), colX[1] + 2, y + 5.5);
+        // Unit price
+        doc.text(fmt2(item.unitPrice), colX[2] + colW[2] - 2, y + 5.5, { align: 'right' });
+        // Qty
+        doc.text(String(item.qty), colX[3] + colW[3] - 2, y + 5.5, { align: 'right' });
+        // Total
+        doc.text(fmt2(item.total), colX[4] + colW[4] - 2, y + 5.5, { align: 'right' });
+      }
+      y += rowH * 2;
+    }
+    y += 6;
+
+    // ── Totals ──
+    var totY = y;
+    var totLabelX = pw - mr - 50, totValX = pw - mr;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    doc.text('TOTAL NET', totLabelX, totY, { align: 'right' }); doc.text(fmt2(totalNet), totValX, totY, { align: 'right' });
+    doc.text('VAT', totLabelX, totY + 6, { align: 'right' }); doc.text(fmt2(vat), totValX, totY + 6, { align: 'right' });
+    doc.setFont('helvetica','bold');
+    doc.text('TOTAL', totLabelX, totY + 12, { align: 'right' }); doc.text(fmt2(total), totValX, totY + 12, { align: 'right' });
+    y = totY + 22;
+
+    // ── Authorised by ──
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    doc.text('AUTHORISED BY', ml, y);
+    // Signature line
+    doc.line(ml + 32, y + 8, ml + 80, y + 8);
+    y += 10;
+    doc.setFont('helvetica','normal');
+    doc.text(authoriser, ml + 32, y + 4);
+    doc.text(dateStr, ml + 32, y + 9);
+    y += 20;
+
+    // ── Footer ──
+    doc.setDrawColor(...border);
+    doc.line(ml, y, pw - mr, y);
+    y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...grey);
+    doc.text('Base Camp Services Ltd', pw/2, y, { align: 'center' });
+    doc.text('Registered Company Number: 12764362     VAT Registration Number: 356 3014 18', pw/2, y + 5, { align: 'center' });
+
+    doc.save('PO_' + poNumber + '.pdf');
   }
   var qrCardTimeout = null;
   var qrLib = null;
