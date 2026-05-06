@@ -130,13 +130,15 @@
     .history-toggle { font-size: 12px; color: var(--muted); }
     .history-body { display: none; }
     .history-body.open { display: block; }
-    .history-row { display: grid; grid-template-columns: 90px 1fr 1fr 80px; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center; cursor: pointer; transition: background 0.1s; }
+    .history-row { display: grid; grid-template-columns: 90px 1fr 1fr 70px 70px; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center; }
     .history-row:last-child { border-bottom: none; }
-    .history-row:hover { background: var(--teal-light); }
     .history-row .h-date { color: var(--muted); font-size: 11px; }
     .history-row .h-site { font-weight: 600; color: var(--dark); }
     .history-row .h-prod { color: var(--mid); }
     .history-row .h-sender { color: var(--muted); font-size: 11px; text-align: right; }
+    .history-row .h-resend { text-align: right; }
+    .resend-btn { font-size: 11px; font-weight: 600; color: var(--teal); background: var(--teal-light); border: 1px solid var(--teal-mid); border-radius: 4px; padding: 3px 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; white-space: nowrap; }
+    .resend-btn:hover { background: #cdeee8; }
     .history-empty { padding: 20px; font-size: 13px; color: var(--muted); text-align: center; }
     .draft-bar { display: flex; gap: 10px; margin-bottom: 20px; }
     .draft-btn { flex: 1; padding: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
@@ -293,12 +295,6 @@
         <div class="field"><label>Role</label><input type="text" id="your_role" placeholder="Director" oninput="updatePreview()"></div>
         <div class="field"><label>Phone</label><input type="text" id="your_phone" placeholder="+44 7843 421278" oninput="updatePreview()" readonly style="background:#F8F7F4; color:var(--muted);"></div>
       </div>
-      <div class="contact-label" style="margin-top:16px;">24hr emergency line</div>
-      <div class="field" style="max-width:200px;">
-        <label>Note</label>
-        <input type="text" id="emergency_note" placeholder="Access issues only" oninput="updatePreview()">
-      </div>
-      <p style="font-size:12px; color:var(--muted); margin-top:6px;" id="emergency_display">Emergency line: 0203 369 2273</p>
     </div>
 
     <div class="form-card">
@@ -384,8 +380,26 @@
         <span class="history-toggle" id="historyToggle">▼ Show</span>
       </div>
       <div class="history-body" id="historyBody">
+        <div style="padding:14px 20px; border-bottom:1px solid var(--border);">
+          <input type="text" id="historySearch" placeholder="Search by site, production or ref…" oninput="filterHistory()" style="width:100%; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 12px; outline:none;">
+        </div>
         <div class="history-empty" id="historyEmpty">Loading history…</div>
         <div id="historyList"></div>
+      </div>
+    </div>
+
+    <!-- Resend confirmation dialog -->
+    <div class="setup-overlay" id="resendOverlay">
+      <div class="setup-card">
+        <h2>Resend booking confirmation?</h2>
+        <p id="resendMsg" style="margin-bottom:16px;"></p>
+        <div style="background:#FFF8EC; border-left:3px solid #E8A020; border-radius:0 6px 6px 0; padding:12px 14px; margin-bottom:24px; font-size:13px; color:#6A4A10; line-height:1.6;">
+          <strong style="color:#4A3008;">Important:</strong> Any attachments from the original send (hire agreement, invoice etc.) will <strong>not</strong> be included in the resend — please attach these manually if required.
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="setup-save" onclick="confirmResend()" style="flex:1;">Resend</button>
+          <button onclick="document.getElementById('resendOverlay').classList.remove('show')" style="flex:1; padding:13px; background:none; border:1px solid var(--border); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; color:var(--mid); cursor:pointer;">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -726,8 +740,6 @@
     pv('pv_your_name',g('your_name')          || '[YOUR NAME]');
     pv('pv_your_role',g('your_role')          || 'The Base Camp Co.');
     pv('pv_your_phone',g('your_phone')        || '[PHONE]');
-    pv('pv_em_phone', g('emergency_phone')    || '[PHONE]');
-    pv('pv_em_note',  g('emergency_note')     || 'Access issues only');
     pv('pv_site_inline', currentSite ? currentSite.site_name : '[SITE]');
 
     var fromEmail = (document.getElementById('from_email')||{}).value || 'james@thebasecampco.com';
@@ -762,11 +774,7 @@
 
       var noteBox = document.getElementById('pv_note_box');
       var note = g('note_text');
-      if (note) { 
-  noteBox.style.display = 'block'; 
-  var el = document.getElementById('pv_note');
-  if(el) el.innerHTML = (note||'').replace(/\n/g,'<br>');
-}
+      if (note) { noteBox.style.display = 'block'; pv('pv_note', note); } else { noteBox.style.display = 'none'; }
 
       var mapImg = document.getElementById('pv_map_img');
       if (currentSite.site_map_url) { mapImg.src = currentSite.site_map_url; mapImg.style.display = 'block'; document.getElementById('pv_map_ph').style.display = 'none'; }
@@ -801,8 +809,7 @@
       ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>'
         +'<td width="3" style="background:#E8A020;border-radius:3px 0 0 3px;">&nbsp;</td>'
         +'<td style="background:#FFF8EC;border-radius:0 6px 6px 0;padding:12px 14px;font-size:13px;color:#6A4A10;line-height:1.55;">'
-        +'<strong style="color:#4A3008;">Important:</strong> '+(d.important_note||'').replace(/\n/g,'<br>')
-        +'</td></tr></table>' : '';
+        +'<strong style="color:#4A3008;">Important:</strong> '+d.important_note+'</td></tr></table>' : '';
 
     var mapHtml = d.site_map_url
       ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
@@ -827,7 +834,7 @@
 
     var contactsHtml = '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.prod_contact_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.prod_contact_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.prod_contact_phone+'</td></tr>'
       + extraContactsHtml
-      + '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.your_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.your_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.your_phone+'</td></tr>'
+      + '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;">'+d.your_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;">'+d.your_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.your_phone+'</td></tr>';
     if (d.sender) {
       footerHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #EAE8E2;padding-top:20px;"><tr><td>'
         +'<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="120" style="display:block;width:120px;height:auto;margin-bottom:14px;">'
@@ -918,8 +925,6 @@
       your_name:          sender.name,
       your_role:          g('your_role') || sender.title,
       your_phone:         g('your_phone') || sender.mobile,
-      emergency_phone:    '0203 369 2273',
-      emergency_note:     g('emergency_note') || 'Access issues only',
       extra_contacts:     getExtraContacts(),
       site_name:          currentSite.site_name,
       address:            currentSite.address,
@@ -1061,10 +1066,13 @@
   }
 
   // ── Booking history ──
+  var allBookings = [];
+  var pendingResend = null;
+
   function toggleHistory() {
-    var body    = document.getElementById('historyBody');
-    var toggle  = document.getElementById('historyToggle');
-    var isOpen  = body.classList.contains('open');
+    var body   = document.getElementById('historyBody');
+    var toggle = document.getElementById('historyToggle');
+    var isOpen = body.classList.contains('open');
     body.classList.toggle('open');
     toggle.textContent = isOpen ? '▼ Show' : '▲ Hide';
     if (!isOpen) loadHistory();
@@ -1074,27 +1082,117 @@
     try {
       var res  = await fetch(WORKER_URL + '/history');
       var json = await res.json();
-      var list = document.getElementById('historyList');
-      var empty = document.getElementById('historyEmpty');
-      if (!json.bookings || !json.bookings.length) {
-        empty.textContent = 'No bookings sent yet.';
-        list.innerHTML = '';
-        return;
-      }
-      empty.style.display = 'none';
-      list.innerHTML = json.bookings.map(function(b) {
-        var date = new Date(b.sent_at);
-        var dateStr = date.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' });
-        return '<div class="history-row" title="Sent to: ' + escHtml(b.recipient) + '">'
-          + '<span class="h-date">' + dateStr + '</span>'
-          + '<span class="h-site">' + escHtml(b.site_name || '') + '</span>'
-          + '<span class="h-prod">' + escHtml(b.production || '') + ' · ' + escHtml(b.booking_ref || '') + '</span>'
-          + '<span class="h-sender">' + escHtml((b.sender || '').split(' ')[0]) + '</span>'
-          + '</div>';
-      }).join('');
+      allBookings = json.bookings || [];
+      renderHistory(allBookings);
     } catch(e) {
       document.getElementById('historyEmpty').textContent = 'Could not load history.';
     }
+  }
+
+  function filterHistory() {
+    var term = (document.getElementById('historySearch').value || '').toLowerCase();
+    if (!term) { renderHistory(allBookings); return; }
+    renderHistory(allBookings.filter(function(b){
+      return (b.site_name   || '').toLowerCase().includes(term)
+          || (b.production  || '').toLowerCase().includes(term)
+          || (b.booking_ref || '').toLowerCase().includes(term)
+          || (b.recipient   || '').toLowerCase().includes(term);
+    }));
+  }
+
+  function renderHistory(bookings) {
+    var list  = document.getElementById('historyList');
+    var empty = document.getElementById('historyEmpty');
+    if (!bookings.length) {
+      empty.textContent = allBookings.length ? 'No results match your search.' : 'No bookings sent yet.';
+      empty.style.display = 'block';
+      list.innerHTML = '';
+      return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = bookings.map(function(b) {
+      var date    = new Date(b.sent_at);
+      var dateStr = date.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' });
+      var dataAttr = 'data-booking=\'' + escHtml(JSON.stringify(b)) + '\'';
+      return '<div class="history-row" title="Sent to: ' + escHtml(b.recipient||'') + '">'
+        + '<span class="h-date">' + dateStr + '</span>'
+        + '<span class="h-site">' + escHtml(b.site_name||'') + '</span>'
+        + '<span class="h-prod">' + escHtml(b.production||'') + ' · ' + escHtml(b.booking_ref||'') + '</span>'
+        + '<span class="h-sender">' + escHtml((b.sender||'').split(' ')[0]) + '</span>'
+        + '<span class="h-resend"><button class="resend-btn" onclick="triggerResend(event, ' + "'" + escHtml(b.id) + "'" + ')">Resend</button></span>'
+        + '</div>';
+    }).join('');
+  }
+
+  function triggerResend(event, bookingId) {
+    event.stopPropagation();
+    var booking = allBookings.find(function(b){ return b.id === bookingId; });
+    if (!booking) return;
+    pendingResend = booking;
+    document.getElementById('resendMsg').textContent =
+      'This will resend the confirmation to ' + (booking.recipient || 'the original recipient') +
+      ' for ' + (booking.production || 'this booking') + ' at ' + (booking.site_name || '') + '.';
+    document.getElementById('resendOverlay').classList.add('show');
+  }
+
+  async function confirmResend() {
+    document.getElementById('resendOverlay').classList.remove('show');
+    if (!pendingResend) return;
+    var b      = pendingResend;
+    var sender = SENDERS[b.sender_email] || SENDERS['james@thebasecampco.com'];
+
+    // Build a minimal email from stored metadata
+    var site = sites.find(function(s){ return s.site_name === b.site_name; }) || {};
+    var d = {
+      contact_name:       b.recipient ? b.recipient.split('@')[0] : '',
+      booking_ref:        b.booking_ref  || '',
+      production_name:    b.production   || '',
+      prod_company:       b.company      || '',
+      prod_title:         b.production   || '',
+      start_date:         b.start_date   || '',
+      end_date:           b.end_date     || '',
+      prod_contact_name:  '',
+      prod_contact_role:  '',
+      prod_contact_phone: '',
+      your_name:          sender.name,
+      your_role:          sender.title,
+      your_phone:         sender.mobile,
+      emergency_phone:    '0203 369 2273',
+      emergency_note:     'Access issues only',
+      extra_contacts:     [],
+      site_name:          b.site_name    || '',
+      address:            site.address   || '',
+      w3w:                site.w3w       || '',
+      maps_url:           site.maps_url  || '',
+      steps:              [site.step1, site.step2, site.step3, site.step4].filter(Boolean),
+      important_note:     site.important_note || '',
+      site_map_url:       site.site_map_url   || '',
+      qr_data_url:        '',
+      qr_form_url:        '',
+      sender:             sender
+    };
+
+    var fromEmail = Object.keys(SENDERS).find(function(k){ return SENDERS[k].name === b.sender; }) || 'james@thebasecampco.com';
+    var payload = {
+      from:    sender.name + ' <' + fromEmail + '>',
+      to:      b.recipient ? b.recipient.split(',').map(function(e){ return e.trim(); }) : [],
+      subject: 'Unit Base Booking Confirmation — ' + d.production_name + ' | Ref: ' + d.booking_ref,
+      html:    buildEmailHTML(d)
+    };
+
+    document.getElementById('loadingOverlay').classList.add('show');
+    try {
+      var res  = await fetch(WORKER_URL + '/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var json = await res.json();
+      if (res.ok) { showToast('Resent to ' + (b.recipient || ''), 'success'); }
+      else { showToast('Resend failed: ' + (json.message || 'Unknown error'), 'error'); }
+    } catch(e) { showToast('Network error', 'error'); }
+    document.getElementById('loadingOverlay').classList.remove('show');
+    pendingResend = null;
   }
 
   function showToast(msg, type) {
@@ -1112,4 +1210,3 @@
 </script>
 </body>
 </html>
-
