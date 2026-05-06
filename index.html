@@ -130,7 +130,7 @@
     .mode-tab:last-child { border-right: none; }
     .mode-tab.active-prod { background: #1E7B6B; color: #fff; }
     .mode-tab.active-land { background: #1A3A5C; color: #fff; }
-    .mode-tab.active-info { background: #4A5568; color: #fff; }
+    .mode-tab.active-qrgen { background: #2D3748; color: #fff; }
     .mode-tab:not(.active-prod):not(.active-land):not(.active-info):hover { background: #1A2A26; color: #fff; }
     .mode-section { display: none; }
     .mode-section.active { display: block; }
@@ -207,10 +207,11 @@
     </div>
 
     <!-- Mode tabs -->
-    <div class="mode-tabs">
+    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr;">
       <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production</button>
       <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord</button>
       <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
+      <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Card</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -553,7 +554,47 @@
 
     </div><!-- /section-info -->
 
-    <!-- Booking history -->
+    <!-- ══════════════════════════════════
+         QR CARD GENERATOR MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-qrgen">
+
+      <div class="form-card">
+        <h2>QR Code Details</h2>
+        <div class="field">
+          <label>QR code URL *</label>
+          <input type="text" id="qrgen_url" placeholder="https://monday.com/forms/..." oninput="updateQRCard()">
+          <span class="hint">Paste the Monday.com form URL — the QR code will be generated automatically</span>
+        </div>
+        <div class="field">
+          <label>Site name *</label>
+          <input type="text" id="qrgen_site" placeholder="Waterloo Car Park Unit Base" oninput="updateQRCard()">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Production *</label>
+            <input type="text" id="qrgen_production" placeholder="Michael Kors" oninput="updateQRCard()">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="text" id="qrgen_date" placeholder="11/05" oninput="updateQRCard()">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Preview</h2>
+        <div style="text-align:center; padding:10px 0;">
+          <canvas id="qrCardCanvas" width="800" height="900" style="max-width:100%; height:auto; border-radius:6px; border:1px solid var(--border);"></canvas>
+        </div>
+      </div>
+
+      <button class="send-btn" style="background:#2D3748;" id="qrDownloadBtn" onclick="downloadQRCard()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download QR card as PNG
+      </button>
+
+    </div><!-- /section-qrgen -->
     <div class="history-panel">
       <div class="history-header" onclick="toggleHistory()">
         <h2>Booking history</h2>
@@ -1365,16 +1406,17 @@
   var currentMode = 'prod';
   function switchMode(mode) {
     currentMode = mode;
-    ['prod','land','info'].forEach(function(m) {
+    ['prod','land','info','qrgen'].forEach(function(m) {
       document.getElementById('section-' + m).classList.toggle('active', m === mode);
       var tab = document.getElementById('tab-' + m);
       tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'New Booking Confirmation', land: 'Landlord Fee Summary', info: 'Site Info Sheet' };
-    var subs   = { prod: 'Select a site, fill in the booking details, and send directly via Resend.', land: 'Send a fee breakdown to the property landlord.', info: 'Send site access information without hire details.' };
+    var titles = { prod: 'New Booking Confirmation', land: 'Landlord Fee Summary', info: 'Site Info Sheet', qrgen: 'QR Card Generator' };
+    var subs   = { prod: 'Select a site, fill in the booking details, and send directly via Resend.', land: 'Send a fee breakdown to the property landlord.', info: 'Send site access information without hire details.', qrgen: 'Generate a branded QR card for vehicle registration.' };
     document.getElementById('modeTitle').textContent    = titles[mode];
     document.getElementById('modeSubtitle').textContent = subs[mode];
     if (currentSite) populateModeFromSite();
+    if (mode === 'qrgen') updateQRCard();
   }
 
   function populateModeFromSite() {
@@ -1382,6 +1424,9 @@
     // Landlord — pre-fill site name
     var lsn = document.getElementById('land_site_name');
     if (lsn && !lsn.value) lsn.value = currentSite.site_name;
+    // QR card — pre-fill site name
+    var qsn = document.getElementById('qrgen_site');
+    if (qsn && !qsn.value) qsn.value = currentSite.site_name;
     // Info sheet — pre-fill steps
     if (document.getElementById('infoStepsContainer').children.length === 0) {
       ['step1','step2','step3','step4'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
@@ -1657,7 +1702,121 @@
     document.getElementById('infoSendBtn').disabled = false;
   }
 
-  function showToast(msg, type) {
+  // ── QR Card Generator ──
+  var qrCardTimeout = null;
+
+  function updateQRCard() {
+    clearTimeout(qrCardTimeout);
+    qrCardTimeout = setTimeout(renderQRCard, 400);
+  }
+
+  async function renderQRCard() {
+    var url        = (document.getElementById('qrgen_url')||{}).value.trim();
+    var siteName   = (document.getElementById('qrgen_site')||{}).value.trim()       || 'SITE NAME';
+    var production = (document.getElementById('qrgen_production')||{}).value.trim() || 'PRODUCTION';
+    var date       = (document.getElementById('qrgen_date')||{}).value.trim()       || '';
+
+    var canvas = document.getElementById('qrCardCanvas');
+    var ctx    = canvas.getContext('2d');
+
+    // Canvas dimensions — match template proportions
+    var W = 800, H = 900;
+    canvas.width = W; canvas.height = H;
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Top white section with logo ──
+    var logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = 'https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w';
+
+    await new Promise(function(resolve) {
+      logoImg.onload  = resolve;
+      logoImg.onerror = resolve;
+      setTimeout(resolve, 3000);
+    });
+
+    // Logo area
+    var logoH = 160;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, logoH);
+
+    // Draw logo centered
+    if (logoImg.complete && logoImg.naturalWidth > 0) {
+      var lw = 320, lh = 100;
+      ctx.drawImage(logoImg, (W - lw) / 2, (logoH - lh) / 2, lw, lh);
+    }
+
+    // ── Teal header bar ──
+    var barY = logoH;
+    ctx.fillStyle = '#1E7B6B';
+    ctx.fillRect(0, barY, W, 80);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('SCAN THIS QR CODE TO REGISTER YOUR VEHICLE', W / 2, barY + 50);
+
+    // ── QR code section ──
+    var qrY   = barY + 80;
+    var qrH   = 480;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, qrY, W, qrH);
+
+    // Teal border around QR area
+    ctx.strokeStyle = '#1E7B6B';
+    ctx.lineWidth   = 6;
+    ctx.strokeRect(3, qrY + 3, W - 6, qrH - 6);
+
+    if (url) {
+      // Fetch QR code image via Google Charts API
+      var qrApiUrl = 'https://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=' + encodeURIComponent(url) + '&choe=UTF-8';
+      var qrImg    = new Image();
+      qrImg.crossOrigin = 'anonymous';
+      qrImg.src = qrApiUrl;
+      await new Promise(function(resolve) {
+        qrImg.onload  = resolve;
+        qrImg.onerror = resolve;
+        setTimeout(resolve, 5000);
+      });
+      if (qrImg.complete && qrImg.naturalWidth > 0) {
+        var qrSize = 380;
+        ctx.drawImage(qrImg, (W - qrSize) / 2, qrY + (qrH - qrSize) / 2, qrSize, qrSize);
+      }
+    } else {
+      ctx.fillStyle = '#cccccc';
+      ctx.font = '20px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Enter a URL to generate QR code', W / 2, qrY + qrH / 2);
+    }
+
+    // ── Footer bar ──
+    var footY = qrY + qrH;
+    var footH = H - footY;
+    ctx.fillStyle = '#1E7B6B';
+    ctx.fillRect(0, footY, W, footH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 30px Arial, sans-serif';
+    ctx.fillText(siteName.toUpperCase(), W / 2, footY + 54);
+
+    ctx.font = '26px Arial, sans-serif';
+    var prodLine = 'PRODUCTION: ' + production + (date ? '   DATE: ' + date : '');
+    ctx.fillText(prodLine, W / 2, footY + 96);
+  }
+
+  function downloadQRCard() {
+    var canvas = document.getElementById('qrCardCanvas');
+    var site   = (document.getElementById('qrgen_site')||{}).value.trim() || 'QR-Card';
+    var prod   = (document.getElementById('qrgen_production')||{}).value.trim() || '';
+    var fname  = (site + (prod ? '-' + prod : '')).replace(/[^a-z0-9]/gi,'_') + '_QR.png';
+    var link   = document.createElement('a');
+    link.download = fname;
+    link.href     = canvas.toDataURL('image/png');
+    link.click();
+  }
     var t = document.getElementById('toast');
     document.getElementById('toastMsg').textContent = msg;
     t.className = 'toast ' + (type||'');
