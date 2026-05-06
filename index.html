@@ -209,11 +209,11 @@
 
     <!-- Mode tabs -->
     <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr;">
-      <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production</button>
-      <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord</button>
+      <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
+      <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
       <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
-      <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Card</button>
-      <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 Purchase Order</button>
+      <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Generator</button>
+      <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 PO Generator</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -586,13 +586,6 @@
         </div>
       </div>
 
-      <div class="form-card">
-        <h2>Preview</h2>
-        <div style="text-align:center; padding:10px 0;">
-          <canvas id="qrCardCanvas" width="800" height="900" style="max-width:100%; height:auto; border-radius:6px; border:1px solid var(--border);"></canvas>
-        </div>
-      </div>
-
       <button class="send-btn" style="background:#2D3748;" id="qrDownloadBtn" onclick="downloadQRCard()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download QR card as PNG
@@ -663,11 +656,6 @@
         </div>
       </div>
 
-      <div class="form-card" style="margin-top:4px;">
-        <h2>Live preview</h2>
-        <div id="poPreview" style="font-family:Arial,sans-serif; font-size:12px; line-height:1.5; color:#1A1A1A;"></div>
-      </div>
-
       <button class="send-btn" style="background:#744210;" onclick="downloadPO()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download purchase order as PDF
@@ -704,66 +692,83 @@
 
   </div>
 
-  <div class="preview-panel">
-    <h2>Email preview</h2>
-    <div class="ep">
-      <div class="ep-hdr">
-        <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co.">
-      </div>
-      <div class="ep-banner">
-        <h3>Your Unit Base booking is confirmed ✓</h3>
-        <p>Booking ref: <strong id="pv_ref" style="color:#fff;">[BOOKING REF]</strong></p>
-      </div>
-      <div class="ep-body">
-        <p style="font-size:12px; color:#1A1A1A; margin:0 0 6px;">Hi <strong id="pv_name">[NAME]</strong>,</p>
-        <p style="font-size:11px; color:#444; line-height:1.5; margin:0 0 12px;">Your unit base booking for <strong id="pv_prod">[PRODUCTION]</strong> at <strong id="pv_site_inline">[SITE]</strong> is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.</p>
-        <p class="ep-sec">Booking summary</p>
-        <div class="ep-box">
-          <div class="ep-row"><span class="ep-rl">Site</span><span class="ep-rv" id="pv_site">[SITE]</span></div>
-          <div class="ep-row"><span class="ep-rl">Address</span><span class="ep-rv" id="pv_addr">[ADDRESS]</span></div>
-          <div class="ep-row"><span class="ep-rl">What3Words</span><span class="ep-rv"><a id="pv_w3w" href="#">[///words]</a></span></div>
-          <div class="ep-row"><span class="ep-rl">Start</span><span class="ep-rv" id="pv_start">[START]</span></div>
-          <div class="ep-row"><span class="ep-rl">End</span><span class="ep-rv" id="pv_end">[END]</span></div>
-          <div class="ep-row"><span class="ep-rl">Company</span><span class="ep-rv" id="pv_company">[COMPANY]</span></div>
-          <div class="ep-row"><span class="ep-rl">Title</span><span class="ep-rv" id="pv_title">[TITLE]</span></div>
+  <div class="preview-panel" id="rightPanel">
+
+    <!-- Email preview — prod / land / info -->
+    <div id="rp_email" style="display:block;">
+      <h2 id="rp_email_title">Email preview</h2>
+      <div class="ep">
+        <div class="ep-hdr">
+          <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co.">
         </div>
-        <p class="ep-sec">Site information</p>
-        <div class="ep-box" style="font-size:11px; color:#333; line-height:1.6;">
-          <div id="pv_steps">Select a site to see steps</div>
+        <div class="ep-banner" id="rp_banner">
+          <h3>Your Unit Base booking is confirmed ✓</h3>
+          <p>Booking ref: <strong id="pv_ref" style="color:#fff;">[BOOKING REF]</strong></p>
         </div>
-        <div class="ep-note" id="pv_note_box" style="display:none;">
-          <strong>Important:</strong> <span id="pv_note"></span>
-        </div>
-        <p class="ep-sec">Site map</p>
-        <div class="ep-map">
-          <img id="pv_map_img" src="" alt="Site map" style="display:none;">
-          <p class="ep-map-ph" id="pv_map_ph">Site map from Monday</p>
-        </div>
-        <div id="pv_qr_block" style="display:none;">
-          <p class="ep-sec" style="margin-top:10px;">QR Code</p>
-          <div class="ep-map">
-            <img id="pv_qr_img" src="" alt="QR Code" style="max-width:80%; height:auto; margin:0 auto; display:block;">
+        <div class="ep-body">
+          <p style="font-size:12px; color:#1A1A1A; margin:0 0 6px;">Hi <strong id="pv_name">[NAME]</strong>,</p>
+          <p style="font-size:11px; color:#444; line-height:1.5; margin:0 0 12px;">Your unit base booking for <strong id="pv_prod">[PRODUCTION]</strong> at <strong id="pv_site_inline">[SITE]</strong> is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.</p>
+          <p class="ep-sec">Booking summary</p>
+          <div class="ep-box">
+            <div class="ep-row"><span class="ep-rl">Site</span><span class="ep-rv" id="pv_site">[SITE]</span></div>
+            <div class="ep-row"><span class="ep-rl">Address</span><span class="ep-rv" id="pv_addr">[ADDRESS]</span></div>
+            <div class="ep-row"><span class="ep-rl">What3Words</span><span class="ep-rv"><a id="pv_w3w" href="#">[///words]</a></span></div>
+            <div class="ep-row"><span class="ep-rl">Start</span><span class="ep-rv" id="pv_start">[START]</span></div>
+            <div class="ep-row"><span class="ep-rl">End</span><span class="ep-rv" id="pv_end">[END]</span></div>
+            <div class="ep-row"><span class="ep-rl">Company</span><span class="ep-rv" id="pv_company">[COMPANY]</span></div>
+            <div class="ep-row"><span class="ep-rl">Title</span><span class="ep-rv" id="pv_title">[TITLE]</span></div>
           </div>
-          <p style="font-size:10px; color:#888; margin:4px 0 10px; line-height:1.5;">All vehicle registrations must be logged by scanning the QR code with your phone camera. A direct link to the form can be found <a id="pv_qr_link" href="#" style="color:#1E7B6B;">here</a>.</p>
-        </div>
-        <p class="ep-sec" style="margin-top:10px;">Key contacts</p>
-        <div class="ep-box" style="font-size:11px;">
-          <div class="ep-row"><span class="ep-rv" id="pv_pc_name">[PROD CONTACT]</span><span class="ep-rl" style="padding-left:6px;" id="pv_pc_role">Production</span><span style="color:#1E7B6B; font-weight:700; margin-left:auto;" id="pv_pc_phone">[PHONE]</span></div>
-          <div class="ep-row" style="margin-top:4px;"><span class="ep-rv" id="pv_your_name">[YOUR NAME]</span><span class="ep-rl" style="padding-left:6px;" id="pv_your_role">The Base Camp Co.</span><span style="color:#1E7B6B; font-weight:700; margin-left:auto;" id="pv_your_phone">[PHONE]</span></div>
-        </div>
-        <div id="pv_footer" style="margin-top:16px; padding-top:14px; border-top:1px solid #EAE8E2; display:none;">
-          <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." style="width:80px; height:auto; margin-bottom:8px; display:block;">
-          <p style="font-size:12px; font-weight:700; color:#1A1A1A; margin:0 0 1px;" id="pv_footer_name">[NAME]</p>
-          <p style="font-size:11px; color:#888; margin:0 0 8px;" id="pv_footer_title">Director · The Base Camp Co.</p>
-          <table style="font-size:10px; border-collapse:collapse;">
-            <tr><td style="color:#888; padding:1px 8px 1px 0;">Email</td><td style="font-weight:600;"><a id="pv_footer_email" href="#" style="color:#1E7B6B;">[EMAIL]</a></td></tr>
-            <tr><td style="color:#888; padding:1px 8px 1px 0;">Office</td><td style="font-weight:600; color:#1A1A1A;" id="pv_footer_office">[OFFICE]</td></tr>
-            <tr><td style="color:#888; padding:1px 8px 1px 0;">Mobile</td><td style="font-weight:600; color:#1A1A1A;" id="pv_footer_mobile">[MOBILE]</td></tr>
-            <tr><td style="color:#888; padding:1px 8px 1px 0;">Web</td><td style="font-weight:600;"><a href="https://thebasecampco.com" style="color:#1E7B6B;">thebasecampco.com</a></td></tr>
-          </table>
+          <p class="ep-sec">Site information</p>
+          <div class="ep-box" style="font-size:11px; color:#333; line-height:1.6;">
+            <div id="pv_steps">Select a site to see steps</div>
+          </div>
+          <div class="ep-note" id="pv_note_box" style="display:none;">
+            <strong>Important:</strong> <span id="pv_note"></span>
+          </div>
+          <p class="ep-sec">Site map</p>
+          <div class="ep-map">
+            <img id="pv_map_img" src="" alt="Site map" style="display:none;">
+            <p class="ep-map-ph" id="pv_map_ph">Site map from Monday</p>
+          </div>
+          <div id="pv_qr_block" style="display:none;">
+            <p class="ep-sec" style="margin-top:10px;">QR Code</p>
+            <div class="ep-map">
+              <img id="pv_qr_img" src="" alt="QR Code" style="max-width:80%; height:auto; margin:0 auto; display:block;">
+            </div>
+            <p style="font-size:10px; color:#888; margin:4px 0 10px; line-height:1.5;">All vehicle registrations must be logged by scanning the QR code with your phone camera. A direct link to the form can be found <a id="pv_qr_link" href="#" style="color:#1E7B6B;">here</a>.</p>
+          </div>
+          <p class="ep-sec" style="margin-top:10px;">Key contacts</p>
+          <div class="ep-box" style="font-size:11px;">
+            <div class="ep-row"><span class="ep-rv" id="pv_pc_name">[PROD CONTACT]</span><span class="ep-rl" style="padding-left:6px;" id="pv_pc_role">Production</span><span style="color:#1E7B6B; font-weight:700; margin-left:auto;" id="pv_pc_phone">[PHONE]</span></div>
+            <div class="ep-row" style="margin-top:4px;"><span class="ep-rv" id="pv_your_name">[YOUR NAME]</span><span class="ep-rl" style="padding-left:6px;" id="pv_your_role">The Base Camp Co.</span><span style="color:#1E7B6B; font-weight:700; margin-left:auto;" id="pv_your_phone">[PHONE]</span></div>
+          </div>
+          <div id="pv_footer" style="margin-top:16px; padding-top:14px; border-top:1px solid #EAE8E2; display:none;">
+            <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." style="width:80px; height:auto; margin-bottom:8px; display:block;">
+            <p style="font-size:12px; font-weight:700; color:#1A1A1A; margin:0 0 1px;" id="pv_footer_name">[NAME]</p>
+            <p style="font-size:11px; color:#888; margin:0 0 8px;" id="pv_footer_title">Director · The Base Camp Co.</p>
+            <table style="font-size:10px; border-collapse:collapse;">
+              <tr><td style="color:#888; padding:1px 8px 1px 0;">Email</td><td style="font-weight:600;"><a id="pv_footer_email" href="#" style="color:#1E7B6B;">[EMAIL]</a></td></tr>
+              <tr><td style="color:#888; padding:1px 8px 1px 0;">Office</td><td style="font-weight:600; color:#1A1A1A;" id="pv_footer_office">[OFFICE]</td></tr>
+              <tr><td style="color:#888; padding:1px 8px 1px 0;">Mobile</td><td style="font-weight:600; color:#1A1A1A;" id="pv_footer_mobile">[MOBILE]</td></tr>
+              <tr><td style="color:#888; padding:1px 8px 1px 0;">Web</td><td style="font-weight:600;"><a href="https://thebasecampco.com" style="color:#1E7B6B;">thebasecampco.com</a></td></tr>
+            </table>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- QR card preview -->
+    <div id="rp_qr" style="display:none;">
+      <h2>QR card preview</h2>
+      <canvas id="qrCardCanvas" width="800" height="900" style="max-width:100%; height:auto; border-radius:6px; border:1px solid var(--border);"></canvas>
+    </div>
+
+    <!-- PO preview -->
+    <div id="rp_po" style="display:none;">
+      <h2>PO preview</h2>
+      <div id="poPreview" style="font-family:Arial,sans-serif; font-size:11px; line-height:1.5; color:#1A1A1A;"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1483,7 +1488,11 @@
   }
 
   // ── Mode switching ──
-  var currentMode = 'prod';
+  function updateRightPanel(mode) {
+    document.getElementById('rp_email').style.display = (mode === 'qrgen' || mode === 'po') ? 'none' : 'block';
+    document.getElementById('rp_qr').style.display    = mode === 'qrgen' ? 'block' : 'none';
+    document.getElementById('rp_po').style.display    = mode === 'po'    ? 'block' : 'none';
+  }
   function switchMode(mode) {
     currentMode = mode;
     ['prod','land','info','qrgen','po'].forEach(function(m) {
@@ -1491,18 +1500,14 @@
       var tab = document.getElementById('tab-' + m);
       tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'New Booking Confirmation', land: 'Landlord Fee Summary', info: 'Site Info Sheet', qrgen: 'QR Card Generator', po: 'Purchase Order' };
+    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator' };
     var subs   = { prod: 'Select a site, fill in the booking details, and send directly via Resend.', land: 'Send a fee breakdown to the property landlord.', info: 'Send site access information without hire details.', qrgen: 'Generate a branded QR card for vehicle registration.', po: 'Generate and download a purchase order as PDF.' };
     document.getElementById('modeTitle').textContent    = titles[mode];
     document.getElementById('modeSubtitle').textContent = subs[mode];
     if (currentSite) populateModeFromSite();
     if (mode === 'qrgen') updateQRCard();
     if (mode === 'po')    updatePOPreview();
-    // Hide email preview panel on tabs that don't need it
-    var previewPanel = document.querySelector('.preview-panel');
-    if (previewPanel) previewPanel.style.display = (mode === 'po' || mode === 'qrgen') ? 'none' : '';
-    var layout = document.querySelector('.layout');
-    if (layout) layout.style.gridTemplateColumns = (mode === 'po' || mode === 'qrgen') ? '1fr' : '1fr 400px';
+    updateRightPanel(mode);
   }
 
   function populateModeFromSite() {
