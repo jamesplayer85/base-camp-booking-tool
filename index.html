@@ -1656,6 +1656,8 @@
     document.getElementById('loadingOverlay').classList.remove('show');
     document.getElementById('infoSendBtn').disabled = false;
   }
+
+  function showToast(msg, type) {
     var t = document.getElementById('toast');
     document.getElementById('toastMsg').textContent = msg;
     t.className = 'toast ' + (type||'');
