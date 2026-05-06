@@ -633,6 +633,14 @@
       </div>
 
       <div class="form-card">
+        <h2>Hire Description</h2>
+        <div class="field">
+          <label>Overall hire summary — appears above line items</label>
+          <textarea id="po_hire_desc" rows="2" placeholder="Hire of Shoreditch High Street Unit Base for The Long Road from 01/06/2026 to 03/06/2026" oninput="updatePOPreview()"></textarea>
+        </div>
+      </div>
+
+      <div class="form-card">
         <h2>Line Items</h2>
         <div id="poLineItems" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;"></div>
         <button class="add-step-btn" onclick="addPOItem()" type="button">
@@ -1810,8 +1818,9 @@
     var id  = 'po_item_' + poItemCounter;
     var row = document.createElement('div');
     row.dataset.poItemId = id;
-    row.style.cssText = 'display:grid; grid-template-columns:1fr 60px 110px 110px 110px 30px; gap:8px; align-items:center;';
-    row.innerHTML = '<input type="text" id="' + id + '_desc" value="' + escHtml(desc||'') + '" placeholder="Description" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Sans\',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
+    row.style.cssText = 'display:grid; grid-template-columns:140px 1fr 60px 110px 110px 110px 30px; gap:8px; align-items:center;';
+    row.innerHTML = '<input type="text" id="' + id + '_item" value="UNIT BASE HIRE FEE" placeholder="Item" oninput="updatePOPreview();" style="font-family:\'DM Sans\',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
+      + '<input type="text" id="' + id + '_desc" value="' + escHtml(desc||'') + '" placeholder="Description" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Sans\',sans-serif; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
       + '<input type="number" id="' + id + '_qty" value="' + (qty||1) + '" min="1" oninput="calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:center; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 6px; outline:none;">'
       + '<input type="number" id="' + id + '_ex" value="' + (unitPrice||'') + '" placeholder="Ex VAT £" oninput="onPOExChange(\'' + id + '\'); calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:right; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
       + '<input type="number" id="' + id + '_inc" value="' + (unitPrice ? (unitPrice*1.2).toFixed(2) : '') + '" placeholder="Inc VAT £" oninput="onPOIncChange(\'' + id + '\'); calcPOTotals(); updatePOPreview();" style="font-family:\'DM Mono\',monospace; font-size:13px; text-align:right; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; outline:none;">'
@@ -1820,11 +1829,12 @@
 
     if (poItemCounter === 1) {
       var header = document.createElement('div');
-      header.style.cssText = 'display:grid; grid-template-columns:1fr 60px 110px 110px 110px 30px; gap:8px; margin-bottom:4px;';
-      header.innerHTML = '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Description</span>'
+      header.style.cssText = 'display:grid; grid-template-columns:140px 1fr 60px 110px 110px 110px 30px; gap:8px; margin-bottom:4px;';
+      header.innerHTML = '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Item</span>'
+        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Description</span>'
         + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:center;">Qty</span>'
-        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:right;">Unit ex VAT</span>'
-        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:right;">Unit inc VAT</span>'
+        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:right;">Ex VAT</span>'
+        + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:right;">Inc VAT</span>'
         + '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;text-align:right;">Total net</span>'
         + '<span></span>';
       document.getElementById('poLineItems').appendChild(header);
@@ -1854,14 +1864,14 @@
   function getPOItems() {
     return Array.from(document.querySelectorAll('[data-po-item-id]')).map(function(row) {
       var id    = row.dataset.poItemId;
+      var item  = (document.getElementById(id + '_item')||{}).value || 'UNIT BASE HIRE FEE';
       var desc  = (document.getElementById(id + '_desc')||{}).value || '';
       var qty   = parseFloat((document.getElementById(id + '_qty') ||{}).value) || 1;
       var exVat = parseFloat((document.getElementById(id + '_ex')  ||{}).value) || 0;
       var incVat= parseFloat((document.getElementById(id + '_inc') ||{}).value) || 0;
-      // Use whichever was entered; prefer ex
       var price = exVat || (incVat / 1.2);
-      return { desc: desc, qty: qty, unitPrice: price, unitPriceInc: price * 1.2, total: qty * price };
-    }).filter(function(i){ return i.desc; });
+      return { item: item, desc: desc, qty: qty, unitPrice: price, unitPriceInc: price * 1.2, total: qty * price };
+    }).filter(function(i){ return i.desc || i.unitPrice; });
   }
 
   function calcPOTotals() {
@@ -1888,21 +1898,24 @@
 
   function fmt2(n) { return '£' + (parseFloat(n)||0).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-  function buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total) {
+  function buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total, hireDesc) {
+    var descBlock = hireDesc
+      ? '<div style="background:#F8F7F4; border-radius:6px; border:1px solid #E8E6E0; padding:12px 18px; margin-bottom:20px;">'
+        + '<p style="font-size:11px; font-weight:700; color:#888880; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 6px;">Hire Details</p>'
+        + '<p style="font-size:13px; color:#1A1A1A; margin:0; line-height:1.6;">' + hireDesc + '</p>'
+        + '</div>'
+      : '';
     return '<div style="background:#ffffff; font-family:Arial,Helvetica,sans-serif; border-radius:6px; overflow:hidden; border:1px solid #E0DED8;">'
-      // Header — matches booking confirmation exactly
       + '<div style="background:#ffffff; padding:24px 32px; border-bottom:1px solid #E8E6E0; text-align:center;">'
       + '<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" width="200" style="display:block; width:200px; max-width:200px; height:auto; margin:0 auto;">'
       + '</div>'
-      // Teal banner — matches booking confirmation exactly
       + '<div style="background:#1E7B6B; padding:16px 28px; display:flex; justify-content:space-between; align-items:center;">'
       + '<h1 style="font-size:18px; font-weight:700; color:#ffffff; margin:0; line-height:1.3;">Purchase Order</h1>'
-      + '<table style="border-collapse:collapse;">'
-      + '<tr><td style="font-size:13px; color:#A8D9D0; padding:1px 10px 1px 0; text-align:right;">PO #</td><td style="font-size:13px; font-weight:700; color:#ffffff;">' + escHtml(poNumber) + '</td></tr>'
-      + '<tr><td style="font-size:13px; color:#A8D9D0; padding:1px 10px 1px 0; text-align:right;">Date</td><td style="font-size:13px; font-weight:700; color:#ffffff;">' + dateStr + '</td></tr>'
-      + '</table>'
+      + '<div style="text-align:right;">'
+      + '<p style="font-size:13px; color:#A8D9D0; margin:0 0 3px;">PO # <strong style="color:#ffffff;">' + escHtml(poNumber) + '</strong></p>'
+      + '<p style="font-size:13px; color:#A8D9D0; margin:0;">Date <strong style="color:#ffffff;">' + dateStr + '</strong></p>'
       + '</div>'
-      // Body
+      + '</div>'
       + '<div style="padding:24px 28px;">'
       + '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">'
       + '<div style="background:#F8F7F4; border-radius:6px; border:1px solid #E8E6E0; padding:14px 18px;">'
@@ -1917,6 +1930,7 @@
       + '<p style="color:#888880; font-size:13px; margin:0; line-height:1.6;">' + supAddr + '</p>'
       + '</div>'
       + '</div>'
+      + descBlock
       + '<p style="font-size:11px; font-weight:700; color:#888880; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 10px;">Line Items</p>'
       + '<table style="width:100%; border-collapse:collapse; margin-bottom:20px;">'
       + '<thead><tr style="background:#F8F7F4;">'
@@ -1955,9 +1969,11 @@
     var vat        = totalNet * 0.2;
     var total      = totalNet + vat;
 
+    var hireDesc = ((document.getElementById('po_hire_desc')||{}).value || '').replace(/\n/g,'<br>');
+
     var rowsHtml = items.length ? items.map(function(item){
       return '<tr>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A;">UNIT BASE HIRE FEE</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A;">' + escHtml(item.item) + '</td>'
         + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A;">' + escHtml(item.desc) + '</td>'
         + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
         + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; color:#1A1A1A; text-align:center;">' + item.qty + '</td>'
@@ -1966,7 +1982,7 @@
     }).join('') : '<tr><td colspan="5" style="padding:12px; color:#888; font-size:12px; background:#fff;">Add line items above</td></tr>';
 
     var el = document.getElementById('poPreview');
-    if (el) el.innerHTML = buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total);
+    if (el) el.innerHTML = buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total, hireDesc);
   }
 
   function downloadPO() {
@@ -1976,6 +1992,7 @@
     var authoriser = (document.getElementById('po_authoriser')||{}).value || '';
     var supName    = (document.getElementById('po_supplier_name')||{}).value || '';
     var supAddr    = ((document.getElementById('po_supplier_address')||{}).value || '').replace(/\n/g,'<br>');
+    var hireDesc   = ((document.getElementById('po_hire_desc')||{}).value || '').replace(/\n/g,'<br>');
     var items      = getPOItems();
     var totalNet   = items.reduce(function(s,i){ return s+i.total; }, 0);
     var vat        = totalNet * 0.2;
@@ -1983,7 +2000,7 @@
 
     var rowsHtml = items.length ? items.map(function(item){
       return '<tr>'
-        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px;">UNIT BASE HIRE FEE</td>'
+        + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px;">' + escHtml(item.item) + '</td>'
         + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px;">' + escHtml(item.desc) + '</td>'
         + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; text-align:right;">' + fmt2(item.unitPrice) + '</td>'
         + '<td style="padding:8px 12px; border-bottom:1px solid #EEECEA; font-size:12px; text-align:center;">' + item.qty + '</td>'
@@ -1993,18 +2010,15 @@
 
     var win = window.open('', '_blank');
     win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
-      + '<title>Purchase Order ' + escHtml(poNumber) + '</title>'
+      + '<title> </title>'
       + '<style>'
-      + 'body { margin:0; padding:24px; background:#fff; font-family:Arial,Helvetica,sans-serif; }'
-      + '@media print {'
-      + '  body { margin:0; padding:0; }'
-      + '  @page { margin:12mm; size:A4; }'
-      + '  head title { display:none; }'
-      + '}'
+      + 'html,body{margin:0;padding:0;background:#fff;font-family:Arial,Helvetica,sans-serif;}'
+      + 'body{padding:24px;}'
+      + '@media print{html,body{padding:0;margin:0;}@page{margin:10mm;size:A4;}}'
       + '</style>'
       + '</head><body>'
-      + buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total)
-      + '<script>window.onload=function(){ document.title=""; window.print(); }<\/script>'
+      + buildPOHTML(poNumber, dateStr, authoriser, supName, supAddr, rowsHtml, totalNet, vat, total, hireDesc)
+      + '<script>window.onload=function(){window.print();}<\/script>'
       + '</body></html>');
     win.document.close();
   }
