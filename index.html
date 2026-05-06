@@ -24,10 +24,10 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; }
 
-    header { background: var(--dark); padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+    header { background: #ffffff; padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
     header img { height: 32px; width: auto; }
-    header .pipe { width: 1px; height: 24px; background: #2A3C38; }
-    header span { font-size: 12px; color: var(--teal-mid); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+    header .pipe { width: 1px; height: 24px; background: var(--border); }
+    header span { font-size: 12px; color: var(--mid); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
     .header-status { margin-left: auto; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
     .status-dot.live { background: var(--green); }
@@ -196,7 +196,7 @@
   <div class="header-status">
     <div class="status-dot" id="statusDot"></div>
     <span id="statusText">Loading sites…</span>
-    <button onclick="document.getElementById('setupOverlay').classList.add('show')" style="margin-left:12px; background:none; border:1px solid #2A3C38; border-radius:6px; color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.15s, color 0.15s;" onmouseover="this.style.color='var(--teal-mid)';this.style.borderColor='var(--teal)';" onmouseout="this.style.color='';this.style.borderColor='';">⚙ API Keys</button>
+    <button onclick="document.getElementById('setupOverlay').classList.add('show')" style="margin-left:12px; background:none; border:1px solid var(--border); border-radius:6px; color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.15s, color 0.15s;" onmouseover="this.style.color='var(--teal)';this.style.borderColor='var(--teal)';" onmouseout="this.style.color='';this.style.borderColor='';">⚙ API Keys</button>
   </div>
 </header>
 
@@ -397,6 +397,8 @@
         <tr><td><code>Important Note</code></td><td>Long Text</td><td>Leave blank to hide amber box</td></tr>
         <tr><td><code>Site Map URL</code></td><td>Text</td><td>Squarespace or Dropbox image URL</td></tr>
         <tr><td><code>QR Required</code></td><td>Checkbox</td><td>Tick to show QR upload on form</td></tr>
+        <tr><td><code>Landlord Company</code></td><td>Text</td><td>Pre-fills supplier field on Purchase Order</td></tr>
+        <tr><td><code>Landlord Address</code></td><td>Text</td><td>Pre-fills supplier address on Purchase Order</td></tr>
       </table>
     </div>
 
@@ -849,8 +851,10 @@
           if (t === 'step 3')          s.step3          = col.text  || '';
           if (t === 'step 4')          s.step4          = col.text  || '';
           if (t === 'important note')  s.important_note = col.text  || '';
-          if (t === 'site map url')    s.site_map_url   = col.text  || '';
-          if (t === 'qr required')     s.qr_required    = col.checked || false;
+          if (t === 'site map url')     s.site_map_url   = col.text  || '';
+          if (t === 'qr required')      s.qr_required    = col.checked || false;
+          if (t === 'landlord company') s.landlord_company = col.text || '';
+          if (t === 'landlord address') s.landlord_address = col.text || '';
         });
         return s;
       }).filter(function(s){ return s.site_name; });
@@ -1509,6 +1513,12 @@
     // QR card — pre-fill site name
     var qsn = document.getElementById('qrgen_site');
     if (qsn && !qsn.value) qsn.value = currentSite.site_name;
+    // PO — pre-fill supplier from Monday
+    var poSupName = document.getElementById('po_supplier_name');
+    var poSupAddr = document.getElementById('po_supplier_address');
+    if (poSupName && !poSupName.value) poSupName.value = currentSite.landlord_company || '';
+    if (poSupAddr && !poSupAddr.value) poSupAddr.value = currentSite.landlord_address || '';
+    updatePOPreview();
     // Info sheet — pre-fill steps
     if (document.getElementById('infoStepsContainer').children.length === 0) {
       ['step1','step2','step3','step4'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
@@ -1896,8 +1906,9 @@
       + '<div style="background:#744210; padding:14px 20px;">'
       + '<span style="font-size:18px; font-weight:700; color:#fff; letter-spacing:0.1em;">PURCHASE ORDER</span>'
       + '</div>'
-      + '<div style="padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">'
+      + '<div style="padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">'
       + '<div>'
+      + '<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" style="height:40px; width:auto; display:block; margin-bottom:10px;">'
       + '<p style="font-weight:700; font-size:13px; margin:0 0 4px;">Base Camp Services Ltd</p>'
       + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">Kingsley House, 22-34 Elm Road<br>Leigh On Sea, Essex, SS19 1SN<br>info@thebasecampco.com<br>0203 369 2273</p>'
       + '</div>'
@@ -1910,6 +1921,7 @@
       + '</div>'
       + '<div style="padding:0 20px 16px; background:#F8F7F4; margin:0 20px; border-radius:6px;">'
       + '<p style="font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.08em; padding-top:14px; margin:0 0 6px;">Supplier</p>'
+      + (currentSite ? '<p style="font-size:11px; color:#888; margin:0 0 4px;">' + escHtml(currentSite.site_name) + '</p>' : '')
       + '<p style="font-weight:700; font-size:13px; margin:0 0 2px;">' + escHtml(supName) + '</p>'
       + '<p style="color:#555; font-size:12px; margin:0; line-height:1.6;">' + supAddr + '</p>'
       + '</div>'
