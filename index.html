@@ -124,6 +124,17 @@
     .setup-save:hover { background:var(--teal-dark); }
     .setup-link { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; margin-top:12px; text-decoration:underline; font-family:'DM Sans',sans-serif; }
     .setup-link:hover { color:var(--teal); }
+    /* ── Mode tabs ── */
+    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; background: var(--dark); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+    .mode-tab { padding: 13px 10px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
+    .mode-tab:last-child { border-right: none; }
+    .mode-tab.active-prod { background: #1E7B6B; color: #fff; }
+    .mode-tab.active-land { background: #1A3A5C; color: #fff; }
+    .mode-tab.active-info { background: #4A5568; color: #fff; }
+    .mode-tab:not(.active-prod):not(.active-land):not(.active-info):hover { background: #1A2A26; color: #fff; }
+    .mode-section { display: none; }
+    .mode-section.active { display: block; }
+
     .history-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-top: 32px; overflow: hidden; }
     .history-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; border-bottom: 1px solid var(--border); }
     .history-header h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); margin: 0; }
@@ -191,10 +202,18 @@
 <div class="layout">
   <div class="form-panel">
     <div class="panel-header">
-      <h1>New Booking Confirmation</h1>
-      <p>Select a site, fill in the booking details, and send directly via Resend.</p>
+      <h1 id="modeTitle">New Booking Confirmation</h1>
+      <p id="modeSubtitle">Select a site, fill in the booking details, and send directly via Resend.</p>
     </div>
 
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production</button>
+      <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord</button>
+      <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
+    </div>
+
+    <!-- Site selector (shared across all modes) -->
     <div class="site-selector">
       <label>Select unit base site</label>
       <select id="siteSelect" onchange="onSiteChange()">
@@ -207,6 +226,11 @@
         </div>
       </div>
     </div>
+
+    <!-- ══════════════════════════════════
+         PRODUCTION CONFIRMATION MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section active" id="section-prod">
 
     <div class="form-card">
       <h2>Recipient</h2>
@@ -372,6 +396,162 @@
         <tr><td><code>QR Required</code></td><td>Checkbox</td><td>Tick to show QR upload on form</td></tr>
       </table>
     </div>
+
+    </div><!-- /section-prod -->
+
+    <!-- ══════════════════════════════════
+         LANDLORD FEE SUMMARY MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-land">
+
+      <div class="form-card">
+        <h2>Landlord Details</h2>
+        <div class="field-row">
+          <div class="field">
+            <label>To: landlord email *</label>
+            <input type="text" id="land_to_email" placeholder="landlord@property.com">
+          </div>
+          <div class="field">
+            <label>Landlord / contact name *</label>
+            <input type="text" id="land_contact_name" placeholder="John Smith">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Property / site name</label>
+          <input type="text" id="land_site_name" placeholder="Pre-filled from site selection">
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Hire Details</h2>
+        <div class="field-row">
+          <div class="field">
+            <label>Production name</label>
+            <input type="text" id="land_production" placeholder="The Long Road">
+          </div>
+          <div class="field">
+            <label>Booking reference</label>
+            <input type="text" id="land_booking_ref" placeholder="TBC-2026-001">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Start date</label>
+            <div style="display:flex; gap:8px;">
+              <input type="date" id="land_start_picker" style="flex:1;" onchange="updateLandDates()">
+              <input type="time" id="land_start_time" style="width:100px;" onchange="updateLandDates()">
+            </div>
+          </div>
+          <div class="field">
+            <label>End date</label>
+            <div style="display:flex; gap:8px;">
+              <input type="date" id="land_end_picker" style="flex:1;" onchange="updateLandDates()">
+              <input type="time" id="land_end_time" style="width:100px;" onchange="updateLandDates()">
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="land_start_date">
+        <input type="hidden" id="land_end_date">
+      </div>
+
+      <div class="form-card">
+        <h2>Fee Breakdown</h2>
+        <div id="feeLineItems" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;"></div>
+        <button class="add-step-btn" onclick="addFeeItem()" type="button">
+          <span style="font-size:18px;line-height:1;">+</span> Add line item
+        </button>
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="field-row" style="margin-bottom:10px;">
+            <div class="field" style="margin:0;">
+              <label>Subtotal (£)</label>
+              <input type="number" id="land_subtotal" placeholder="0.00" oninput="calcTotals()" style="font-family:'DM Mono',monospace;">
+            </div>
+            <div class="field" style="margin:0;">
+              <label>VAT rate (%)</label>
+              <input type="number" id="land_vat_rate" value="20" oninput="calcTotals()" style="font-family:'DM Mono',monospace;">
+            </div>
+          </div>
+          <div class="field-row" style="margin-bottom:10px;">
+            <div class="field" style="margin:0;">
+              <label>Commission (£)</label>
+              <input type="number" id="land_commission" placeholder="0.00" oninput="calcTotals()" style="font-family:'DM Mono',monospace;">
+            </div>
+            <div class="field" style="margin:0;">
+              <label>Total to invoice (£) <span style="color:var(--teal); font-weight:700;" id="land_total_display"></span></label>
+              <input type="number" id="land_total" placeholder="Auto-calculated" readonly style="font-family:'DM Mono',monospace; background:#F8F7F4; color:var(--teal); font-weight:700;">
+            </div>
+          </div>
+          <div class="field" style="margin:0;">
+            <label>Payment terms / notes</label>
+            <textarea id="land_payment_terms" rows="2" placeholder="e.g. Payment due within 30 days of invoice. Bank transfer only."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>From: sender</h2>
+        <select class="sender-select" id="land_from_email">
+          <option value="james@thebasecampco.com">James Player — james@thebasecampco.com</option>
+          <option value="tom@thebasecampco.com">Tom Bosanquet — tom@thebasecampco.com</option>
+          <option value="ben@thebasecampco.com">Ben Frost — ben@thebasecampco.com</option>
+        </select>
+      </div>
+
+      <button class="send-btn" style="background:#1A3A5C;" id="landSendBtn" onclick="sendLandlordEmail()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+        Send landlord fee summary
+      </button>
+
+    </div><!-- /section-land -->
+
+    <!-- ══════════════════════════════════
+         SITE INFO SHEET MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-info">
+
+      <div class="form-card">
+        <h2>Recipient</h2>
+        <div class="field-row">
+          <div class="field">
+            <label>To: email address(es) *</label>
+            <input type="text" id="info_to_email" placeholder="recipient@production.com">
+          </div>
+          <div class="field">
+            <label>Contact first name *</label>
+            <input type="text" id="info_contact_name" placeholder="Sarah">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>From: sender</label>
+          <select class="sender-select" id="info_from_email">
+            <option value="james@thebasecampco.com">James Player — james@thebasecampco.com</option>
+            <option value="tom@thebasecampco.com">Tom Bosanquet — tom@thebasecampco.com</option>
+            <option value="ben@thebasecampco.com">Ben Frost — ben@thebasecampco.com</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Site Information — pre-filled from template, edit if needed</h2>
+        <div class="steps-list" id="infoStepsContainer"></div>
+        <button class="add-step-btn" onclick="addInfoStep('')" type="button">
+          <span style="font-size:18px;line-height:1;">+</span> Add step
+        </button>
+      </div>
+
+      <div class="form-card">
+        <h2>Important Note — leave blank to hide</h2>
+        <div class="field">
+          <textarea id="info_note_text" rows="3" placeholder="Gate must be kept shut at all times…"></textarea>
+        </div>
+      </div>
+
+      <button class="send-btn" style="background:#4A5568;" id="infoSendBtn" onclick="sendInfoSheet()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
+        Send site info sheet
+      </button>
+
+    </div><!-- /section-info -->
 
     <!-- Booking history -->
     <div class="history-panel">
@@ -707,6 +887,7 @@
     }
     document.getElementById('siteLoaded').style.display = 'block';
     document.getElementById('siteLoadedText').innerHTML = '<strong>' + currentSite.site_name + '</strong><br>' + currentSite.address;
+    populateModeFromSite();
     updateSubject();
     updatePreview();
   }
@@ -835,22 +1016,7 @@
     var contactsHtml = '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+d.prod_contact_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">'+d.prod_contact_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.prod_contact_phone+'</td></tr>'
       + extraContactsHtml
       + '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;">'+d.your_name+'</td><td style="font-size:13px;color:#888880;padding:7px 8px;">'+d.your_role+'</td><td style="font-size:13px;font-weight:700;color:#1E7B6B;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">'+d.your_phone+'</td></tr>';
-    if (d.sender) {
-      footerHtml = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #EAE8E2;padding-top:20px;"><tr><td>'
-        +'<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="120" style="display:block;width:120px;height:auto;margin-bottom:14px;">'
-        +'<p style="font-size:14px;font-weight:700;color:#1A1A1A;margin:0 0 2px;">'+d.sender.name+'</p>'
-        +'<p style="font-size:13px;color:#888880;margin:0 0 12px;">'+d.sender.title+' &nbsp;·&nbsp; The Base Camp Co.</p>'
-        +'<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">'
-        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Email</td><td style="font-size:12px;font-weight:600;"><a href="mailto:'+d.sender.email+'" style="color:#1E7B6B;text-decoration:none;">'+d.sender.email+'</a></td></tr>'
-        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Office</td><td style="font-size:12px;font-weight:600;color:#1A1A1A;">'+d.sender.office+'</td></tr>'
-        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Mobile</td><td style="font-size:12px;font-weight:600;color:#1A1A1A;">'+d.sender.mobile+'</td></tr>'
-        +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Web</td><td style="font-size:12px;font-weight:600;"><a href="https://'+d.sender.website+'" style="color:#1E7B6B;text-decoration:none;">'+d.sender.website+'</a></td></tr>'
-        +'</table>'
-        +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
-        +'<td style="background:#F4F7F6;border-radius:6px;padding:10px 14px;font-size:11px;color:#888880;line-height:1.6;">'
-        +'The Base Camp Co. &nbsp;·&nbsp; Registered in England &nbsp;·&nbsp; <a href="https://thebasecampco.com" style="color:#1E7B6B;text-decoration:none;">thebasecampco.com</a>'
-        +'</td></tr></table></td></tr></table>';
-    }
+    var footerHtml = buildFooterHTML(d.sender);
 
     return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
       +'<body style="margin:0;padding:0;background:#F2F1ED;font-family:Arial,Helvetica,sans-serif;">'
@@ -1195,7 +1361,301 @@
     pendingResend = null;
   }
 
-  function showToast(msg, type) {
+  // ── Mode switching ──
+  var currentMode = 'prod';
+  function switchMode(mode) {
+    currentMode = mode;
+    ['prod','land','info'].forEach(function(m) {
+      document.getElementById('section-' + m).classList.toggle('active', m === mode);
+      var tab = document.getElementById('tab-' + m);
+      tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
+    });
+    var titles = { prod: 'New Booking Confirmation', land: 'Landlord Fee Summary', info: 'Site Info Sheet' };
+    var subs   = { prod: 'Select a site, fill in the booking details, and send directly via Resend.', land: 'Send a fee breakdown to the property landlord.', info: 'Send site access information without hire details.' };
+    document.getElementById('modeTitle').textContent    = titles[mode];
+    document.getElementById('modeSubtitle').textContent = subs[mode];
+    if (currentSite) populateModeFromSite();
+  }
+
+  function populateModeFromSite() {
+    if (!currentSite) return;
+    // Landlord — pre-fill site name
+    var lsn = document.getElementById('land_site_name');
+    if (lsn && !lsn.value) lsn.value = currentSite.site_name;
+    // Info sheet — pre-fill steps
+    if (document.getElementById('infoStepsContainer').children.length === 0) {
+      ['step1','step2','step3','step4'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
+      if (document.getElementById('infoStepsContainer').children.length === 0) { addInfoStep(''); addInfoStep(''); addInfoStep(''); }
+      document.getElementById('info_note_text').value = currentSite.important_note || '';
+    }
+  }
+
+  // ── Fee line items ──
+  var feeCounter = 0;
+  function addFeeItem(desc, amount) {
+    feeCounter++;
+    var id  = 'fee_' + feeCounter;
+    var row = document.createElement('div');
+    row.dataset.feeId = id;
+    row.style.cssText = 'display:grid; grid-template-columns:1fr 120px 30px; gap:8px; align-items:center;';
+    row.innerHTML = '<input type="text" id="' + id + '_desc" value="' + escHtml(desc||'') + '" placeholder="Description (e.g. Daily hire rate × 3 days)" style="font-family:\'DM Sans\',sans-serif; font-size:14px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 12px; outline:none;">'
+      + '<input type="number" id="' + id + '_amt" value="' + (amount||'') + '" placeholder="0.00" oninput="calcTotals()" style="font-family:\'DM Mono\',monospace; font-size:14px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 12px; outline:none; text-align:right;">'
+      + '<button class="step-remove" type="button" onclick="removeFeeItem(\'' + id + '\')">×</button>';
+    document.getElementById('feeLineItems').appendChild(row);
+    calcTotals();
+  }
+  function removeFeeItem(id) { var r = document.querySelector('[data-fee-id="' + id + '"]'); if(r){ r.remove(); calcTotals(); } }
+
+  function calcTotals() {
+    var subtotal = 0;
+    Array.from(document.querySelectorAll('[data-fee-id]')).forEach(function(row) {
+      var id  = row.dataset.feeId;
+      var amt = parseFloat((document.getElementById(id + '_amt')||{}).value) || 0;
+      subtotal += amt;
+    });
+    var manualSub = parseFloat(document.getElementById('land_subtotal').value) || 0;
+    if (manualSub > 0) subtotal = manualSub;
+    else document.getElementById('land_subtotal').value = subtotal > 0 ? subtotal.toFixed(2) : '';
+    var vatRate    = parseFloat(document.getElementById('land_vat_rate').value) || 0;
+    var vat        = subtotal * vatRate / 100;
+    var commission = parseFloat(document.getElementById('land_commission').value) || 0;
+    var total      = subtotal + vat - commission;
+    document.getElementById('land_total').value = total > 0 ? total.toFixed(2) : '';
+  }
+
+  function updateLandDates() {
+    function fmt(datePicker, timePicker, hiddenId) {
+      var d = (document.getElementById(datePicker)||{}).value;
+      var t = (document.getElementById(timePicker)||{}).value;
+      if (!d) { document.getElementById(hiddenId).value = ''; return; }
+      var parts = d.split('-');
+      var formatted = parts[2] + '/' + parts[1] + '/' + parts[0].slice(2);
+      document.getElementById(hiddenId).value = formatted + (t ? ' — ' + t : '');
+    }
+    fmt('land_start_picker','land_start_time','land_start_date');
+    fmt('land_end_picker','land_end_time','land_end_date');
+  }
+
+  // ── Info sheet steps ──
+  var infoStepCounter = 0;
+  function addInfoStep(value) {
+    infoStepCounter++;
+    var id  = 'info_step_' + infoStepCounter;
+    var row = document.createElement('div');
+    row.className = 'step-row';
+    row.dataset.infoStepId = id;
+    row.innerHTML = '<div class="step-circle"></div>'
+      + '<div class="field" style="flex:1;margin:0;"><input type="text" id="' + id + '" value="' + escHtml(value) + '" placeholder="Enter access step…"></div>'
+      + '<button class="step-remove" type="button" onclick="removeInfoStep(\'' + id + '\')">×</button>';
+    document.getElementById('infoStepsContainer').appendChild(row);
+  }
+  function removeInfoStep(id) { var r = document.querySelector('[data-info-step-id="' + id + '"]'); if(r) r.remove(); }
+  function getInfoSteps() { return Array.from(document.querySelectorAll('#infoStepsContainer input')).map(function(i){ return i.value.trim(); }).filter(Boolean); }
+
+  // ── Landlord email builder ──
+  function buildLandlordEmailHTML(d) {
+    var lineItemsHtml = (d.fee_items||[]).map(function(item){
+      return '<tr><td style="font-size:13px;color:#333;padding:7px 12px 7px 0;border-bottom:1px solid #E8E6E0;">' + item.desc + '</td>'
+        + '<td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;text-align:right;border-bottom:1px solid #E8E6E0;white-space:nowrap;">£' + parseFloat(item.amount).toFixed(2) + '</td></tr>';
+    }).join('');
+
+    var vatRate    = parseFloat(d.vat_rate) || 0;
+    var vat        = parseFloat(d.subtotal) * vatRate / 100;
+    var commission = parseFloat(d.commission) || 0;
+
+    var totalsHtml = '<tr><td style="font-size:13px;color:#888;padding:7px 12px 7px 0;border-bottom:1px solid #E8E6E0;">Subtotal</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;text-align:right;border-bottom:1px solid #E8E6E0;">£' + parseFloat(d.subtotal).toFixed(2) + '</td></tr>'
+      + (vatRate > 0 ? '<tr><td style="font-size:13px;color:#888;padding:7px 12px 7px 0;border-bottom:1px solid #E8E6E0;">VAT (' + vatRate + '%)</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;text-align:right;border-bottom:1px solid #E8E6E0;">£' + vat.toFixed(2) + '</td></tr>' : '')
+      + (commission > 0 ? '<tr><td style="font-size:13px;color:#888;padding:7px 12px 7px 0;border-bottom:1px solid #E8E6E0;">Commission deduction</td><td style="font-size:13px;font-weight:700;color:#DC3545;padding:7px 0;text-align:right;border-bottom:1px solid #E8E6E0;">− £' + commission.toFixed(2) + '</td></tr>' : '')
+      + '<tr><td style="font-size:14px;font-weight:700;color:#1A1A1A;padding:10px 12px 10px 0;">Total to invoice</td><td style="font-size:15px;font-weight:700;color:#1A3A5C;padding:10px 0;text-align:right;">£' + parseFloat(d.total).toFixed(2) + '</td></tr>';
+
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
+      + '<body style="margin:0;padding:0;background:#F2F1ED;font-family:Arial,Helvetica,sans-serif;">'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F2F1ED;padding:24px 12px;"><tr><td align="center">'
+      + '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #E0DED8;">'
+      + '<tr><td align="center" style="background:#ffffff;padding:24px 32px;border-bottom:1px solid #E8E6E0;">'
+      + '<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="200" style="display:block;width:200px;max-width:200px;height:auto;margin:0 auto;"></td></tr>'
+      + '<tr><td style="background:#1A3A5C;padding:16px 28px;">'
+      + '<h1 style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 5px;line-height:1.3;">Hire fee summary</h1>'
+      + '<p style="font-size:13px;color:#A8C4E0;margin:0;">' + escHtml(d.site_name) + (d.booking_ref ? ' &nbsp;·&nbsp; Ref: <strong style="color:#fff;">' + escHtml(d.booking_ref) + '</strong>' : '') + '</p></td></tr>'
+      + '<tr><td style="padding:24px 28px;">'
+      + '<p style="font-size:15px;color:#1A1A1A;margin:0 0 10px;">Hi ' + escHtml(d.contact_name) + ',</p>'
+      + '<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 22px;">Please find below the hire fee summary for <strong>' + escHtml(d.production) + '</strong>' + (d.start_date ? ' from <strong>' + escHtml(d.start_date) + '</strong> to <strong>' + escHtml(d.end_date) + '</strong>' : '') + '.</p>'
+      + '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Fee breakdown</p>'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+      + lineItemsHtml + totalsHtml
+      + '</table></td></tr></table>'
+      + (d.payment_terms ? '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;">Payment terms</p><p style="font-size:13px;color:#444440;line-height:1.6;margin:0 0 20px;">' + escHtml(d.payment_terms).replace(/\n/g,'<br>') + '</p>' : '')
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0;"><tr><td style="border-top:1px solid #EAE8E2;font-size:0;">&nbsp;</td></tr></table>'
+      + '<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 20px;">If you have any questions regarding this fee summary please don\'t hesitate to get in touch.</p>'
+      + buildFooterHTML(d.sender)
+      + '</td></tr></table></td></tr></table></body></html>';
+  }
+
+  // ── Info sheet email builder ──
+  function buildInfoSheetHTML(d) {
+    var stepsHtml = (d.steps||[]).map(function(s){
+      return '<tr><td style="padding:8px 0;border-bottom:1px solid #EEECEA;vertical-align:top;">'
+        +'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        +'<td style="width:20px;min-width:20px;vertical-align:top;padding-right:11px;padding-top:2px;">'
+        +'<div style="background:#4A5568;border-radius:50%;width:16px;height:16px;font-size:0;line-height:0;">&nbsp;</div>'
+        +'</td><td style="font-size:13px;color:#333330;line-height:1.55;">'+s+'</td>'
+        +'</tr></table></td></tr>';
+    }).join('');
+
+    var noteHtml = d.important_note
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>'
+        +'<td width="3" style="background:#E8A020;border-radius:3px 0 0 3px;">&nbsp;</td>'
+        +'<td style="background:#FFF8EC;border-radius:0 6px 6px 0;padding:12px 14px;font-size:13px;color:#6A4A10;line-height:1.55;">'
+        +'<strong style="color:#4A3008;">Important:</strong> '+(d.important_note||'').replace(/\n/g,'<br>')
+        +'</td></tr></table>' : '';
+
+    var mapHtml = d.site_map_url
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>'
+        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
+        +'<img src="'+d.site_map_url+'" alt="Site map" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
+        +'</td></tr></table>' : '';
+
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
+      +'<body style="margin:0;padding:0;background:#F2F1ED;font-family:Arial,Helvetica,sans-serif;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F2F1ED;padding:24px 12px;"><tr><td align="center">'
+      +'<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #E0DED8;">'
+      +'<tr><td align="center" style="background:#ffffff;padding:24px 32px;border-bottom:1px solid #E8E6E0;">'
+      +'<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="200" style="display:block;width:200px;max-width:200px;height:auto;margin:0 auto;"></td></tr>'
+      +'<tr><td style="background:#4A5568;padding:16px 28px;">'
+      +'<h1 style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 5px;line-height:1.3;">Site information sheet</h1>'
+      +'<p style="font-size:13px;color:#CBD5E0;margin:0;">'+escHtml(d.site_name)+'</p></td></tr>'
+      +'<tr><td style="padding:24px 28px;">'
+      +'<p style="font-size:15px;color:#1A1A1A;margin:0 0 10px;">Hi '+escHtml(d.contact_name)+',</p>'
+      +'<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 22px;">Please find below the site information for <strong>'+escHtml(d.site_name)+'</strong>.</p>'
+      +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Site details</p>'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Site name</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+escHtml(d.site_name)+'</td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Address</td><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:5px 0;vertical-align:top;">'+escHtml(d.address)+'</td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">What3Words</td><td style="font-size:13px;font-weight:700;padding:5px 0;vertical-align:top;"><a href="https://w3w.co/'+escHtml(d.w3w)+'" style="color:#4A5568;text-decoration:none;">///'+escHtml(d.w3w)+'</a></td></tr>'
+      +'<tr><td style="font-size:13px;color:#888880;width:38%;padding:5px 12px 5px 0;vertical-align:top;">Google Maps</td><td style="font-size:13px;font-weight:700;padding:5px 0;vertical-align:top;"><a href="'+escHtml(d.maps_url)+'" style="color:#4A5568;text-decoration:none;">View map pin &rarr;</a></td></tr>'
+      +'</table></td></tr></table>'
+      +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Site access</p>'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'+stepsHtml+'</table></td></tr></table>'
+      + noteHtml
+      +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Site map</p>'
+      + mapHtml
+      + buildFooterHTML(d.sender)
+      +'</td></tr></table></td></tr></table></body></html>';
+  }
+
+  // ── Build footer (shared) ──
+  function buildFooterHTML(sender) {
+    if (!sender) return '';
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-top:1px solid #EAE8E2;padding-top:20px;"><tr><td>'
+      +'<img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." width="120" style="display:block;width:120px;height:auto;margin-bottom:14px;">'
+      +'<p style="font-size:14px;font-weight:700;color:#1A1A1A;margin:0 0 2px;">'+sender.name+'</p>'
+      +'<p style="font-size:13px;color:#888880;margin:0 0 12px;">'+sender.title+' &nbsp;·&nbsp; The Base Camp Co.</p>'
+      +'<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">'
+      +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Email</td><td style="font-size:12px;font-weight:600;"><a href="mailto:'+sender.email+'" style="color:#1E7B6B;text-decoration:none;">'+sender.email+'</a></td></tr>'
+      +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Office</td><td style="font-size:12px;font-weight:600;color:#1A1A1A;">'+sender.office+'</td></tr>'
+      +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Mobile</td><td style="font-size:12px;font-weight:600;color:#1A1A1A;">'+sender.mobile+'</td></tr>'
+      +'<tr><td style="font-size:12px;color:#888880;padding:2px 10px 2px 0;">Web</td><td style="font-size:12px;font-weight:600;"><a href="https://'+sender.website+'" style="color:#1E7B6B;text-decoration:none;">'+sender.website+'</a></td></tr>'
+      +'</table>'
+      +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
+      +'<td style="background:#F4F7F6;border-radius:6px;padding:10px 14px;font-size:11px;color:#888880;line-height:1.6;">'
+      +'The Base Camp Co. &nbsp;·&nbsp; Registered in England &nbsp;·&nbsp; <a href="https://thebasecampco.com" style="color:#1E7B6B;text-decoration:none;">thebasecampco.com</a>'
+      +'</td></tr></table></td></tr></table>';
+  }
+
+  // ── Send landlord email ──
+  async function sendLandlordEmail() {
+    var toEmail = (document.getElementById('land_to_email')||{}).value.trim();
+    var contact = (document.getElementById('land_contact_name')||{}).value.trim();
+    if (!toEmail || !contact) { showToast('Please enter landlord email and name', 'error'); return; }
+
+    var fromEmail = document.getElementById('land_from_email').value;
+    var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
+
+    var feeItems = Array.from(document.querySelectorAll('[data-fee-id]')).map(function(row){
+      var id = row.dataset.feeId;
+      return { desc: (document.getElementById(id+'_desc')||{}).value||'', amount: (document.getElementById(id+'_amt')||{}).value||'0' };
+    }).filter(function(i){ return i.desc; });
+
+    var d = {
+      contact_name:  contact,
+      site_name:     (document.getElementById('land_site_name')||{}).value || (currentSite ? currentSite.site_name : ''),
+      production:    (document.getElementById('land_production')||{}).value || '',
+      booking_ref:   (document.getElementById('land_booking_ref')||{}).value || '',
+      start_date:    (document.getElementById('land_start_date')||{}).value || '',
+      end_date:      (document.getElementById('land_end_date')||{}).value || '',
+      fee_items:     feeItems,
+      subtotal:      (document.getElementById('land_subtotal')||{}).value || '0',
+      vat_rate:      (document.getElementById('land_vat_rate')||{}).value || '0',
+      commission:    (document.getElementById('land_commission')||{}).value || '0',
+      total:         (document.getElementById('land_total')||{}).value || '0',
+      payment_terms: (document.getElementById('land_payment_terms')||{}).value || '',
+      sender:        sender
+    };
+
+    var toEmails = toEmail.split(',').map(function(e){ return e.trim(); }).filter(Boolean);
+    var payload  = {
+      from:    sender.name + ' <' + fromEmail + '>',
+      to:      toEmails,
+      subject: 'Hire Fee Summary — ' + (d.site_name || '') + (d.production ? ' / ' + d.production : '') + (d.booking_ref ? ' | Ref: ' + d.booking_ref : ''),
+      html:    buildLandlordEmailHTML(d)
+    };
+
+    document.getElementById('loadingOverlay').classList.add('show');
+    document.getElementById('landSendBtn').disabled = true;
+    try {
+      var res  = await fetch(WORKER_URL + '/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      var json = await res.json();
+      if (res.ok) { showToast('Fee summary sent to ' + toEmails.join(', '), 'success'); }
+      else { showToast('Send failed: ' + (json.message||'Unknown error'), 'error'); }
+    } catch(e) { showToast('Network error', 'error'); }
+    document.getElementById('loadingOverlay').classList.remove('show');
+    document.getElementById('landSendBtn').disabled = false;
+  }
+
+  // ── Send info sheet ──
+  async function sendInfoSheet() {
+    var toEmail = (document.getElementById('info_to_email')||{}).value.trim();
+    var contact = (document.getElementById('info_contact_name')||{}).value.trim();
+    if (!toEmail || !contact) { showToast('Please enter recipient email and name', 'error'); return; }
+    if (!currentSite) { showToast('Please select a site first', 'error'); return; }
+
+    var fromEmail = document.getElementById('info_from_email').value;
+    var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
+
+    var d = {
+      contact_name:   contact,
+      site_name:      currentSite.site_name,
+      address:        currentSite.address,
+      w3w:            currentSite.w3w,
+      maps_url:       currentSite.maps_url,
+      steps:          getInfoSteps(),
+      important_note: (document.getElementById('info_note_text')||{}).value || '',
+      site_map_url:   currentSite.site_map_url,
+      sender:         sender
+    };
+
+    var toEmails = toEmail.split(',').map(function(e){ return e.trim(); }).filter(Boolean);
+    var payload  = {
+      from:    sender.name + ' <' + fromEmail + '>',
+      to:      toEmails,
+      subject: 'Site Information — ' + d.site_name,
+      html:    buildInfoSheetHTML(d)
+    };
+
+    document.getElementById('loadingOverlay').classList.add('show');
+    document.getElementById('infoSendBtn').disabled = true;
+    try {
+      var res  = await fetch(WORKER_URL + '/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      var json = await res.json();
+      if (res.ok) { showToast('Info sheet sent to ' + toEmails.join(', '), 'success'); }
+      else { showToast('Send failed: ' + (json.message||'Unknown error'), 'error'); }
+    } catch(e) { showToast('Network error', 'error'); }
+    document.getElementById('loadingOverlay').classList.remove('show');
+    document.getElementById('infoSendBtn').disabled = false;
+  }
     var t = document.getElementById('toast');
     document.getElementById('toastMsg').textContent = msg;
     t.className = 'toast ' + (type||'');
