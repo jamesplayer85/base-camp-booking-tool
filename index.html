@@ -2048,19 +2048,19 @@
       }
     } catch(e) {}
     if (!logoLoaded) {
-      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(...teal);
+      doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(30,123,107);
       doc.text('THE BASE CAMP CO.', ml, mt + 10);
     }
 
     // ── PURCHASE ORDER title ──
-    doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(...teal);
+    doc.setFont('helvetica','bold'); doc.setFontSize(24); doc.setTextColor(30,123,107);
     doc.text('PURCHASE ORDER', pw - mr, mt + 10, { align: 'right' });
 
     var y = mt + 28;
 
     // ── From / PO details row ──
     // Left: company address
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
     var fromLines = ['Base Camp Services Ltd','Kingsley House, 22-34 Elm Road','Leigh On Sea, Essex','SS19 1SN','info@thebasecampco.com','0203 369 2273'];
     fromLines.forEach(function(line, i) {
       if (i === 0) { doc.setFont('helvetica','bold'); } else { doc.setFont('helvetica','normal'); }
@@ -2068,17 +2068,17 @@
     });
 
     // Right: PO # and Date
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
     doc.text('PO #', pw - mr - 40, y); doc.setFont('helvetica','bold'); doc.text(poNumber, pw - mr, y, { align: 'right' });
     doc.setFont('helvetica','normal'); doc.text('DATE:', pw - mr - 40, y + 6); doc.setFont('helvetica','bold'); doc.text(dateStr, pw - mr, y + 6, { align: 'right' });
 
     y += 36;
 
     // ── Supplier box ──
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...teal);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,123,107);
     doc.text('SUPPLIER', pw - mr, y, { align: 'right' });
     y += 5;
-    doc.setFont('helvetica','normal'); doc.setTextColor(...dark);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,26,26);
     var supLines = supName ? [supName].concat(supAddr.split('\n').filter(Boolean)) : ['[Supplier name]'];
     supLines.forEach(function(line, i) {
       if (i === 0) doc.setFont('helvetica','bold'); else doc.setFont('helvetica','normal');
@@ -2088,7 +2088,7 @@
 
     // ── Hire description ──
     if (hireDesc) {
-      doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(...grey);
+      doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(136,136,128);
       var hireLines = doc.splitTextToSize(hireDesc, cw);
       doc.text(hireLines, ml, y);
       y += (hireLines.length * 5) + 4;
@@ -2102,12 +2102,12 @@
     var numRows = Math.max(items.length, 5);
 
     // Header row — all centred
-    doc.setFillColor(...light);
+    doc.setFillColor(248,247,244);
     doc.rect(ml, y, cw, rowH, 'F');
-    doc.setDrawColor(...border);
+    doc.setDrawColor(232,230,224);
     doc.rect(ml, y, cw, rowH, 'S');
     colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + rowH); });
-    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...dark);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,26,26);
     headers.forEach(function(h, i) {
       var cx = colX[i] + colW[i] / 2;
       doc.text(h, cx, y + 5.5, { align: 'center' });
@@ -2132,12 +2132,12 @@
       var maxLines = Math.max(itemLines.length, descLines.length, 1);
       var cellH = Math.max(rowH * 2, maxLines * 5 + 6);
 
-      doc.setDrawColor(...border);
+      doc.setDrawColor(232,230,224);
       doc.rect(ml, y, cw, cellH, 'S');
       colX.slice(1).forEach(function(x) { doc.line(x, y, x, y + cellH); });
 
       if (item) {
-        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...dark);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(26,26,26);
         doc.text(itemLines, colX[0] + 2, y + 5);
         doc.text(descLines, colX[1] + 2, y + 5);
         doc.text(fmt2(item.unitPrice), colX[2] + colW[2] - 2, y + 5, { align: 'right' });
@@ -2151,7 +2151,7 @@
     // ── Totals ──
     var totY = y;
     var totLabelX = pw - mr - 50, totValX = pw - mr;
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
     doc.text('TOTAL NET', totLabelX, totY, { align: 'right' }); doc.text(fmt2(totalNet), totValX, totY, { align: 'right' });
     doc.text('VAT', totLabelX, totY + 6, { align: 'right' }); doc.text(fmt2(vat), totValX, totY + 6, { align: 'right' });
     doc.setFont('helvetica','bold');
@@ -2159,7 +2159,7 @@
     y = totY + 22;
 
     // ── Authorised by ──
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...dark);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(26,26,26);
     doc.text('AUTHORISED BY', ml, y);
     // Signature line
     doc.line(ml + 32, y + 8, ml + 80, y + 8);
@@ -2170,10 +2170,10 @@
     y += 20;
 
     // ── Footer ──
-    doc.setDrawColor(...border);
+    doc.setDrawColor(232,230,224);
     doc.line(ml, y, pw - mr, y);
     y += 5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...grey);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(136,136,128);
     doc.text('Base Camp Services Ltd', pw/2, y, { align: 'center' });
     doc.text('Registered Company Number: 12764362     VAT Registration Number: 356 3014 18', pw/2, y + 5, { align: 'center' });
 
