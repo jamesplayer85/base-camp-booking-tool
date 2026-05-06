@@ -762,7 +762,11 @@
 
       var noteBox = document.getElementById('pv_note_box');
       var note = g('note_text');
-      if (note) { noteBox.style.display = 'block'; pv('pv_note', note); } else { noteBox.style.display = 'none'; }
+      if (note) { 
+  noteBox.style.display = 'block'; 
+  var el = document.getElementById('pv_note');
+  if(el) el.innerHTML = (note||'').replace(/\n/g,'<br>');
+}
 
       var mapImg = document.getElementById('pv_map_img');
       if (currentSite.site_map_url) { mapImg.src = currentSite.site_map_url; mapImg.style.display = 'block'; document.getElementById('pv_map_ph').style.display = 'none'; }
