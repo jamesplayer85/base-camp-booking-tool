@@ -333,6 +333,13 @@
     </div>
 
     <div class="form-card">
+      <h2>Opening message — edit if needed</h2>
+      <div class="field">
+        <textarea id="prod_opening_note" rows="3" oninput="updatePreview()">Your unit base booking is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.</textarea>
+      </div>
+    </div>
+
+    <div class="form-card">
       <h2>Important Note — leave blank to hide</h2>
       <div class="field">
         <textarea id="note_text" rows="3" placeholder="Gate must be kept shut at all times…" oninput="updatePreview()"></textarea>
@@ -457,6 +464,33 @@
         </div>
         <input type="hidden" id="land_start_date">
         <input type="hidden" id="land_end_date">
+      </div>
+
+      <div class="form-card">
+        <h2>Opening message — edit if needed</h2>
+        <div class="field">
+          <textarea id="land_opening_note" rows="3" oninput="updateLandPreview()"></textarea>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Key Contacts</h2>
+        <div class="contact-label">Production contact</div>
+        <div class="contact-row">
+          <div class="field"><label>Name</label><input type="text" id="land_prod_contact_name" placeholder="Unit Manager name" oninput="updateLandPreview()"></div>
+          <div class="field"><label>Role</label><input type="text" id="land_prod_contact_role" placeholder="Unit Manager" oninput="updateLandPreview()"></div>
+          <div class="field"><label>Phone</label><input type="text" id="land_prod_contact_phone" placeholder="+44 7700 900000" oninput="updateLandPreview()"></div>
+        </div>
+        <div id="landExtraContactsContainer"></div>
+        <button class="add-step-btn" onclick="addLandExtraContact()" type="button" style="margin-top:10px;">
+          <span style="font-size:18px;line-height:1;">+</span> Add contact
+        </button>
+        <div class="contact-label" style="margin-top:16px;">The Base Camp Co. contact</div>
+        <div class="contact-row">
+          <div class="field"><label>Name</label><input type="text" id="land_your_name" readonly style="background:#F8F7F4; color:var(--muted);"></div>
+          <div class="field"><label>Role</label><input type="text" id="land_your_role" placeholder="Director" oninput="updateLandPreview()"></div>
+          <div class="field"><label>Phone</label><input type="text" id="land_your_phone" readonly style="background:#F8F7F4; color:var(--muted);"></div>
+        </div>
       </div>
 
       <div class="form-card">
@@ -777,7 +811,7 @@
         <!-- Landlord preview body -->
         <div class="ep-body" id="rp_land_body" style="display:none;">
           <p style="font-size:12px; color:#1A1A1A; margin:0 0 8px;">Hi <strong id="pv_land_contact">[NAME]</strong>,</p>
-          <p style="font-size:11px; color:#444; line-height:1.5; margin:0 0 12px;">The <strong id="pv_land_prod">[PRODUCTION]</strong> have confirmed their booking of <strong id="pv_land_site">[SITE]</strong>. Please see below details of dates, times and fees. We will issue the hire agreement shortly and send over for signature.</p>
+          <p style="font-size:11px; color:#444; line-height:1.5; margin:0 0 12px;" id="pv_land_opening">The [PRODUCTION] have confirmed their booking of [SITE NAME]. Please see below details of dates, times and fees. We will issue the hire agreement shortly and send over for signature.</p>
           <p class="ep-sec">Booking details</p>
           <div class="ep-box">
             <div class="ep-row"><span class="ep-rl">Site</span><span class="ep-rv" id="pv_land_site_row">[SITE]</span></div>
@@ -788,6 +822,10 @@
           <p class="ep-sec">Fee breakdown</p>
           <div class="ep-box" id="pv_land_fees" style="font-size:11px; color:#333;">
             <div style="color:#888; font-style:italic;">Add fee line items to see breakdown</div>
+          </div>
+          <p class="ep-sec" style="margin-top:10px;">Key contacts</p>
+          <div class="ep-box" style="font-size:11px;" id="pv_land_contacts">
+            <div style="color:#888; font-style:italic;">Fill in contacts above</div>
           </div>
         </div>
 
@@ -1098,6 +1136,7 @@
     pv('pv_your_role',g('your_role')          || 'The Base Camp Co.');
     pv('pv_your_phone',g('your_phone')        || '[PHONE]');
     pv('pv_site_inline', currentSite ? currentSite.site_name : '[SITE]');
+    syncToLandlord();
 
     var fromEmail = (document.getElementById('from_email')||{}).value || 'james@thebasecampco.com';
     var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
@@ -1205,7 +1244,7 @@
       +'<p style="font-size:13px;color:#A8D9D0;margin:0;">Booking ref: <strong style="color:#ffffff;">'+d.booking_ref+'</strong></p></td></tr>'
       +'<tr><td style="padding:24px 28px;">'
       +'<p style="font-size:15px;color:#1A1A1A;margin:0 0 10px;">Hi '+d.contact_name+',</p>'
-      +'<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 22px;">Your unit base booking for <strong>'+d.production_name+'</strong> at <strong>'+d.site_name+'</strong> is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.</p>'
+      +'<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 22px;">' + (d.opening_note || 'Your unit base booking for <strong>'+d.production_name+'</strong> at <strong>'+d.site_name+'</strong> is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.') + '</p>'
       +'<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Booking summary</p>'
       +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
       +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
@@ -1268,6 +1307,7 @@
       your_role:          g('your_role') || sender.title,
       your_phone:         g('your_phone') || sender.mobile,
       extra_contacts:     getExtraContacts(),
+      opening_note:       g('prod_opening_note'),
       site_name:          currentSite.site_name,
       address:            currentSite.address,
       w3w:                currentSite.w3w,
@@ -1545,25 +1585,34 @@
     var start    = (document.getElementById('land_start_date')||{}).value  || '[START]';
     var end      = (document.getElementById('land_end_date')||{}).value    || '[END]';
     var ref      = (document.getElementById('land_booking_ref')||{}).value || '[REF]';
+    var opening  = (document.getElementById('land_opening_note')||{}).value || '';
 
-    var el = document.getElementById('pv_land_title');
-    if (el) el.textContent = 'Unit Base Booking Confirmation - ' + siteName;
-    var re = document.getElementById('pv_land_ref');
-    if (re) re.textContent = ref;
-    var lc = document.getElementById('pv_land_contact');
-    if (lc) lc.textContent = contact;
-    var lp = document.getElementById('pv_land_prod');
-    if (lp) lp.textContent = prod;
-    var ls = document.getElementById('pv_land_site');
-    if (ls) ls.textContent = siteName;
-    var lsr = document.getElementById('pv_land_site_row');
-    if (lsr) lsr.textContent = siteName;
-    var lpr = document.getElementById('pv_land_prod_row');
-    if (lpr) lpr.textContent = prod;
-    var lst = document.getElementById('pv_land_start');
-    if (lst) lst.textContent = start;
-    var len = document.getElementById('pv_land_end');
-    if (len) len.textContent = end;
+    var fromEmail = (document.getElementById('land_from_email')||{}).value || 'james@thebasecampco.com';
+    var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
+    var lyn = document.getElementById('land_your_name');  if (lyn) lyn.value = sender.name;
+    var lyp = document.getElementById('land_your_phone'); if (lyp) lyp.value = sender.mobile;
+
+    var el = document.getElementById('pv_land_title');    if (el) el.textContent = 'Unit Base Booking Confirmation - ' + siteName;
+    var re = document.getElementById('pv_land_ref');      if (re) re.textContent = ref;
+    var lc = document.getElementById('pv_land_contact');  if (lc) lc.textContent = contact;
+    var lp = document.getElementById('pv_land_prod');     if (lp) lp.textContent = prod;
+    var ls = document.getElementById('pv_land_site');     if (ls) ls.textContent = siteName;
+    var lsr = document.getElementById('pv_land_site_row'); if (lsr) lsr.textContent = siteName;
+    var lpr = document.getElementById('pv_land_prod_row'); if (lpr) lpr.textContent = prod;
+    var lst = document.getElementById('pv_land_start');   if (lst) lst.textContent = start;
+    var len2 = document.getElementById('pv_land_end');    if (len2) len2.textContent = end;
+    var lo = document.getElementById('pv_land_opening');  if (lo) lo.textContent = opening || ('The ' + prod + ' have confirmed their booking of ' + siteName + '. Please see below details of dates, times and fees. We will issue the hire agreement shortly and send over for signature.');
+
+    // Contacts
+    var pcn = g('land_prod_contact_name'), pcr = g('land_prod_contact_role'), pcp = g('land_prod_contact_phone');
+    var contactsEl = document.getElementById('pv_land_contacts');
+    if (contactsEl) {
+      var rows = '';
+      if (pcn || pcp) rows += '<div class="ep-row"><span class="ep-rv" style="min-width:90px;">' + escHtml(pcn||'') + '</span><span class="ep-rl" style="padding-left:6px;">' + escHtml(pcr||'Production') + '</span><span style="color:#1A3A5C;font-weight:700;margin-left:auto;">' + escHtml(pcp||'') + '</span></div>';
+      getLandExtraContacts().forEach(function(c){ rows += '<div class="ep-row" style="margin-top:3px;"><span class="ep-rv" style="min-width:90px;">' + escHtml(c.name) + '</span><span class="ep-rl" style="padding-left:6px;">' + escHtml(c.role) + '</span><span style="color:#1A3A5C;font-weight:700;margin-left:auto;">' + escHtml(c.phone) + '</span></div>'; });
+      rows += '<div class="ep-row" style="margin-top:3px;"><span class="ep-rv" style="min-width:90px;">' + escHtml(sender.name) + '</span><span class="ep-rl" style="padding-left:6px;">The Base Camp Co.</span><span style="color:#1A3A5C;font-weight:700;margin-left:auto;">' + escHtml(sender.mobile) + '</span></div>';
+      contactsEl.innerHTML = rows;
+    }
 
     // Fee items
     var feesEl = document.getElementById('pv_land_fees');
@@ -1572,7 +1621,6 @@
         var id = row.dataset.feeId;
         return { desc: (document.getElementById(id+'_desc')||{}).value||'', amt: (document.getElementById(id+'_amt')||{}).value||'0' };
       }).filter(function(i){ return i.desc; });
-
       if (!items.length) {
         feesEl.innerHTML = '<div style="color:#888; font-style:italic;">Add fee line items to see breakdown</div>';
       } else {
@@ -1591,6 +1639,62 @@
         + '</div>';
       }
     }
+  }
+
+  function updateLandlordOpeningNote() {
+    var el   = document.getElementById('land_opening_note');
+    var site = currentSite ? currentSite.site_name : '[SITE NAME]';
+    var prod = g('land_production') || '[PRODUCTION NAME]';
+    if (el) el.value = 'The ' + prod + ' have confirmed their booking of ' + site + '. Please see below details of dates, times and fees. We will issue the hire agreement shortly and send over for signature.';
+  }
+
+  // Sync production fields to landlord tab
+  function syncToLandlord() {
+    var prodName = g('production_name');
+    var lp = document.getElementById('land_production');
+    if (lp && !lp.value && prodName) lp.value = prodName;
+    var ref = g('booking_ref');
+    var lr = document.getElementById('land_booking_ref');
+    if (lr && !lr.value && ref) lr.value = ref;
+    // Sync contacts
+    var pcn = g('prod_contact_name'), pcr = g('prod_contact_role'), pcp = g('prod_contact_phone');
+    var ln = document.getElementById('land_prod_contact_name');
+    var lro = document.getElementById('land_prod_contact_role');
+    var lph = document.getElementById('land_prod_contact_phone');
+    if (ln && !ln.value && pcn) ln.value = pcn;
+    if (lro && !lro.value && pcr) lro.value = pcr;
+    if (lph && !lph.value && pcp) lph.value = pcp;
+    updateLandlordOpeningNote();
+  }
+
+  var landExtraContactCounter = 0;
+  function addLandExtraContact(name, role, phone) {
+    landExtraContactCounter++;
+    var id = 'land_extra_' + landExtraContactCounter;
+    var row = document.createElement('div');
+    row.className = 'contact-row';
+    row.dataset.landContactId = id;
+    row.style.marginTop = '10px';
+    row.innerHTML = '<div class="field"><label>Name</label><input type="text" id="'+id+'_name" value="'+escHtml(name||'')+'" placeholder="Contact name" oninput="updateLandPreview()"></div>'
+      + '<div class="field"><label>Role</label><input type="text" id="'+id+'_role" value="'+escHtml(role||'')+'" placeholder="Role" oninput="updateLandPreview()"></div>'
+      + '<div class="field" style="position:relative;">'
+      + '<label>Phone</label>'
+      + '<div style="display:flex;gap:6px;align-items:center;">'
+      + '<input type="text" id="'+id+'_phone" value="'+escHtml(phone||'')+'" placeholder="+44 7700 900000" oninput="updateLandPreview()" style="flex:1;">'
+      + '<button class="step-remove" type="button" onclick="removeLandExtraContact(\''+id+'\')">x</button>'
+      + '</div></div>';
+    document.getElementById('landExtraContactsContainer').appendChild(row);
+    updateLandPreview();
+  }
+  function removeLandExtraContact(id) {
+    var row = document.querySelector('[data-land-contact-id="'+id+'"]');
+    if (row) { row.remove(); updateLandPreview(); }
+  }
+  function getLandExtraContacts() {
+    return Array.from(document.querySelectorAll('[data-land-contact-id]')).map(function(row) {
+      var id = row.dataset.landContactId;
+      return { name: (document.getElementById(id+'_name')||{}).value||'', role: (document.getElementById(id+'_role')||{}).value||'', phone: (document.getElementById(id+'_phone')||{}).value||'' };
+    }).filter(function(c){ return c.name || c.phone; });
   }
 
   function updateRightPanel(mode) {
@@ -1646,6 +1750,7 @@
     if (poSupName && !poSupName.value) poSupName.value = currentSite.landlord_company || '';
     if (poSupAddr && !poSupAddr.value) poSupAddr.value = currentSite.landlord_address || '';
     updatePOPreview();
+    updateLandlordOpeningNote();
     // Info sheet -- pre-fill steps
     if (document.getElementById('infoStepsContainer').children.length === 0) {
       ['step1','step2','step3','step4'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
@@ -1743,7 +1848,7 @@
       + (d.booking_ref ? '<p style="font-size:13px;color:#A8C4E0;margin:0;">Ref: <strong style="color:#fff;">' + escHtml(d.booking_ref) + '</strong></p>' : '') + '</td></tr>'
       + '<tr><td style="padding:24px 28px;">'
       + '<p style="font-size:15px;color:#1A1A1A;margin:0 0 10px;">Hi ' + escHtml(d.contact_name) + ',</p>'
-      + '<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 22px;">The <strong>' + escHtml(d.production) + '</strong> have confirmed their booking of <strong>' + escHtml(d.site_name) + '</strong>. Please see below details of dates, times and fees. We will issue the hire agreement shortly and send over for signature.</p>'
+      + '<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 22px;">' + escHtml(d.opening_note || ('The ' + d.production + ' have confirmed their booking of ' + d.site_name + '. Please see below details of dates, times and fees. We will issue the hire agreement shortly and send over for signature.')) + '</p>'
       + '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Booking details</p>'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
@@ -1758,6 +1863,13 @@
       + lineItemsHtml + totalsHtml
       + '</table></td></tr></table>'
       + (d.payment_terms ? '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;">Payment terms</p><p style="font-size:13px;color:#444440;line-height:1.6;margin:0 0 20px;">' + escHtml(d.payment_terms).replace(/\n/g,'<br>') + '</p>' : '')
+      + '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 10px;">Key contacts</p>'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F7F4;border-radius:6px;border:1px solid #E8E6E0;margin-bottom:20px;"><tr><td style="padding:14px 18px;">'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+      + (d.prod_contact_name ? '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">' + escHtml(d.prod_contact_name) + '</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">' + escHtml(d.prod_contact_role||'Production') + '</td><td style="font-size:13px;font-weight:700;color:#1A3A5C;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">' + escHtml(d.prod_contact_phone||'') + '</td></tr>' : '')
+      + (d.extra_contacts||[]).map(function(c){ return '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">' + escHtml(c.name) + '</td><td style="font-size:13px;color:#888880;padding:7px 8px;border-bottom:1px solid #EEECEA;">' + escHtml(c.role) + '</td><td style="font-size:13px;font-weight:700;color:#1A3A5C;padding:7px 0;text-align:right;border-bottom:1px solid #EEECEA;white-space:nowrap;">' + escHtml(c.phone) + '</td></tr>'; }).join('')
+      + '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;">' + escHtml(d.sender.name) + '</td><td style="font-size:13px;color:#888880;padding:7px 8px;">The Base Camp Co.</td><td style="font-size:13px;font-weight:700;color:#1A3A5C;padding:7px 0;text-align:right;white-space:nowrap;">' + escHtml(d.sender.mobile) + '</td></tr>'
+      + '</table></td></tr></table>'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0;"><tr><td style="border-top:1px solid #EAE8E2;font-size:0;">&nbsp;</td></tr></table>'
       + '<p style="font-size:14px;color:#444440;line-height:1.65;margin:0 0 20px;">If you have any questions please don\'t hesitate to get in touch.</p>'
       + buildFooterHTML(d.sender)
@@ -1852,19 +1964,24 @@
     }).filter(function(i){ return i.desc; });
 
     var d = {
-      contact_name:  contact,
-      site_name:     (document.getElementById('land_site_name')||{}).value || (currentSite ? currentSite.site_name : ''),
-      production:    (document.getElementById('land_production')||{}).value || '',
-      booking_ref:   (document.getElementById('land_booking_ref')||{}).value || '',
-      start_date:    (document.getElementById('land_start_date')||{}).value || '',
-      end_date:      (document.getElementById('land_end_date')||{}).value || '',
-      fee_items:     feeItems,
-      subtotal:      (document.getElementById('land_subtotal')||{}).value || '0',
-      vat_rate:      (document.getElementById('land_vat_rate')||{}).value || '0',
-      commission:    (document.getElementById('land_commission')||{}).value || '0',
-      total:         (document.getElementById('land_total')||{}).value || '0',
-      payment_terms: (document.getElementById('land_payment_terms')||{}).value || '',
-      sender:        sender
+      contact_name:       contact,
+      site_name:          (document.getElementById('land_site_name')||{}).value || (currentSite ? currentSite.site_name : ''),
+      production:         (document.getElementById('land_production')||{}).value || '',
+      booking_ref:        (document.getElementById('land_booking_ref')||{}).value || '',
+      start_date:         (document.getElementById('land_start_date')||{}).value || '',
+      end_date:           (document.getElementById('land_end_date')||{}).value || '',
+      opening_note:       (document.getElementById('land_opening_note')||{}).value || '',
+      prod_contact_name:  (document.getElementById('land_prod_contact_name')||{}).value || '',
+      prod_contact_role:  (document.getElementById('land_prod_contact_role')||{}).value || '',
+      prod_contact_phone: (document.getElementById('land_prod_contact_phone')||{}).value || '',
+      extra_contacts:     getLandExtraContacts(),
+      fee_items:          feeItems,
+      subtotal:           (document.getElementById('land_subtotal')||{}).value || '0',
+      vat_rate:           (document.getElementById('land_vat_rate')||{}).value || '0',
+      commission:         (document.getElementById('land_commission')||{}).value || '0',
+      total:              (document.getElementById('land_total')||{}).value || '0',
+      payment_terms:      (document.getElementById('land_payment_terms')||{}).value || '',
+      sender:             sender
     };
 
     var toEmails = toEmail.split(',').map(function(e){ return e.trim(); }).filter(Boolean);
