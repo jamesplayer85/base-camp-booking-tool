@@ -2570,14 +2570,27 @@
     var BOLD_FONT  = 'Arial';
     var LIGHT_FONT = 'Arial';
     try {
-      var fontBase = 'https://jamesplayer85.github.io/base-camp-booking-tool/fonts/Avenir.ttc';
-      var fBold  = new FontFace('AvenirBlack', 'url(' + fontBase + ')', { weight: '900' });
-      var fLight = new FontFace('AvenirLight', 'url(' + fontBase + ')', { weight: '300' });
-      await Promise.all([fBold.load(), fLight.load()]);
-      document.fonts.add(fBold);
-      document.fonts.add(fLight);
-      BOLD_FONT  = 'AvenirBlack';
-      LIGHT_FONT = 'AvenirLight';
+      var fontUrl = 'https://jamesplayer85.github.io/base-camp-booking-tool/fonts/Avenir.ttc';
+
+      // Inject @font-face via style tag to prime browser
+      if (!document.getElementById('avenir-style')) {
+        var styleEl = document.createElement('style');
+        styleEl.id = 'avenir-style';
+        styleEl.textContent = [
+          '@font-face { font-family: "AvenirBlack"; src: url("' + fontUrl + '") format("truetype"); font-weight: 900; }',
+          '@font-face { font-family: "AvenirLight"; src: url("' + fontUrl + '") format("truetype"); font-weight: 300; }'
+        ].join('\n');
+        document.head.appendChild(styleEl);
+      }
+
+      // Load via FontFace API
+      var fBold  = new FontFace('AvenirBlack',  'url(' + fontUrl + ')', { weight: '900' });
+      var fLight = new FontFace('AvenirLight', 'url(' + fontUrl + ')', { weight: '300' });
+      var results = await Promise.allSettled([fBold.load(), fLight.load()]);
+      if (results[0].status === 'fulfilled') { document.fonts.add(results[0].value); BOLD_FONT  = 'AvenirBlack'; }
+      if (results[1].status === 'fulfilled') { document.fonts.add(results[1].value); LIGHT_FONT = 'AvenirLight'; }
+      // Wait for fonts to be ready in the document
+      if (BOLD_FONT !== 'Arial') await document.fonts.ready;
     } catch(e) { /* fall back to Arial */ }
 
     // -- Generate QR code first --
