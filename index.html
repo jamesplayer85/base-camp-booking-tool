@@ -2500,14 +2500,14 @@
     var sigLoaded = false;
     try {
       // Fetch font as base64
-      var fontRes = await fetch('https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMSo3ROp6.woff2');
+      var fontRes = await fetch('https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2Q7ZjYYiAzcPDiS.woff2');
       if (fontRes.ok) {
         var fontBuf  = await fontRes.arrayBuffer();
         var fontB64  = btoa(String.fromCharCode.apply(null, new Uint8Array(fontBuf)));
-        doc.addFileToVFS('DancingScript.woff2', fontB64);
-        doc.addFont('DancingScript.woff2', 'DancingScript', 'normal');
-        doc.setFont('DancingScript', 'normal');
-        doc.setFontSize(22);
+        doc.addFileToVFS('Caveat.woff2', fontB64);
+        doc.addFont('Caveat.woff2', 'Caveat', 'normal');
+        doc.setFont('Caveat', 'normal');
+        doc.setFontSize(16);
         doc.setTextColor(30, 30, 30);
         doc.text(sigName, ml, y + 10);
         sigLoaded = true;
