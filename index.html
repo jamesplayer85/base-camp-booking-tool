@@ -2634,7 +2634,7 @@
     // Layout proportions
     var logoH  = Math.round(DIM * 0.195);
     var barH   = Math.round(DIM * 0.09);
-    var footH  = Math.round(DIM * 0.135);
+    var footH  = Math.round(DIM * 0.175);
     var qrAreaH = DIM - logoH - barH - footH;
 
     // White background
@@ -2712,17 +2712,17 @@
 
     // Production line
     var prodFs      = Math.round(DIM * 0.033);  // ~18pt
-    var lineSpacing = siteFs * 1.2;
-    var gap         = prodFs * 0.55;
-    var totalH      = (siteLines2.length - 1) * lineSpacing + siteFs + gap + prodFs;
-    var textStartY  = footY + (footH - totalH) / 2 + siteFs;
+    var lineSpacing = siteFs * 1.35;
+    var prodSpacing = prodFs * 1.4;
+    var totalH      = siteLines2.length * lineSpacing + prodSpacing;
+    var textStartY  = footY + (footH - totalH) / 2 + siteFs * 0.5;
 
     ctx.font = '900 ' + siteFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
     siteLines2.forEach(function(line, i) {
       ctx.fillText(line, DIM / 2, textStartY + i * lineSpacing);
     });
 
-    var prodLineY = textStartY + (siteLines2.length - 1) * lineSpacing + siteFs * 0.1 + gap + prodFs * 0.8;
+    var prodLineY = textStartY + siteLines2.length * lineSpacing + prodFs * 0.5;
 
     // Measure pieces for centred mixed-weight line
     var pLabel = 'PRODUCTION:';
