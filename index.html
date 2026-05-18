@@ -2566,7 +2566,21 @@
 
     await loadQRLib();
 
-    // -- Generate QR code first, await it fully --
+    // -- Load Avenir from GitHub --
+    var BOLD_FONT  = 'Arial';
+    var LIGHT_FONT = 'Arial';
+    try {
+      var fontBase = 'https://jamesplayer85.github.io/base-camp-booking-tool/fonts/Avenir.ttc';
+      var fBold  = new FontFace('AvenirBlack', 'url(' + fontBase + ')', { weight: '900' });
+      var fLight = new FontFace('AvenirLight', 'url(' + fontBase + ')', { weight: '300' });
+      await Promise.all([fBold.load(), fLight.load()]);
+      document.fonts.add(fBold);
+      document.fonts.add(fLight);
+      BOLD_FONT  = 'AvenirBlack';
+      LIGHT_FONT = 'AvenirLight';
+    } catch(e) { /* fall back to Arial */ }
+
+    // -- Generate QR code first --
     var qrDataUrl = null;
     if (url) {
       var qrContainer = document.getElementById('qrgen_hidden');
@@ -2578,7 +2592,7 @@
       }
       qrContainer.innerHTML = '';
       await new Promise(function(resolve) {
-        new QRCode(qrContainer, { text: url, width: 600, height: 600, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+        new QRCode(qrContainer, { text: url, width: 800, height: 800, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
         setTimeout(function() {
           var qrCanvas = qrContainer.querySelector('canvas');
           var qrImg    = qrContainer.querySelector('img');
@@ -2589,7 +2603,7 @@
       });
     }
 
-    // -- Load logo fully before drawing anything --
+    // -- Load logo fully before drawing --
     var logoImg = new Image();
     logoImg.crossOrigin = 'anonymous';
     logoImg.src = 'https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w';
@@ -2599,151 +2613,141 @@
       setTimeout(function() { resolve(logoImg.naturalWidth > 0); }, 3000);
     });
 
-    // -- High DPI canvas: 1200×1500px for crisp PNG output --
+    // -- Square 1080x1080 canvas --
     var canvas = document.getElementById('qrCardCanvas');
-    var S = 2; // scale factor — drawn at 2x, displayed at 1x
-    var W = 600, H = 780;
-    canvas.width  = W * S;
-    canvas.height = H * S;
-    canvas.style.width  = W + 'px';
-    canvas.style.height = H + 'px';
+    var DIM = 1080;
+    canvas.width  = DIM;
+    canvas.height = DIM;
+    canvas.style.width  = '100%';
+    canvas.style.height = 'auto';
 
     var ctx = canvas.getContext('2d');
-    ctx.scale(S, S);
-
     var TEAL  = '#1E7B6B';
     var WHITE = '#ffffff';
-    var DARK  = '#1A1A1A';
-    var pad   = 28;
 
-    // -- White background --
+    // Layout proportions
+    var logoH  = Math.round(DIM * 0.195);
+    var barH   = Math.round(DIM * 0.09);
+    var footH  = Math.round(DIM * 0.175);
+    var qrAreaH = DIM - logoH - barH - footH;
+
+    // White background
     ctx.fillStyle = WHITE;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, DIM, DIM);
 
-    // -- Logo centred at top --
-    var logoAreaH = 100;
+    // Logo area
     if (logoLoaded) {
-      var lw = 220, lh = lw * (logoImg.naturalHeight / logoImg.naturalWidth);
-      ctx.drawImage(logoImg, (W - lw) / 2, (logoAreaH - lh) / 2, lw, lh);
+      var lw = Math.round(DIM * 0.44);
+      var lh = Math.round(lw * (logoImg.naturalHeight / logoImg.naturalWidth));
+      ctx.drawImage(logoImg, (DIM - lw) / 2, (logoH - lh) / 2, lw, lh);
     } else {
       ctx.fillStyle = TEAL;
-      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.font = '900 ' + Math.round(DIM * 0.05) + 'px ' + BOLD_FONT + ', Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('THE BASE CAMP CO.', W / 2, logoAreaH / 2 + 10);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('THE BASE CAMP CO.', DIM / 2, logoH / 2);
     }
 
-    // -- Teal header bar --
-    var barY = logoAreaH;
-    var barH = 56;
+    // Teal header bar
+    var barY = logoH;
     ctx.fillStyle = TEAL;
-    ctx.fillRect(0, barY, W, barH);
+    ctx.fillRect(0, barY, DIM, barH);
     ctx.fillStyle = WHITE;
     ctx.textAlign = 'center';
-    ctx.font = 'bold 15px Arial, sans-serif';
-    ctx.letterSpacing = '0.05em';
-    ctx.fillText('SCAN THIS QR CODE TO REGISTER YOUR VEHICLE', W / 2, barY + barH / 2 + 6);
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 ' + Math.round(DIM * 0.033) + 'px ' + BOLD_FONT + ', Arial, sans-serif';
+    ctx.fillText('SCAN THIS QR CODE TO REGISTER YOUR VEHICLE', DIM / 2, barY + barH / 2);
 
-    // -- QR code white frame with teal border --
-    var frameY   = barY + barH + 20;
-    var frameSize = W - (pad * 2);
-    var frameH   = frameSize;
-
-    // Teal border rectangle
-    ctx.strokeStyle = TEAL;
-    ctx.lineWidth   = 4;
-    ctx.strokeRect(pad - 2, frameY - 2, frameSize + 4, frameH + 4);
-
-    // White fill
+    // White QR area - full width, no border radius
+    var qrY = barY + barH;
     ctx.fillStyle = WHITE;
-    ctx.fillRect(pad, frameY, frameSize, frameH);
+    ctx.fillRect(0, qrY, DIM, qrAreaH);
+
+    // Subtle top/bottom lines on QR frame
+    ctx.strokeStyle = '#E0DED8';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, qrY); ctx.lineTo(DIM, qrY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, qrY + qrAreaH); ctx.lineTo(DIM, qrY + qrAreaH); ctx.stroke();
 
     if (qrDataUrl) {
       var qrImg2 = new Image();
-      await new Promise(function(resolve) {
-        qrImg2.onload = resolve; qrImg2.onerror = resolve;
-        qrImg2.src = qrDataUrl;
-      });
-      var qrPad  = 24;
-      var qrSize = frameSize - qrPad * 2;
-      ctx.drawImage(qrImg2, pad + qrPad, frameY + qrPad, qrSize, qrSize);
+      await new Promise(function(resolve) { qrImg2.onload = resolve; qrImg2.onerror = resolve; qrImg2.src = qrDataUrl; });
+      var qrPad  = Math.round(DIM * 0.055);
+      var qrSize = qrAreaH - qrPad * 2;
+      ctx.drawImage(qrImg2, (DIM - qrSize) / 2, qrY + qrPad, qrSize, qrSize);
     } else {
-      ctx.fillStyle = '#cccccc';
-      ctx.font = '16px Arial, sans-serif';
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = '300 ' + Math.round(DIM * 0.025) + 'px ' + LIGHT_FONT + ', Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Enter a URL above to generate QR code', W / 2, frameY + frameH / 2);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Enter a URL above to generate QR code', DIM / 2, qrY + qrAreaH / 2);
     }
 
-    // -- Footer: site name + production/date --
-    var footY = frameY + frameH + 22;
-
-    // Site name — large, teal, bold
+    // Teal footer
+    var footY = qrY + qrAreaH;
     ctx.fillStyle = TEAL;
+    ctx.fillRect(0, footY, DIM, footH);
+    ctx.fillStyle = WHITE;
     ctx.textAlign = 'center';
-    ctx.font = 'bold 20px Arial, sans-serif';
-    var maxTW = W - pad * 2;
-    // Word-wrap site name
+    ctx.textBaseline = 'middle';
+
+    // Site name - bold, uppercase, white
+    var siteFs = Math.round(DIM * 0.037);  // ~18pt
+    ctx.font = '900 ' + siteFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
+    var maxTW = DIM * 0.88;
     var siteWords = siteName.toUpperCase().split(' ');
-    var siteLine = '', siteLines = [];
+    var siteLine = '', siteLines2 = [];
     siteWords.forEach(function(w) {
       var test = siteLine + (siteLine ? ' ' : '') + w;
-      if (ctx.measureText(test).width > maxTW && siteLine) { siteLines.push(siteLine); siteLine = w; }
+      if (ctx.measureText(test).width > maxTW && siteLine) { siteLines2.push(siteLine); siteLine = w; }
       else siteLine = test;
     });
-    if (siteLine) siteLines.push(siteLine);
-    siteLines.forEach(function(line, i) { ctx.fillText(line, W / 2, footY + i * 26); });
+    if (siteLine) siteLines2.push(siteLine);
 
-    var prodY = footY + siteLines.length * 26 + 8;
+    // Production line
+    var prodFs = Math.round(DIM * 0.033);  // ~18pt
+    var lineSpacing = siteFs * 1.35;
+    var prodSpacing = prodFs * 1.4;
+    var totalH = siteLines2.length * lineSpacing + prodSpacing;
+    var textStartY = footY + (footH - totalH) / 2 + siteFs * 0.5;
 
-    // Production line — "PRODUCTION:" bold teal, value dark
-    ctx.font = 'bold 14px Arial, sans-serif';
-    var prodLabel = 'PRODUCTION:';
-    var prodValue = '  ' + production;
-    var dateLabel = date ? '   DATE:' : '';
-    var dateValue = date ? '  ' + date : '';
+    ctx.font = '900 ' + siteFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
+    siteLines2.forEach(function(line, i) {
+      ctx.fillText(line, DIM / 2, textStartY + i * lineSpacing);
+    });
 
-    // Measure to centre the whole line
-    ctx.font = 'bold 14px Arial, sans-serif';
-    var plW = ctx.measureText(prodLabel).width;
-    ctx.font = '14px Arial, sans-serif';
-    var pvW = ctx.measureText(prodValue).width;
-    ctx.font = 'bold 14px Arial, sans-serif';
-    var dlW = date ? ctx.measureText(dateLabel).width : 0;
-    ctx.font = '14px Arial, sans-serif';
-    var dvW = date ? ctx.measureText(dateValue).width : 0;
-    var totalW = plW + pvW + dlW + dvW;
-    var startX = (W - totalW) / 2;
+    var prodLineY = textStartY + siteLines2.length * lineSpacing + prodFs * 0.5;
+
+    // Measure pieces for centred mixed-weight line
+    var pLabel = 'PRODUCTION:';
+    var pValue = ' ' + production;
+    var dLabel = date ? '   DATE:' : '';
+    var dValue = date ? ' ' + date : '';
+
+    ctx.font = '900 ' + prodFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
+    var plW = ctx.measureText(pLabel).width;
+    ctx.font = '300 ' + prodFs + 'px ' + LIGHT_FONT + ', Arial, sans-serif';
+    var pvW = ctx.measureText(pValue).width;
+    ctx.font = '900 ' + prodFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
+    var dlW = date ? ctx.measureText(dLabel).width : 0;
+    ctx.font = '300 ' + prodFs + 'px ' + LIGHT_FONT + ', Arial, sans-serif';
+    var dvW = date ? ctx.measureText(dValue).width : 0;
+
+    var lineW  = plW + pvW + dlW + dvW;
+    var startX = (DIM - lineW) / 2;
 
     ctx.textAlign = 'left';
-    ctx.fillStyle = TEAL;
-    ctx.font = 'bold 14px Arial, sans-serif';
-    ctx.fillText(prodLabel, startX, prodY);
-    ctx.fillStyle = DARK;
-    ctx.font = '14px Arial, sans-serif';
-    ctx.fillText(prodValue, startX + plW, prodY);
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 ' + prodFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
+    ctx.fillText(pLabel, startX, prodLineY);
+    ctx.font = '300 ' + prodFs + 'px ' + LIGHT_FONT + ', Arial, sans-serif';
+    ctx.fillText(pValue, startX + plW, prodLineY);
     if (date) {
-      ctx.fillStyle = TEAL;
-      ctx.font = 'bold 14px Arial, sans-serif';
-      ctx.fillText(dateLabel, startX + plW + pvW, prodY);
-      ctx.fillStyle = DARK;
-      ctx.font = '14px Arial, sans-serif';
-      ctx.fillText(dateValue, startX + plW + pvW + dlW, prodY);
+      ctx.font = '900 ' + prodFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
+      ctx.fillText(dLabel, startX + plW + pvW, prodLineY);
+      ctx.font = '300 ' + prodFs + 'px ' + LIGHT_FONT + ', Arial, sans-serif';
+      ctx.fillText(dValue, startX + plW + pvW + dlW, prodLineY);
     }
-  }
-
-  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    var words = text.split(' ');
-    var line  = '';
-    for (var i = 0; i < words.length; i++) {
-      var test = line + words[i] + ' ';
-      if (ctx.measureText(test).width > maxWidth && i > 0) {
-        ctx.fillText(line.trim(), x, y);
-        line = words[i] + ' ';
-        y   += lineHeight;
-      } else {
-        line = test;
-      }
-    }
-    ctx.fillText(line.trim(), x, y);
   }
 
   function downloadQRCard() {
