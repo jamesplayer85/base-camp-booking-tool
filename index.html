@@ -557,28 +557,26 @@
 
       <div class="form-card">
         <h2>Recipient</h2>
-        <div class="field-row">
-          <div class="field">
-            <label>To: email address(es) *</label>
-            <input type="text" id="info_to_email" placeholder="recipient@production.com">
-          </div>
-          <div class="field">
-            <label>Contact first name *</label>
-            <input type="text" id="info_contact_name" placeholder="Sarah">
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:0;">
+        <div class="field">
           <label>From: sender</label>
-          <select class="sender-select" id="info_from_email">
+          <select class="sender-select" id="info_from_email" onchange="updateInfoPreview()">
             <option value="james@thebasecampco.com">James Player — james@thebasecampco.com</option>
             <option value="tom@thebasecampco.com">Tom Bosanquet — tom@thebasecampco.com</option>
             <option value="ben@thebasecampco.com">Ben Frost — ben@thebasecampco.com</option>
           </select>
         </div>
+        <div class="field">
+          <label>To: email address(es) *</label>
+          <input type="text" id="info_to_email" placeholder="recipient@production.com" oninput="updateInfoPreview()">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Contact first name *</label>
+          <input type="text" id="info_contact_name" placeholder="Sarah" oninput="updateInfoPreview()">
+        </div>
       </div>
 
       <div class="form-card">
-        <h2>Site Information — pre-filled from template, edit if needed</h2>
+        <h2>Site Access — pre-filled from site template, edit if needed</h2>
         <div class="steps-list" id="infoStepsContainer"></div>
         <button class="add-step-btn" onclick="addInfoStep('')" type="button">
           <span style="font-size:18px;line-height:1;">+</span> Add step
@@ -588,7 +586,7 @@
       <div class="form-card">
         <h2>Important Note — leave blank to hide</h2>
         <div class="field">
-          <textarea id="info_note_text" rows="3" placeholder="Gate must be kept shut at all times…"></textarea>
+          <textarea id="info_note_text" rows="3" placeholder="Gate must be kept shut at all times…" oninput="updateInfoPreview()"></textarea>
         </div>
       </div>
 
@@ -848,6 +846,14 @@
           </div>
           <p class="ep-sec">Site access</p>
           <div class="ep-box" style="font-size:11px; color:#333; line-height:1.6;" id="pv_info_steps">Select a site to see steps</div>
+          <div class="ep-note" id="pv_info_note_box" style="display:none;">
+            <strong>Important:</strong> <span id="pv_info_note"></span>
+          </div>
+          <p class="ep-sec">Site map</p>
+          <div class="ep-map">
+            <img id="pv_info_map_img" src="" alt="Site map" style="display:none; max-width:100%; height:auto;">
+            <p class="ep-map-ph" id="pv_info_map_ph">Site map from Monday</p>
+          </div>
         </div>
       </div>
     </div>
@@ -1657,16 +1663,15 @@
 
   // Sync production fields to landlord tab
   function updateLandSubject() {
-    var site  = (document.getElementById('land_site_name')||{}).value || (currentSite ? currentSite.site_name : '');
     var prod  = (document.getElementById('land_production')||{}).value || '';
     var start = (document.getElementById('land_start_date')||{}).value || '';
     var end   = (document.getElementById('land_end_date')||{}).value || '';
-    if (!site && !prod) return;
+    if (!prod) return;
     var startShort = start.replace(/\s*-\s*\d+:\d+/,'').trim();
     var endShort   = end.replace(/\s*-\s*\d+:\d+/,'').trim();
     var dates = (startShort && endShort && startShort !== endShort) ? ' (' + startShort + ' - ' + endShort + ')' : (startShort ? ' (' + startShort + ')' : '');
     var el = document.getElementById('land_email_subject');
-    if (el) el.value = 'Unit Base Booking Confirmation' + (site ? ' - ' + site : '') + (prod ? ' - ' + prod : '') + dates;
+    if (el) el.value = 'Unit Base Booking Confirmation - ' + prod + dates;
   }
 
   function syncToLandlord() {
@@ -1756,6 +1761,7 @@
     if (currentSite) populateModeFromSite();
     if (mode === 'qrgen') updateQRCard();
     if (mode === 'po')    updatePOPreview();
+    if (mode === 'info')  updateInfoPreview();
     updateRightPanel(mode);
   }
 
@@ -1781,6 +1787,7 @@
       if (document.getElementById('infoStepsContainer').children.length === 0) { addInfoStep(''); addInfoStep(''); addInfoStep(''); }
       document.getElementById('info_note_text').value = currentSite.important_note || '';
     }
+    updateInfoPreview();
   }
 
   // -- Fee line items --
@@ -1837,13 +1844,59 @@
     var row = document.createElement('div');
     row.className = 'step-row';
     row.dataset.infoStepId = id;
-    row.innerHTML = '<div class="step-circle"></div>'
-      + '<div class="field" style="flex:1;margin:0;"><input type="text" id="' + id + '" value="' + escHtml(value) + '" placeholder="Enter access step..."></div>'
-      + '<button class="step-remove" type="button" onclick="removeInfoStep(\'' + id + '\')">x</button>';
+    row.innerHTML = '<div class="step-circle" style="background:#4A5568;"></div>'
+      + '<div class="field" style="flex:1;margin:0;"><input type="text" id="' + id + '" value="' + escHtml(value) + '" placeholder="Enter access step..." oninput="updateInfoPreview()"></div>'
+      + '<button class="step-remove" type="button" onclick="removeInfoStep(\'' + id + '\'); updateInfoPreview();">x</button>';
     document.getElementById('infoStepsContainer').appendChild(row);
+    updateInfoPreview();
   }
   function removeInfoStep(id) { var r = document.querySelector('[data-info-step-id="' + id + '"]'); if(r) r.remove(); }
   function getInfoSteps() { return Array.from(document.querySelectorAll('#infoStepsContainer input')).map(function(i){ return i.value.trim(); }).filter(Boolean); }
+
+  function updateInfoPreview() {
+    var siteName = currentSite ? currentSite.site_name : '[SITE]';
+    var addr     = currentSite ? currentSite.address   : '';
+    var w3w      = currentSite ? currentSite.w3w       : '';
+    var contact  = (document.getElementById('info_contact_name')||{}).value || '[NAME]';
+    var steps    = getInfoSteps();
+    var note     = (document.getElementById('info_note_text')||{}).value || '';
+    var mapUrl   = currentSite ? currentSite.site_map_url : '';
+
+    // Banner
+    var b = document.getElementById('rp_banner_info');
+    if (b) { var h = b.querySelector('h3'); if (h) h.textContent = 'Site information sheet'; var p = b.querySelector('p'); if (p) p.textContent = siteName; }
+
+    // Body fields
+    var el;
+    el = document.getElementById('pv_info_contact');    if (el) el.textContent = contact;
+    el = document.getElementById('pv_info_site_inline'); if (el) el.textContent = siteName;
+    el = document.getElementById('pv_info_site_name');  if (el) el.textContent = siteName;
+    el = document.getElementById('pv_info_addr');       if (el) el.textContent = addr;
+    el = document.getElementById('pv_info_w3w');        if (el) el.textContent = '///' + w3w;
+
+    var stepsEl = document.getElementById('pv_info_steps');
+    if (stepsEl) {
+      stepsEl.innerHTML = steps.length
+        ? steps.map(function(s){ return '<div style="display:flex;gap:8px;align-items:flex-start;padding:3px 0;"><span style="background:#4A5568;border-radius:50%;width:14px;height:14px;min-width:14px;display:inline-block;margin-top:2px;"></span><span>' + escHtml(s) + '</span></div>'; }).join('')
+        : '<span style="color:#888;">Select a site to see steps</span>';
+    }
+
+    // Note
+    var noteBox = document.getElementById('pv_info_note_box');
+    var noteEl  = document.getElementById('pv_info_note');
+    if (noteBox && noteEl) {
+      if (note) { noteBox.style.display = 'block'; noteEl.innerHTML = note.replace(/\n/g,'<br>'); }
+      else { noteBox.style.display = 'none'; }
+    }
+
+    // Map
+    var mapImg = document.getElementById('pv_info_map_img');
+    var mapPh  = document.getElementById('pv_info_map_ph');
+    if (mapImg && mapPh) {
+      if (mapUrl) { mapImg.src = mapUrl; mapImg.style.display = 'block'; mapPh.style.display = 'none'; }
+      else { mapImg.style.display = 'none'; mapPh.style.display = 'block'; }
+    }
+  }
 
   // -- Landlord email builder --
   function buildLandlordEmailHTML(d) {
