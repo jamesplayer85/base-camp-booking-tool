@@ -2711,17 +2711,18 @@
     if (siteLine) siteLines2.push(siteLine);
 
     // Production line
-    var prodFs = Math.round(DIM * 0.033);  // ~18pt
-    var lineSpacing = siteFs * 1.3;
-    var totalH = siteLines2.length * lineSpacing + prodFs * 1.8;
-    var textStartY = footY + (footH - totalH) / 2 + siteFs;
+    var prodFs      = Math.round(DIM * 0.033);  // ~18pt
+    var lineSpacing = siteFs * 1.2;
+    var gap         = prodFs * 0.55;
+    var totalH      = (siteLines2.length - 1) * lineSpacing + siteFs + gap + prodFs;
+    var textStartY  = footY + (footH - totalH) / 2 + siteFs;
 
     ctx.font = '900 ' + siteFs + 'px ' + BOLD_FONT + ', Arial, sans-serif';
     siteLines2.forEach(function(line, i) {
       ctx.fillText(line, DIM / 2, textStartY + i * lineSpacing);
     });
 
-    var prodLineY = textStartY + siteLines2.length * lineSpacing + prodFs * 0.2;
+    var prodLineY = textStartY + (siteLines2.length - 1) * lineSpacing + siteFs * 0.1 + gap + prodFs * 0.8;
 
     // Measure pieces for centred mixed-weight line
     var pLabel = 'PRODUCTION:';
