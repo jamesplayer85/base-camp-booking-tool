@@ -861,7 +861,7 @@
     <!-- QR card preview -->
     <div id="rp_qr" style="display:none;">
       <h2>QR card preview</h2>
-      <canvas id="qrCardCanvas" width="800" height="900" style="max-width:100%; height:auto; border-radius:6px; border:1px solid var(--border);"></canvas>
+      <canvas id="qrCardCanvas" style="max-width:100%; height:auto; border-radius:6px; border:1px solid var(--border); display:block;"></canvas>
     </div>
 
     <!-- PO preview -->
@@ -2566,120 +2566,168 @@
 
     await loadQRLib();
 
-    // Generate QR code to a hidden div then grab its canvas/image
-    var qrContainer = document.getElementById('qrgen_hidden');
-    if (!qrContainer) {
-      qrContainer = document.createElement('div');
-      qrContainer.id = 'qrgen_hidden';
-      qrContainer.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:400px;height:400px;';
-      document.body.appendChild(qrContainer);
-    }
-    qrContainer.innerHTML = '';
-
+    // -- Generate QR code first, await it fully --
     var qrDataUrl = null;
     if (url) {
+      var qrContainer = document.getElementById('qrgen_hidden');
+      if (!qrContainer) {
+        qrContainer = document.createElement('div');
+        qrContainer.id = 'qrgen_hidden';
+        qrContainer.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+        document.body.appendChild(qrContainer);
+      }
+      qrContainer.innerHTML = '';
       await new Promise(function(resolve) {
-        var qr = new QRCode(qrContainer, {
-          text:          url,
-          width:         400,
-          height:        400,
-          colorDark:     '#000000',
-          colorLight:    '#ffffff',
-          correctLevel:  QRCode.CorrectLevel.H
-        });
+        new QRCode(qrContainer, { text: url, width: 600, height: 600, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
         setTimeout(function() {
           var qrCanvas = qrContainer.querySelector('canvas');
           var qrImg    = qrContainer.querySelector('img');
-          if (qrCanvas)      qrDataUrl = qrCanvas.toDataURL('image/png');
-          else if (qrImg)    qrDataUrl = qrImg.src;
+          if (qrCanvas) qrDataUrl = qrCanvas.toDataURL('image/png');
+          else if (qrImg) qrDataUrl = qrImg.src;
           resolve();
-        }, 300);
+        }, 400);
       });
     }
 
-    // Now draw the card
-    var canvas = document.getElementById('qrCardCanvas');
-    var ctx    = canvas.getContext('2d');
-    var W = 800, H = 900;
-    canvas.width = W; canvas.height = H;
-
-    // White background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
-
-    // -- Logo area (top white section) --
-    var logoAreaH = 160;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, logoAreaH);
-
-    // Draw logo text as fallback (always works, no CORS issues)
-    ctx.fillStyle = '#1E7B6B';
-    ctx.font = 'bold 52px Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('THE BASE CAMP CO.', W / 2, 100);
-
-    // Try loading the logo image over the text
+    // -- Load logo fully before drawing anything --
     var logoImg = new Image();
     logoImg.crossOrigin = 'anonymous';
     logoImg.src = 'https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w';
-    logoImg.onload = function() {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, W, logoAreaH);
-      var lw = 340, lh = 106;
+    var logoLoaded = await new Promise(function(resolve) {
+      logoImg.onload  = function() { resolve(true); };
+      logoImg.onerror = function() { resolve(false); };
+      setTimeout(function() { resolve(logoImg.naturalWidth > 0); }, 3000);
+    });
+
+    // -- High DPI canvas: 1200×1500px for crisp PNG output --
+    var canvas = document.getElementById('qrCardCanvas');
+    var S = 2; // scale factor — drawn at 2x, displayed at 1x
+    var W = 600, H = 780;
+    canvas.width  = W * S;
+    canvas.height = H * S;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+
+    var ctx = canvas.getContext('2d');
+    ctx.scale(S, S);
+
+    var TEAL  = '#1E7B6B';
+    var WHITE = '#ffffff';
+    var DARK  = '#1A1A1A';
+    var pad   = 28;
+
+    // -- White background --
+    ctx.fillStyle = WHITE;
+    ctx.fillRect(0, 0, W, H);
+
+    // -- Logo centred at top --
+    var logoAreaH = 100;
+    if (logoLoaded) {
+      var lw = 220, lh = lw * (logoImg.naturalHeight / logoImg.naturalWidth);
       ctx.drawImage(logoImg, (W - lw) / 2, (logoAreaH - lh) / 2, lw, lh);
-    };
+    } else {
+      ctx.fillStyle = TEAL;
+      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('THE BASE CAMP CO.', W / 2, logoAreaH / 2 + 10);
+    }
 
     // -- Teal header bar --
     var barY = logoAreaH;
-    ctx.fillStyle = '#1E7B6B';
-    ctx.fillRect(0, barY, W, 80);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Arial, sans-serif';
+    var barH = 56;
+    ctx.fillStyle = TEAL;
+    ctx.fillRect(0, barY, W, barH);
+    ctx.fillStyle = WHITE;
     ctx.textAlign = 'center';
-    ctx.fillText('SCAN THIS QR CODE TO REGISTER YOUR VEHICLE', W / 2, barY + 50);
+    ctx.font = 'bold 15px Arial, sans-serif';
+    ctx.letterSpacing = '0.05em';
+    ctx.fillText('SCAN THIS QR CODE TO REGISTER YOUR VEHICLE', W / 2, barY + barH / 2 + 6);
 
-    // -- QR code area --
-    var qrAreaY = barY + 80;
-    var qrAreaH = 480;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, qrAreaY, W, qrAreaH);
+    // -- QR code white frame with teal border --
+    var frameY   = barY + barH + 20;
+    var frameSize = W - (pad * 2);
+    var frameH   = frameSize;
 
-    // Teal border
-    ctx.strokeStyle = '#1E7B6B';
-    ctx.lineWidth   = 8;
-    ctx.strokeRect(4, qrAreaY + 4, W - 8, qrAreaH - 8);
+    // Teal border rectangle
+    ctx.strokeStyle = TEAL;
+    ctx.lineWidth   = 4;
+    ctx.strokeRect(pad - 2, frameY - 2, frameSize + 4, frameH + 4);
+
+    // White fill
+    ctx.fillStyle = WHITE;
+    ctx.fillRect(pad, frameY, frameSize, frameH);
 
     if (qrDataUrl) {
-      var qrDrawImg = new Image();
-      qrDrawImg.onload = function() {
-        var qrSize = 380;
-        var qrX    = (W - qrSize) / 2;
-        var qrY2   = qrAreaY + (qrAreaH - qrSize) / 2;
-        ctx.drawImage(qrDrawImg, qrX, qrY2, qrSize, qrSize);
-      };
-      qrDrawImg.src = qrDataUrl;
+      var qrImg2 = new Image();
+      await new Promise(function(resolve) {
+        qrImg2.onload = resolve; qrImg2.onerror = resolve;
+        qrImg2.src = qrDataUrl;
+      });
+      var qrPad  = 24;
+      var qrSize = frameSize - qrPad * 2;
+      ctx.drawImage(qrImg2, pad + qrPad, frameY + qrPad, qrSize, qrSize);
     } else {
-      ctx.fillStyle = '#aaaaaa';
-      ctx.font = '22px Arial, sans-serif';
+      ctx.fillStyle = '#cccccc';
+      ctx.font = '16px Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Enter a URL above to generate QR code', W / 2, qrAreaY + qrAreaH / 2);
+      ctx.fillText('Enter a URL above to generate QR code', W / 2, frameY + frameH / 2);
     }
 
-    // -- Footer bar --
-    var footY = qrAreaY + qrAreaH;
-    ctx.fillStyle = '#1E7B6B';
-    ctx.fillRect(0, footY, W, H - footY);
+    // -- Footer: site name + production/date --
+    var footY = frameY + frameH + 22;
 
-    ctx.fillStyle = '#ffffff';
+    // Site name — large, teal, bold
+    ctx.fillStyle = TEAL;
     ctx.textAlign = 'center';
-    ctx.font = 'bold 28px Arial, sans-serif';
-    // Wrap long site names
-    var maxW = W - 60;
-    wrapText(ctx, siteName.toUpperCase(), W / 2, footY + 52, maxW, 36);
+    ctx.font = 'bold 20px Arial, sans-serif';
+    var maxTW = W - pad * 2;
+    // Word-wrap site name
+    var siteWords = siteName.toUpperCase().split(' ');
+    var siteLine = '', siteLines = [];
+    siteWords.forEach(function(w) {
+      var test = siteLine + (siteLine ? ' ' : '') + w;
+      if (ctx.measureText(test).width > maxTW && siteLine) { siteLines.push(siteLine); siteLine = w; }
+      else siteLine = test;
+    });
+    if (siteLine) siteLines.push(siteLine);
+    siteLines.forEach(function(line, i) { ctx.fillText(line, W / 2, footY + i * 26); });
 
-    ctx.font = '24px Arial, sans-serif';
-    var prodLine = 'PRODUCTION: ' + production + (date ? '   DATE: ' + date : '');
-    ctx.fillText(prodLine, W / 2, footY + 100);
+    var prodY = footY + siteLines.length * 26 + 8;
+
+    // Production line — "PRODUCTION:" bold teal, value dark
+    ctx.font = 'bold 14px Arial, sans-serif';
+    var prodLabel = 'PRODUCTION:';
+    var prodValue = '  ' + production;
+    var dateLabel = date ? '   DATE:' : '';
+    var dateValue = date ? '  ' + date : '';
+
+    // Measure to centre the whole line
+    ctx.font = 'bold 14px Arial, sans-serif';
+    var plW = ctx.measureText(prodLabel).width;
+    ctx.font = '14px Arial, sans-serif';
+    var pvW = ctx.measureText(prodValue).width;
+    ctx.font = 'bold 14px Arial, sans-serif';
+    var dlW = date ? ctx.measureText(dateLabel).width : 0;
+    ctx.font = '14px Arial, sans-serif';
+    var dvW = date ? ctx.measureText(dateValue).width : 0;
+    var totalW = plW + pvW + dlW + dvW;
+    var startX = (W - totalW) / 2;
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = TEAL;
+    ctx.font = 'bold 14px Arial, sans-serif';
+    ctx.fillText(prodLabel, startX, prodY);
+    ctx.fillStyle = DARK;
+    ctx.font = '14px Arial, sans-serif';
+    ctx.fillText(prodValue, startX + plW, prodY);
+    if (date) {
+      ctx.fillStyle = TEAL;
+      ctx.font = 'bold 14px Arial, sans-serif';
+      ctx.fillText(dateLabel, startX + plW + pvW, prodY);
+      ctx.fillStyle = DARK;
+      ctx.font = '14px Arial, sans-serif';
+      ctx.fillText(dateValue, startX + plW + pvW + dlW, prodY);
+    }
   }
 
   function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -2703,7 +2751,8 @@
     var site   = (document.getElementById('qrgen_site')||{}).value.trim()       || 'QR-Card';
     var prod   = (document.getElementById('qrgen_production')||{}).value.trim() || '';
     var fname  = (site + (prod ? '-' + prod : '')).replace(/[^a-z0-9]/gi, '_') + '_QR.png';
-    var link   = document.createElement('a');
+    // Export at full 2x resolution
+    var link = document.createElement('a');
     link.download = fname;
     link.href     = canvas.toDataURL('image/png');
     link.click();
