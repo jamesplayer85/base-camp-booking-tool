@@ -412,58 +412,74 @@
     </div><!-- /section-prod -->
 
     <!-- ══════════════════════════════════
-         LANDLORD FEE SUMMARY MODE
+         LANDLORD CONFIRMATION MODE
     ══════════════════════════════════ -->
     <div class="mode-section" id="section-land">
 
       <div class="form-card">
-        <h2>Landlord Details</h2>
-        <div class="field-row">
-          <div class="field">
-            <label>To: landlord email *</label>
-            <input type="text" id="land_to_email" placeholder="landlord@property.com">
-          </div>
-          <div class="field">
-            <label>Landlord / contact name *</label>
-            <input type="text" id="land_contact_name" placeholder="John Smith" oninput="updateLandPreview()">
-          </div>
+        <h2>Recipient</h2>
+        <div class="field">
+          <label>From: sender</label>
+          <select class="sender-select" id="land_from_email" onchange="updateLandPreview()">
+            <option value="james@thebasecampco.com">James Player — james@thebasecampco.com</option>
+            <option value="tom@thebasecampco.com">Tom Bosanquet — tom@thebasecampco.com</option>
+            <option value="ben@thebasecampco.com">Ben Frost — ben@thebasecampco.com</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>To: landlord email *</label>
+          <input type="text" id="land_to_email" placeholder="landlord@property.com">
         </div>
         <div class="field" style="margin-bottom:0;">
-          <label>Property / site name</label>
-          <input type="text" id="land_site_name" placeholder="Pre-filled from site selection" oninput="updateLandPreview()">
+          <label>Landlord / contact name *</label>
+          <input type="text" id="land_contact_name" placeholder="John Smith" oninput="updateLandPreview()">
         </div>
       </div>
 
       <div class="form-card">
-        <h2>Hire Details</h2>
+        <h2>Booking Details</h2>
         <div class="field-row">
           <div class="field">
-            <label>Production name</label>
-            <input type="text" id="land_production" placeholder="The Long Road" oninput="updateLandPreview()">
+            <label>Booking reference *</label>
+            <input type="text" id="land_booking_ref" placeholder="TBC-2026-001" oninput="updateLandPreview(); updateLandSubject();">
           </div>
           <div class="field">
-            <label>Booking reference</label>
-            <input type="text" id="land_booking_ref" placeholder="TBC-2026-001" oninput="updateLandPreview()">
+            <label>Production name *</label>
+            <input type="text" id="land_production" placeholder="The Long Road" oninput="updateLandPreview(); updateLandSubject();">
           </div>
         </div>
         <div class="field-row">
           <div class="field">
-            <label>Start date</label>
+            <label>Production company</label>
+            <input type="text" id="land_prod_company" placeholder="Studioworks Ltd" oninput="updateLandPreview()">
+          </div>
+          <div class="field">
+            <label>Property / site name</label>
+            <input type="text" id="land_site_name" placeholder="Pre-filled from site selection" oninput="updateLandPreview(); updateLandSubject();">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Start date &amp; time *</label>
             <div style="display:flex; gap:8px;">
-              <input type="date" id="land_start_picker" style="flex:1;" onchange="updateLandDates(); updateLandPreview();">
-              <input type="time" id="land_start_time" style="width:100px;" onchange="updateLandDates(); updateLandPreview();">
+              <input type="date" id="land_start_picker" style="flex:1;" onchange="updateLandDates(); updateLandPreview(); updateLandSubject();">
+              <input type="time" id="land_start_time" style="width:100px;" onchange="updateLandDates(); updateLandPreview(); updateLandSubject();">
             </div>
           </div>
           <div class="field">
-            <label>End date</label>
+            <label>End date &amp; time *</label>
             <div style="display:flex; gap:8px;">
-              <input type="date" id="land_end_picker" style="flex:1;" onchange="updateLandDates(); updateLandPreview();">
-              <input type="time" id="land_end_time" style="width:100px;" onchange="updateLandDates(); updateLandPreview();">
+              <input type="date" id="land_end_picker" style="flex:1;" onchange="updateLandDates(); updateLandPreview(); updateLandSubject();">
+              <input type="time" id="land_end_time" style="width:100px;" onchange="updateLandDates(); updateLandPreview(); updateLandSubject();">
             </div>
           </div>
         </div>
         <input type="hidden" id="land_start_date">
         <input type="hidden" id="land_end_date">
+        <div class="field" style="margin-bottom:0;">
+          <label>Email subject line — auto-filled, edit if needed</label>
+          <input type="text" id="land_email_subject" placeholder="Unit Base Booking Confirmation - Production - Dates">
+        </div>
       </div>
 
       <div class="form-card">
@@ -516,7 +532,7 @@
               <input type="number" id="land_commission" placeholder="0.00" oninput="calcTotals(); if(currentMode==='land') updateLandPreview();" style="font-family:'DM Mono',monospace;">
             </div>
             <div class="field" style="margin:0;">
-              <label>Total to invoice (£) <span style="color:var(--teal); font-weight:700;" id="land_total_display"></span></label>
+              <label>Total to invoice (£)</label>
               <input type="number" id="land_total" placeholder="Auto-calculated" readonly style="font-family:'DM Mono',monospace; background:#F8F7F4; color:var(--teal); font-weight:700;">
             </div>
           </div>
@@ -527,18 +543,9 @@
         </div>
       </div>
 
-      <div class="form-card">
-        <h2>From: sender</h2>
-        <select class="sender-select" id="land_from_email">
-          <option value="james@thebasecampco.com">James Player — james@thebasecampco.com</option>
-          <option value="tom@thebasecampco.com">Tom Bosanquet — tom@thebasecampco.com</option>
-          <option value="ben@thebasecampco.com">Ben Frost — ben@thebasecampco.com</option>
-        </select>
-      </div>
-
       <button class="send-btn" style="background:#1A3A5C;" id="landSendBtn" onclick="sendLandlordEmail()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
-        Send landlord fee summary
+        Send booking confirmation
       </button>
 
     </div><!-- /section-land -->
@@ -1649,22 +1656,38 @@
   }
 
   // Sync production fields to landlord tab
+  function updateLandSubject() {
+    var site  = (document.getElementById('land_site_name')||{}).value || (currentSite ? currentSite.site_name : '');
+    var prod  = (document.getElementById('land_production')||{}).value || '';
+    var start = (document.getElementById('land_start_date')||{}).value || '';
+    var end   = (document.getElementById('land_end_date')||{}).value || '';
+    if (!site && !prod) return;
+    var startShort = start.replace(/\s*-\s*\d+:\d+/,'').trim();
+    var endShort   = end.replace(/\s*-\s*\d+:\d+/,'').trim();
+    var dates = (startShort && endShort && startShort !== endShort) ? ' (' + startShort + ' - ' + endShort + ')' : (startShort ? ' (' + startShort + ')' : '');
+    var el = document.getElementById('land_email_subject');
+    if (el) el.value = 'Unit Base Booking Confirmation' + (site ? ' - ' + site : '') + (prod ? ' - ' + prod : '') + dates;
+  }
+
   function syncToLandlord() {
     var prodName = g('production_name');
-    var lp = document.getElementById('land_production');
-    if (lp && !lp.value && prodName) lp.value = prodName;
-    var ref = g('booking_ref');
-    var lr = document.getElementById('land_booking_ref');
-    if (lr && !lr.value && ref) lr.value = ref;
-    // Sync contacts
+    var company  = g('prod_company');
+    var ref      = g('booking_ref');
+    var lp  = document.getElementById('land_production');
+    var lc  = document.getElementById('land_prod_company');
+    var lr  = document.getElementById('land_booking_ref');
+    if (lp  && !lp.value  && prodName) lp.value  = prodName;
+    if (lc  && !lc.value  && company)  lc.value  = company;
+    if (lr  && !lr.value  && ref)      lr.value  = ref;
     var pcn = g('prod_contact_name'), pcr = g('prod_contact_role'), pcp = g('prod_contact_phone');
-    var ln = document.getElementById('land_prod_contact_name');
+    var ln  = document.getElementById('land_prod_contact_name');
     var lro = document.getElementById('land_prod_contact_role');
     var lph = document.getElementById('land_prod_contact_phone');
-    if (ln && !ln.value && pcn) ln.value = pcn;
+    if (ln  && !ln.value  && pcn) ln.value  = pcn;
     if (lro && !lro.value && pcr) lro.value = pcr;
     if (lph && !lph.value && pcp) lph.value = pcp;
     updateLandlordOpeningNote();
+    updateLandSubject();
   }
 
   var landExtraContactCounter = 0;
@@ -1741,6 +1764,7 @@
     // Landlord -- pre-fill site name
     var lsn = document.getElementById('land_site_name');
     if (lsn && !lsn.value) lsn.value = currentSite.site_name;
+    updateLandSubject();
     // QR card -- pre-fill site name
     var qsn = document.getElementById('qrgen_site');
     if (qsn && !qsn.value) qsn.value = currentSite.site_name;
@@ -1988,7 +2012,7 @@
     var payload  = {
       from:    sender.name + ' <' + fromEmail + '>',
       to:      toEmails,
-      subject: 'Hire Fee Summary \u2014 ' + (d.site_name || '') + (d.production ? ' / ' + d.production : '') + (d.booking_ref ? ' | Ref: ' + d.booking_ref : ''),
+      subject: (document.getElementById('land_email_subject')||{}).value || ('Unit Base Booking Confirmation - ' + (d.site_name||'') + (d.production ? ' - ' + d.production : '')),
       html:    buildLandlordEmailHTML(d)
     };
 
