@@ -735,7 +735,11 @@
           </div>
           <div class="field">
             <label>Site name *</label>
-            <input type="text" id="agree_site_name" placeholder="Pre-filled from site selection">
+            <input type="text" id="agree_site_name" placeholder="Pre-filled from site selection" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="field">
+            <label>Site address</label>
+            <input type="text" id="agree_site_address" placeholder="Pre-filled from Monday.com">
           </div>
         </div>
       </div>
@@ -746,13 +750,9 @@
           <label>Licensee (Production Company) *</label>
           <input type="text" id="agree_licensee" placeholder="Studioworks Ltd">
         </div>
-        <div class="field">
-          <label>Principal (Property Owner) *</label>
-          <input type="text" id="agree_principal" placeholder="Waterloo Properties Ltd">
-        </div>
         <div class="field" style="margin-bottom:0;">
-          <label>Site address</label>
-          <input type="text" id="agree_site_address" placeholder="Pre-filled from Monday.com">
+          <label>Principal (Property Owner + Address) *</label>
+          <textarea id="agree_principal" rows="2" placeholder="Waterloo Properties Ltd, 123 Example Street, London SE1 7PB" style="resize:vertical;"></textarea>
         </div>
       </div>
 
@@ -777,15 +777,21 @@
       </div>
 
       <div class="form-card">
-        <h2>Fees</h2>
-        <div class="field-row">
-          <div class="field">
-            <label>Total fee *</label>
-            <input type="text" id="agree_total_fee" placeholder="£5,000 + VAT" style="font-family:'DM Mono',monospace;">
-          </div>
-          <div class="field">
-            <label>Fee breakdown</label>
-            <input type="text" id="agree_fee_breakdown" placeholder="5 x days @ £1,000 + VAT per day" style="font-family:'DM Mono',monospace;">
+        <h2>Fee Breakdown</h2>
+        <div id="agreeFeeLineItems" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;"></div>
+        <button class="add-step-btn" onclick="addAgreeFeeItem()" type="button">
+          <span style="font-size:18px;line-height:1;">+</span> Add line item
+        </button>
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="field-row" style="margin-bottom:10px;">
+            <div class="field" style="margin:0;">
+              <label>Total fee *</label>
+              <input type="text" id="agree_total_fee" placeholder="£5,000 + VAT" style="font-family:'DM Mono',monospace;">
+            </div>
+            <div class="field" style="margin:0;">
+              <label>Fee breakdown summary (for document)</label>
+              <input type="text" id="agree_fee_breakdown" placeholder="Auto-filled from lines above" style="font-family:'DM Mono',monospace; background:#F8F7F4; color:var(--muted);" readonly>
+            </div>
           </div>
         </div>
       </div>
@@ -2025,9 +2031,12 @@ div>
     var agSite = document.getElementById('agree_site_name');
     var agAddr = document.getElementById('agree_site_address');
     var agPrin = document.getElementById('agree_principal');
-    if (agSite && !agSite.value) agSite.value = currentSite.site_name       || '';
-    if (agAddr && !agAddr.value) agAddr.value = currentSite.address          || '';
-    if (agPrin && !agPrin.value) agPrin.value = currentSite.landlord_company || '';
+    if (agSite && !agSite.value) agSite.value = currentSite.site_name.toUpperCase();
+    if (agAddr && !agAddr.value) agAddr.value = currentSite.address || '';
+    if (agPrin && !agPrin.value) {
+      var parts = [currentSite.landlord_company, currentSite.landlord_address].filter(Boolean);
+      agPrin.value = parts.join(', ');
+    }
   }
 
   // -- Fee line items --
@@ -3059,20 +3068,60 @@ div>
     window._agreeEndSched   = fmtSched('agree_end_date','agree_end_time');
   }
 
+  var agreeFeeCounter = 0;
+  function addAgreeFeeItem(desc, amount) {
+    agreeFeeCounter++;
+    var id  = 'agree_fee_' + agreeFeeCounter;
+    var row = document.createElement('div');
+    row.dataset.agreeFeeId = id;
+    row.style.cssText = 'display:grid; grid-template-columns:1fr 140px 30px; gap:8px; align-items:center;';
+    row.innerHTML = '<input type="text" id="' + id + '_desc" value="' + escHtml(desc||'') + '" placeholder="e.g. 5 x days hire @ £1,000 + VAT per day" style="font-family:\'DM Sans\',sans-serif; font-size:14px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 12px; outline:none;" oninput="updateAgreeFeeBreakdown()">'
+      + '<input type="text" id="' + id + '_amt" value="' + escHtml(amount||'') + '" placeholder="£1,000 + VAT" style="font-family:\'DM Mono\',monospace; font-size:13px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 12px; outline:none;" oninput="updateAgreeFeeBreakdown()">'
+      + '<button class="step-remove" type="button" onclick="removeAgreeFeeItem(\'' + id + '\')">x</button>';
+    document.getElementById('agreeFeeLineItems').appendChild(row);
+    updateAgreeFeeBreakdown();
+  }
+  function removeAgreeFeeItem(id) {
+    var r = document.querySelector('[data-agree-fee-id="' + id + '"]');
+    if (r) { r.remove(); updateAgreeFeeBreakdown(); }
+  }
+  function getAgreeFeeItems() {
+    return Array.from(document.querySelectorAll('[data-agree-fee-id]')).map(function(row) {
+      var id = row.dataset.agreeFeeId;
+      return { desc: (document.getElementById(id+'_desc')||{}).value||'', amt: (document.getElementById(id+'_amt')||{}).value||'' };
+    }).filter(function(i){ return i.desc; });
+  }
+  function updateAgreeFeeBreakdown() {
+    var items = getAgreeFeeItems();
+    var el = document.getElementById('agree_fee_breakdown');
+    if (el) el.value = items.map(function(i){ return i.desc + (i.amt ? ' (' + i.amt + ')' : ''); }).join(' | ');
+  }
+
   function syncToAgree() {
-    var map = {
-      'agree_production_title':   g('production_name'),
-      'agree_site_name':          currentSite ? currentSite.site_name          : '',
-      'agree_site_address':       currentSite ? currentSite.address            : '',
-      'agree_licensee':           g('prod_company'),
-      'agree_principal':          currentSite ? currentSite.landlord_company   : '',
-      'agree_prod_contact_name':  g('prod_contact_name'),
+    var simple = {
+      'agree_production_title':     g('production_name'),
+      'agree_licensee':             g('prod_company'),
+      'agree_prod_contact_name':    g('prod_contact_name'),
       'agree_prod_contact_details': g('prod_contact_phone'),
     };
-    for (var id in map) {
+    for (var id in simple) {
       var el = document.getElementById(id);
-      if (el && !el.value && map[id]) el.value = map[id];
+      if (el && !el.value && simple[id]) el.value = simple[id];
     }
+    // Site name — uppercase
+    var agSite = document.getElementById('agree_site_name');
+    if (agSite && !agSite.value && currentSite) agSite.value = currentSite.site_name.toUpperCase();
+    // Site address
+    var agAddr = document.getElementById('agree_site_address');
+    if (agAddr && !agAddr.value && currentSite) agAddr.value = currentSite.address || '';
+    // Principal = landlord company + address combined
+    var agPrin = document.getElementById('agree_principal');
+    if (agPrin && !agPrin.value && currentSite) {
+      var parts = [currentSite.landlord_company, currentSite.landlord_address].filter(Boolean);
+      agPrin.value = parts.join(', ');
+    }
+    // Add a default fee line if empty
+    if (document.getElementById('agreeFeeLineItems').children.length === 0) addAgreeFeeItem();
     var dateEl = document.getElementById('agree_date');
     if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
   }
@@ -3106,7 +3155,8 @@ div>
       var prodTitle= (document.getElementById('agree_production_title')||{}).value    || '';
       var siteAddr = (document.getElementById('agree_site_address')||{}).value        || '';
       var totalFee = (document.getElementById('agree_total_fee')||{}).value           || '';
-      var feeBreak = (document.getElementById('agree_fee_breakdown')||{}).value       || '';
+      var feeItems = getAgreeFeeItems();
+      var feeBreak = feeItems.map(function(i){ return i.desc; }).join('\n');
       var pcName   = (document.getElementById('agree_prod_contact_name')||{}).value   || '';
       var pcDetails= (document.getElementById('agree_prod_contact_details')||{}).value|| '';
       var osName   = (document.getElementById('agree_onsite_contact_name')||{}).value || '';
