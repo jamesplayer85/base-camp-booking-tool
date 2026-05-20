@@ -204,7 +204,6 @@
   <div class="form-panel">
     <div class="panel-header">
       <h1 id="modeTitle">New Booking Confirmation</h1>
-      <p id="modeSubtitle">Select a site, fill in the booking details, and send directly via Resend.</p>
     </div>
 
     <!-- Mode tabs -->
@@ -229,6 +228,14 @@
           <div id="siteLoadedText"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Production selector (prod, land, agree tabs only) -->
+    <div class="site-selector" id="productionSelectorWrap" style="display:none;">
+      <label>Select production <span style="font-size:11px;color:var(--muted);font-weight:400;">(optional — pre-fills contact details)</span></label>
+      <select id="productionSelect" onchange="onProductionChange()">
+        <option value="">— Loading productions… —</option>
+      </select>
     </div>
 
     <!-- ══════════════════════════════════
@@ -268,15 +275,9 @@
           <input type="text" id="production_name" placeholder="The Long Road" oninput="updateSubject(); updatePreview();">
         </div>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Production company *</label>
-          <input type="text" id="prod_company" placeholder="Studioworks Ltd" oninput="updatePreview()">
-        </div>
-        <div class="field">
-          <label>Production title</label>
-          <input type="text" id="prod_title" placeholder="The Long Road" oninput="updatePreview()">
-        </div>
+      <div class="field">
+        <label>Production company *</label>
+        <input type="text" id="prod_company" placeholder="Studioworks Ltd" oninput="updatePreview()">
       </div>
       <div class="field-row">
         <div class="field">
@@ -304,16 +305,9 @@
 
     <div class="form-card">
       <h2>Key Contacts</h2>
-      <div class="contact-label">Production contact</div>
-      <div class="contact-row">
-        <div class="field"><label>Name</label><input type="text" id="prod_contact_name" placeholder="Unit Manager name" oninput="updatePreview()"></div>
-        <div class="field"><label>Role</label><input type="text" id="prod_contact_role" placeholder="Unit Manager" oninput="updatePreview()"></div>
-        <div class="field"><label>Phone</label><input type="text" id="prod_contact_phone" placeholder="+44 7700 900000" oninput="updatePreview()"></div>
-      </div>
-
-      <!-- Additional contacts -->
-      <div id="extraContactsContainer"></div>
-      <button class="add-step-btn" onclick="addExtraContact()" type="button" style="margin-top:10px;">
+      <!-- Dynamic contact rows — defaults to 2, add/remove freely -->
+      <div id="prodContactsContainer"></div>
+      <button class="add-step-btn" onclick="addProdContact()" type="button" style="margin-top:10px;">
         <span style="font-size:18px;line-height:1;">+</span> Add contact
       </button>
 
@@ -378,8 +372,8 @@
     </div>
 
     <div class="draft-bar">
-      <button class="draft-btn draft-save" onclick="saveDraft()">💾 Save draft</button>
-      <button class="draft-btn draft-load" onclick="loadDraft()">↩ Load last draft</button>
+      <button class="draft-btn draft-save" onclick="saveDraft('prod')">💾 Save draft</button>
+      <button class="draft-btn draft-load" onclick="loadDraft('prod')">↩ Load draft</button>
     </div>
 
     <button class="send-btn" id="sendBtn" onclick="sendEmail()">
@@ -492,14 +486,9 @@
 
       <div class="form-card">
         <h2>Key Contacts</h2>
-        <div class="contact-label">Production contact</div>
-        <div class="contact-row">
-          <div class="field"><label>Name</label><input type="text" id="land_prod_contact_name" placeholder="Unit Manager name" oninput="updateLandPreview()"></div>
-          <div class="field"><label>Role</label><input type="text" id="land_prod_contact_role" placeholder="Unit Manager" oninput="updateLandPreview()"></div>
-          <div class="field"><label>Phone</label><input type="text" id="land_prod_contact_phone" placeholder="+44 7700 900000" oninput="updateLandPreview()"></div>
-        </div>
-        <div id="landExtraContactsContainer"></div>
-        <button class="add-step-btn" onclick="addLandExtraContact()" type="button" style="margin-top:10px;">
+        <!-- Dynamic contact rows — defaults to 2, add/remove freely -->
+        <div id="landContactsContainer"></div>
+        <button class="add-step-btn" onclick="addLandContact()" type="button" style="margin-top:10px;">
           <span style="font-size:18px;line-height:1;">+</span> Add contact
         </button>
         <div class="contact-label" style="margin-top:16px;">The Base Camp Co. contact</div>
@@ -543,6 +532,11 @@
           </div>
         </div>
       </div>
+
+    <div class="draft-bar">
+      <button class="draft-btn draft-save" onclick="saveDraft('land')">💾 Save draft</button>
+      <button class="draft-btn draft-load" onclick="loadDraft('land')">↩ Load draft</button>
+    </div>
 
       <button class="send-btn" style="background:#006766;" id="landSendBtn" onclick="sendLandlordEmail()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
@@ -1071,6 +1065,9 @@
   // CONFIG -- loaded from browser storage, never hardcoded
   // 
   var MONDAY_BOARD_ID = '18411582352';
+  var MONDAY_PRODUCTIONS_BOARD_ID = '18414060671';
+  var productions = [];
+  var currentProduction = null;
 
   var SENDERS = {
     'james@thebasecampco.com': { name: 'James Player',  title: 'Director', email: 'james@thebasecampco.com', office: '0203 369 2273', mobile: '07843 421278', website: 'thebasecampco.com' },
@@ -1167,12 +1164,15 @@
 
   function populateSelect() {
     var sel = document.getElementById('siteSelect');
+    // Sort sites alphabetically
+    var sortedSites = sites.map(function(s,i){return{s:s,i:i};}).sort(function(a,b){return a.s.site_name.localeCompare(b.s.site_name);});
     sel.innerHTML = '<option value="">-- Select a site --</option>';
-    sites.forEach(function(s, i) {
+    sortedSites.forEach(function(obj) {
+      var s = obj.s; var i = obj.i;
       var opt = document.createElement('option');
       opt.value = i; opt.textContent = s.site_name;
       sel.appendChild(opt);
-    });
+    }); // end sortedSites.forEach
   }
 
   function setStatus(ok, msg) {
@@ -1253,41 +1253,101 @@
 
   // -- Extra contacts --
   var extraContactCounter = 0;
-  function addExtraContact(name, role, phone) {
-    extraContactCounter++;
-    var id = 'extra_contact_' + extraContactCounter;
-    var container = document.getElementById('extraContactsContainer');
+  // ── Dynamic contacts (prod + land tabs) ──────────────────────────
+  var prodContactCounter = 0;
+  var landContactCounter = 0;
+
+  function addProdContact(name, role, phone, email) {
+    prodContactCounter++;
+    var id = 'pc_' + prodContactCounter;
+    var isFirst = prodContactCounter === 1;
+    var container = document.getElementById('prodContactsContainer');
     var row = document.createElement('div');
-    row.className = 'contact-row';
-    row.dataset.contactId = id;
-    row.style.marginTop = '10px';
-    row.innerHTML = '<div class="field"><label>Name</label><input type="text" id="'+id+'_name" value="'+escHtml(name||'')+'" placeholder="Contact name" oninput="updatePreview()"></div>'
-      + '<div class="field"><label>Role</label><input type="text" id="'+id+'_role" value="'+escHtml(role||'')+'" placeholder="Role" oninput="updatePreview()"></div>'
-      + '<div class="field" style="position:relative;">'
-      + '<label>Phone</label>'
-      + '<div style="display:flex;gap:6px;align-items:center;">'
-      + '<input type="text" id="'+id+'_phone" value="'+escHtml(phone||'')+'" placeholder="+44 7700 900000" oninput="updatePreview()" style="flex:1;">'
-      + '<button class="step-remove" type="button" onclick="removeExtraContact(\''+id+'\')" title="Remove">x</button>'
-      + '</div></div>';
+    row.dataset.prodContactId = id;
+    row.style.marginBottom = '10px';
+    row.innerHTML = '<div class="contact-label" style="display:flex;justify-content:space-between;align-items:center;">'
+      + '<span>' + (isFirst ? 'Contact 1' : 'Contact ' + prodContactCounter) + '</span>'
+      + '<button class="step-remove" type="button" onclick="removeProdContact(\'' + id + '\')" title="Remove contact" style="position:static;">x</button>'
+      + '</div>'
+      + '<div class="contact-row">'
+      + '<div class="field"><label>Name</label><input type="text" id="' + id + '_name" value="' + escHtml(name||'') + '" placeholder="Contact name" oninput="updatePreview()"></div>'
+      + '<div class="field"><label>Role</label><input type="text" id="' + id + '_role" value="' + escHtml(role||'') + '" placeholder="Unit Manager" oninput="updatePreview()"></div>'
+      + '<div class="field"><label>Phone</label><input type="text" id="' + id + '_phone" value="' + escHtml(phone||'') + '" placeholder="+44 7700 900000" oninput="updatePreview()"></div>'
+      + '</div>';
     container.appendChild(row);
     updatePreview();
+    return id;
   }
 
-  function removeExtraContact(id) {
-    var row = document.querySelector('[data-contact-id="' + id + '"]');
+  function removeProdContact(id) {
+    var row = document.querySelector('[data-prod-contact-id="' + id + '"]');
     if (row) { row.remove(); updatePreview(); }
   }
 
-  function getExtraContacts() {
-    return Array.from(document.querySelectorAll('#extraContactsContainer .contact-row')).map(function(row) {
-      var id = row.dataset.contactId;
+  function getProdContacts() {
+    return Array.from(document.querySelectorAll('[data-prod-contact-id]')).map(function(row) {
+      var id = row.dataset.prodContactId;
       return {
-        name:  (document.getElementById(id+'_name')||{}).value||'',
-        role:  (document.getElementById(id+'_role')||{}).value||'',
+        name:  (document.getElementById(id+'_name') ||{}).value||'',
+        role:  (document.getElementById(id+'_role') ||{}).value||'',
         phone: (document.getElementById(id+'_phone')||{}).value||''
       };
     }).filter(function(c){ return c.name || c.phone; });
   }
+
+  function addLandContact(name, role, phone) {
+    landContactCounter++;
+    var id = 'lc_' + landContactCounter;
+    var container = document.getElementById('landContactsContainer');
+    var row = document.createElement('div');
+    row.dataset.landContactId = id;
+    row.style.marginBottom = '10px';
+    row.innerHTML = '<div class="contact-label" style="display:flex;justify-content:space-between;align-items:center;">'
+      + '<span>Contact ' + landContactCounter + '</span>'
+      + '<button class="step-remove" type="button" onclick="removeLandContact(\'' + id + '\')" title="Remove contact" style="position:static;">x</button>'
+      + '</div>'
+      + '<div class="contact-row">'
+      + '<div class="field"><label>Name</label><input type="text" id="' + id + '_name" value="' + escHtml(name||'') + '" placeholder="Contact name" oninput="updateLandPreview()"></div>'
+      + '<div class="field"><label>Role</label><input type="text" id="' + id + '_role" value="' + escHtml(role||'') + '" placeholder="Unit Manager" oninput="updateLandPreview()"></div>'
+      + '<div class="field"><label>Phone</label><input type="text" id="' + id + '_phone" value="' + escHtml(phone||'') + '" placeholder="+44 7700 900000" oninput="updateLandPreview()"></div>'
+      + '</div>';
+    container.appendChild(row);
+    updateLandPreview();
+    return id;
+  }
+
+  function removeLandContact(id) {
+    var row = document.querySelector('[data-land-contact-id="' + id + '"]');
+    if (row) { row.remove(); updateLandPreview(); }
+  }
+
+  function getLandContacts() {
+    return Array.from(document.querySelectorAll('[data-land-contact-id]')).map(function(row) {
+      var id = row.dataset.landContactId;
+      return {
+        name:  (document.getElementById(id+'_name') ||{}).value||'',
+        role:  (document.getElementById(id+'_role') ||{}).value||'',
+        phone: (document.getElementById(id+'_phone')||{}).value||''
+      };
+    }).filter(function(c){ return c.name || c.phone; });
+  }
+
+  function initDefaultContacts() {
+    // Prod: default 2 empty contact rows
+    document.getElementById('prodContactsContainer').innerHTML = '';
+    prodContactCounter = 0;
+    addProdContact(); addProdContact();
+    // Land: default 2 empty contact rows
+    document.getElementById('landContactsContainer').innerHTML = '';
+    landContactCounter = 0;
+    addLandContact(); addLandContact();
+  }
+
+  // Legacy aliases so existing email builders keep working
+  function addExtraContact(n,r,p) { addProdContact(n,r,p); }
+  function addLandExtraContact(n,r,p) { addLandContact(n,r,p); }
+  function getExtraContacts() { return getProdContacts(); }
+
   function onSiteChange() {
     var idx = document.getElementById('siteSelect').value;
     if (idx === '') { currentSite = null; return; }
@@ -1334,7 +1394,7 @@
     pv('pv_start',    g('start_date')         || '[START]');
     pv('pv_end',      g('end_date')           || '[END]');
     pv('pv_company',  g('prod_company')       || '[COMPANY]');
-    pv('pv_title',    g('prod_title')         || '[TITLE]');
+    pv('pv_title',    g('production_name')         || '[TITLE]');
     pv('pv_pc_name',  g('prod_contact_name')  || '[PROD CONTACT]');
     pv('pv_pc_role',  g('prod_contact_role')  || 'Production');
     pv('pv_pc_phone', g('prod_contact_phone') || '[PHONE]');
@@ -1497,22 +1557,23 @@
     var fromEmail = document.getElementById('from_email').value;
     var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
 
+    var allContacts = getProdContacts();
     var d = {
       to_emails:          toEmails,
       contact_name:       g('contact_name'),
       booking_ref:        g('booking_ref'),
       production_name:    g('production_name'),
       prod_company:       g('prod_company'),
-      prod_title:         g('prod_title') || g('production_name'),
+      prod_title: g('production_name'),
       start_date:         g('start_date'),
       end_date:           g('end_date'),
-      prod_contact_name:  g('prod_contact_name')  || '[PROD CONTACT NAME]',
-      prod_contact_role:  g('prod_contact_role')  || 'Production',
-      prod_contact_phone: g('prod_contact_phone') || '[PHONE]',
+      prod_contact_name:  (allContacts[0]||{}).name  || '',
+      prod_contact_role:  (allContacts[0]||{}).role  || '',
+      prod_contact_phone: (allContacts[0]||{}).phone || '',
       your_name:          sender.name,
       your_role:          g('your_role') || sender.title,
       your_phone:         g('your_phone') || sender.mobile,
-      extra_contacts:     getExtraContacts(),
+      extra_contacts:     allContacts.slice(1),
       opening_note:       g('prod_opening_note'),
       site_name:          currentSite.site_name,
       address:            currentSite.address,
@@ -1604,52 +1665,77 @@
   }
 
   // -- Draft save / load --
-  async function saveDraft() {
-    var draft = {
-      to_email:           g('to_email'),
-      contact_name:       g('contact_name'),
-      booking_ref:        g('booking_ref'),
-      production_name:    g('production_name'),
-      prod_company:       g('prod_company'),
-      prod_title:         g('prod_title'),
-      start_date_picker:  (document.getElementById('start_date_picker')||{}).value||'',
-      start_time_picker:  (document.getElementById('start_time_picker')||{}).value||'',
-      end_date_picker:    (document.getElementById('end_date_picker')||{}).value||'',
-      end_time_picker:    (document.getElementById('end_time_picker')||{}).value||'',
-      email_subject:      g('email_subject'),
-      prod_contact_name:  g('prod_contact_name'),
-      prod_contact_role:  g('prod_contact_role'),
-      prod_contact_phone: g('prod_contact_phone'),
-      emergency_note:     g('emergency_note'),
-      note_text:          g('note_text'),
-      site_index:         (document.getElementById('siteSelect')||{}).value||'',
-      from_email:         (document.getElementById('from_email')||{}).value||''
-    };
+  async function saveDraft(tab) {
+    tab = tab || 'prod';
+    var draft = {};
+    if (tab === 'prod') {
+      draft = {
+        to_email: g('to_email'), contact_name: g('contact_name'), booking_ref: g('booking_ref'),
+        production_name: g('production_name'), prod_company: g('prod_company'), prod_title: g('production_name'),
+        start_date_picker: (document.getElementById('start_date_picker')||{}).value||'',
+        start_time_picker: (document.getElementById('start_time_picker')||{}).value||'',
+        end_date_picker:   (document.getElementById('end_date_picker')||{}).value||'',
+        end_time_picker:   (document.getElementById('end_time_picker')||{}).value||'',
+        email_subject: g('email_subject'), prod_contact_name: g('prod_contact_name'),
+        prod_contact_role: g('prod_contact_role'), prod_contact_phone: g('prod_contact_phone'),
+        emergency_note: g('emergency_note'), note_text: g('note_text'),
+        site_index: (document.getElementById('siteSelect')||{}).value||'',
+        from_email: (document.getElementById('from_email')||{}).value||''
+      };
+    } else if (tab === 'land') {
+      draft = {
+        land_to_name: g('land_to_name'), land_to_email: g('land_to_email'),
+        land_booking_ref: g('land_booking_ref'), land_production_name: g('land_production_name'),
+        land_prod_company: g('land_prod_company'), land_email_subject: g('land_email_subject'),
+        land_start_date: (document.getElementById('land_start_date')||{}).value||'',
+        land_start_time: (document.getElementById('land_start_time')||{}).value||'',
+        land_end_date: (document.getElementById('land_end_date')||{}).value||'',
+        land_end_time: (document.getElementById('land_end_time')||{}).value||'',
+        land_payment_terms: g('land_payment_terms'),
+        site_index: (document.getElementById('siteSelect')||{}).value||'',
+        land_from_email: (document.getElementById('land_from_email')||{}).value||''
+      };
+    }
     try {
-      await fetch(WORKER_URL + '/draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) });
+      var key = 'tbc_draft_' + tab;
+      localStorage.setItem(key, JSON.stringify(draft));
       showToast('Draft saved', 'success');
     } catch(e) { showToast('Could not save draft', 'error'); }
   }
 
-  async function loadDraft() {
+  async function loadDraft(tab) {
+    tab = tab || 'prod';
     try {
-      var res  = await fetch(WORKER_URL + '/draft');
-      var json = await res.json();
-      if (!json.draft) { showToast('No saved draft found', ''); return; }
-      var d = json.draft;
-      var fields = ['to_email','contact_name','booking_ref','production_name','prod_company','prod_title',
-                    'email_subject','prod_contact_name','prod_contact_role','prod_contact_phone','emergency_note','note_text'];
-      fields.forEach(function(id){ var el = document.getElementById(id); if(el && d[id]) el.value = d[id]; });
-      ['start_date_picker','start_time_picker','end_date_picker','end_time_picker'].forEach(function(id){
-        var el = document.getElementById(id); if(el && d[id]) el.value = d[id];
-      });
-      updateDateTime();
-      if (d.from_email) { var fe = document.getElementById('from_email'); if(fe) fe.value = d.from_email; }
-      if (d.site_index !== '' && sites[parseInt(d.site_index)]) {
-        document.getElementById('siteSelect').value = d.site_index;
-        onSiteChange();
+      var key = 'tbc_draft_' + tab;
+      var stored = localStorage.getItem(key);
+      if (!stored) { showToast('No saved draft for this tab', ''); return; }
+      var d = JSON.parse(stored);
+      if (tab === 'prod') {
+        var fields = ['to_email','contact_name','booking_ref','production_name','prod_company','prod_title',
+                      'email_subject','prod_contact_name','prod_contact_role','prod_contact_phone','emergency_note','note_text'];
+        fields.forEach(function(id){ var el=document.getElementById(id); if(el&&d[id]) el.value=d[id]; });
+        ['start_date_picker','start_time_picker','end_date_picker','end_time_picker'].forEach(function(id){
+          var el=document.getElementById(id); if(el&&d[id]) el.value=d[id];
+        });
+        updateDateTime();
+        if (d.from_email) { var fe=document.getElementById('from_email'); if(fe) fe.value=d.from_email; }
+        if (d.site_index !== '' && sites[parseInt(d.site_index)]) {
+          document.getElementById('siteSelect').value = d.site_index; onSiteChange();
+        }
+        updatePreview();
+      } else if (tab === 'land') {
+        var lFields = ['land_to_name','land_to_email','land_booking_ref','land_production_name',
+                       'land_prod_company','land_email_subject','land_payment_terms'];
+        lFields.forEach(function(id){ var el=document.getElementById(id); if(el&&d[id]) el.value=d[id]; });
+        ['land_start_date','land_start_time','land_end_date','land_end_time'].forEach(function(id){
+          var el=document.getElementById(id); if(el&&d[id]) el.value=d[id];
+        });
+        if (d.land_from_email) { var lfe=document.getElementById('land_from_email'); if(lfe) lfe.value=d.land_from_email; }
+        if (d.site_index !== '' && sites[parseInt(d.site_index)]) {
+          document.getElementById('siteSelect').value = d.site_index; onSiteChange();
+        }
+        updateLandPreview();
       }
-      updatePreview();
       showToast('Draft loaded', 'success');
     } catch(e) { showToast('Could not load draft', 'error'); }
   }
@@ -1716,7 +1802,10 @@
         + '<span class="h-site">' + escHtml(b.site_name||'') + '</span>'
         + '<span class="h-prod">' + escHtml(b.production||'') + (b.booking_ref ? ' \u00b7 ' + escHtml(b.booking_ref) : '') + '</span>'
         + '<span class="h-sender">' + escHtml((b.sender||'').split(' ')[0]) + '</span>'
-        + (tab === 'prod' ? '<span class="h-resend"><button class="resend-btn" onclick="triggerResend(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Resend</button></span>' : '')
+        + '<span class="h-resend">'
+        + (tab === 'prod' ? '<button class="resend-btn" onclick="triggerResend(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Resend</button>' : '')
+        + '<button class="resend-btn" style="background:#2563eb;" onclick="recallBooking(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Duplicate</button>'
+        + '</span>'
         + '</div>';
     }).join('');
   }
@@ -1846,12 +1935,11 @@
     var lo = document.getElementById('pv_land_opening');  if (lo) lo.textContent = opening || ('The ' + prod + ' have confirmed their booking of ' + siteName + '. Please see below details of dates, times and fees. We will issue the hire agreement shortly and send over for signature.');
 
     // Contacts
-    var pcn = g('land_prod_contact_name'), pcr = g('land_prod_contact_role'), pcp = g('land_prod_contact_phone');
+    var landContacts = getLandContacts();
     var contactsEl = document.getElementById('pv_land_contacts');
     if (contactsEl) {
       var rows = '';
-      if (pcn || pcp) rows += '<div class="ep-row"><span class="ep-rv" style="min-width:90px;">' + escHtml(pcn||'') + '</span><span class="ep-rl" style="padding-left:6px;">' + escHtml(pcr||'Production') + '</span><span style="color:#006766;font-weight:700;margin-left:auto;">' + escHtml(pcp||'') + '</span></div>';
-      getLandExtraContacts().forEach(function(c){ rows += '<div class="ep-row" style="margin-top:3px;"><span class="ep-rv" style="min-width:90px;">' + escHtml(c.name) + '</span><span class="ep-rl" style="padding-left:6px;">' + escHtml(c.role) + '</span><span style="color:#006766;font-weight:700;margin-left:auto;">' + escHtml(c.phone) + '</span></div>'; });
+      landContacts.forEach(function(c){ rows += '<div class="ep-row"><span class="ep-rv" style="min-width:90px;">' + escHtml(c.name||'') + '</span><span class="ep-rl" style="padding-left:6px;">' + escHtml(c.role||'') + '</span><span style="color:#006766;font-weight:700;margin-left:auto;">' + escHtml(c.phone||'') + '</span></div>'; });
       rows += '<div class="ep-row" style="margin-top:3px;"><span class="ep-rv" style="min-width:90px;">' + escHtml(sender.name) + '</span><span class="ep-rl" style="padding-left:6px;">The Base Camp Co.</span><span style="color:#006766;font-weight:700;margin-left:auto;">' + escHtml(sender.mobile) + '</span></div>';
       contactsEl.innerHTML = rows;
     }
@@ -1913,46 +2001,22 @@
     if (lp  && !lp.value  && prodName) lp.value  = prodName;
     if (lc  && !lc.value  && company)  lc.value  = company;
     if (lr  && !lr.value  && ref)      lr.value  = ref;
-    var pcn = g('prod_contact_name'), pcr = g('prod_contact_role'), pcp = g('prod_contact_phone');
-    var ln  = document.getElementById('land_prod_contact_name');
-    var lro = document.getElementById('land_prod_contact_role');
-    var lph = document.getElementById('land_prod_contact_phone');
-    if (ln  && !ln.value  && pcn) ln.value  = pcn;
-    if (lro && !lro.value && pcr) lro.value = pcr;
-    if (lph && !lph.value && pcp) lph.value = pcp;
+    var pcContacts = getProdContacts();
+    // Sync prod contacts → land contacts (only if land contacts are empty)
+    var landCs = getLandContacts();
+    var landEmpty = landCs.every(function(c){ return !c.name && !c.phone; });
+    if (landEmpty && pcContacts.length) {
+      document.getElementById('landContactsContainer').innerHTML = '';
+      landContactCounter = 0;
+      pcContacts.forEach(function(c){ addLandContact(c.name, c.role, c.phone); });
+      // Ensure at least 2
+      while (landContactCounter < 2) addLandContact();
+    }
     updateLandlordOpeningNote();
     updateLandSubject();
   }
 
-  var landExtraContactCounter = 0;
-  function addLandExtraContact(name, role, phone) {
-    landExtraContactCounter++;
-    var id = 'land_extra_' + landExtraContactCounter;
-    var row = document.createElement('div');
-    row.className = 'contact-row';
-    row.dataset.landContactId = id;
-    row.style.marginTop = '10px';
-    row.innerHTML = '<div class="field"><label>Name</label><input type="text" id="'+id+'_name" value="'+escHtml(name||'')+'" placeholder="Contact name" oninput="updateLandPreview()"></div>'
-      + '<div class="field"><label>Role</label><input type="text" id="'+id+'_role" value="'+escHtml(role||'')+'" placeholder="Role" oninput="updateLandPreview()"></div>'
-      + '<div class="field" style="position:relative;">'
-      + '<label>Phone</label>'
-      + '<div style="display:flex;gap:6px;align-items:center;">'
-      + '<input type="text" id="'+id+'_phone" value="'+escHtml(phone||'')+'" placeholder="+44 7700 900000" oninput="updateLandPreview()" style="flex:1;">'
-      + '<button class="step-remove" type="button" onclick="removeLandExtraContact(\''+id+'\')">x</button>'
-      + '</div></div>';
-    document.getElementById('landExtraContactsContainer').appendChild(row);
-    updateLandPreview();
-  }
-  function removeLandExtraContact(id) {
-    var row = document.querySelector('[data-land-contact-id="'+id+'"]');
-    if (row) { row.remove(); updateLandPreview(); }
-  }
-  function getLandExtraContacts() {
-    return Array.from(document.querySelectorAll('[data-land-contact-id]')).map(function(row) {
-      var id = row.dataset.landContactId;
-      return { name: (document.getElementById(id+'_name')||{}).value||'', role: (document.getElementById(id+'_role')||{}).value||'', phone: (document.getElementById(id+'_phone')||{}).value||'' };
-    }).filter(function(c){ return c.name || c.phone; });
-  }
+  // Old land extra contact functions removed — replaced by addLandContact/getLandContacts above
 
   function updateRightPanel(mode) {
     // Hide every right panel unconditionally first
@@ -1992,9 +2056,8 @@
       tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
     var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement' };
-    var subs   = { prod: 'Select a site, fill in the booking details, and send directly via Resend.', land: 'Send a fee breakdown to the property landlord.', info: 'Send site access information without hire details.', qrgen: 'Generate a branded QR card for vehicle registration.', po: 'Generate and download a purchase order as PDF.' };
-    document.getElementById('modeTitle').textContent    = titles[mode];
-    document.getElementById('modeSubtitle').textContent = subs[mode];
+    document.getElementById('modeTitle').textContent = titles[mode];
+    updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
     // Show correct history panel
     ['prod','land','info','qrgen','po','agree'].forEach(function(t) {
@@ -2054,7 +2117,7 @@
     row.dataset.feeId = id;
     row.style.cssText = 'display:grid; grid-template-columns:1fr 120px 30px; gap:8px; align-items:center;';
     row.innerHTML = '<input type="text" id="' + id + '_desc" value="' + escHtml(desc||'') + '" placeholder="Description (e.g. Daily hire rate x 3 days)" style="font-family:\'DM Sans\',sans-serif; font-size:14px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 12px; outline:none;">'
-      + '<input type="number" id="' + id + '_amt" value="' + (amount||'') + '" placeholder="0.00" oninput="calcTotals();" style="font-family:\'DM Mono\',monospace; font-size:14px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 12px; outline:none; text-align:right;">'
+      + '<input type="text" id="' + id + '_amt" value="' + (amount||'') + '" placeholder="0.00" oninput="calcTotals();" style="font-family:\'DM Mono\',monospace; font-size:14px; color:var(--dark); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 12px; outline:none; text-align:right;">'
       + '<button class="step-remove" type="button" onclick="removeFeeItem(\'' + id + '\')">x</button>';
     document.getElementById('feeLineItems').appendChild(row);
     calcTotals();
@@ -2295,6 +2358,7 @@
       return { desc: (document.getElementById(id+'_desc')||{}).value||'', amount: (document.getElementById(id+'_amt')||{}).value||'0' };
     }).filter(function(i){ return i.desc; });
 
+    var landCs = getLandContacts();
     var d = {
       contact_name:       contact,
       site_name:          (document.getElementById('land_site_name')||{}).value || (currentSite ? currentSite.site_name : ''),
@@ -2303,10 +2367,10 @@
       start_date:         (document.getElementById('land_start_date')||{}).value || '',
       end_date:           (document.getElementById('land_end_date')||{}).value || '',
       opening_note:       (document.getElementById('land_opening_note')||{}).value || '',
-      prod_contact_name:  (document.getElementById('land_prod_contact_name')||{}).value || '',
-      prod_contact_role:  (document.getElementById('land_prod_contact_role')||{}).value || '',
-      prod_contact_phone: (document.getElementById('land_prod_contact_phone')||{}).value || '',
-      extra_contacts:     getLandExtraContacts(),
+      prod_contact_name:  (landCs[0]||{}).name  || '',
+      prod_contact_role:  (landCs[0]||{}).role  || '',
+      prod_contact_phone: (landCs[0]||{}).phone || '',
+      extra_contacts:     landCs.slice(1),
       fee_items:          feeItems,
       subtotal:           (document.getElementById('land_subtotal')||{}).value || '0',
       vat_rate:           (document.getElementById('land_vat_rate')||{}).value || '0',
@@ -3046,9 +3110,147 @@
   if (poDateEl) poDateEl.value = todayStr;
   addPOItem();
   updatePreview();
-  if (checkSetup()) loadSites();
+  if (checkSetup()) { loadSites(); loadProductions(); }
+  initDefaultContacts();
+  updateProductionSelectorVisibility('prod');
 
-  // ── Hire Agreement ──────────────────────────────────────────────
+
+  // ── Recall / Duplicate ─────────────────────────────────────────────
+  function recallBooking(event, bookingId, tab) {
+    event.stopPropagation();
+    var all = allHistoryByTab[tab] || [];
+    var b = all.find(function(x){ return x.id === bookingId; });
+    if (!b) return;
+
+    // Switch to the tab
+    switchMode(tab);
+
+    if (tab === 'prod') {
+      if (b.site_name) {
+        var si = sites.findIndex(function(s){ return s.site_name === b.site_name; });
+        if (si !== -1) { document.getElementById('siteSelect').value = si; onSiteChange(); }
+      }
+      if (b.production)  { var el=document.getElementById('production_name'); if(el) el.value=b.production; }
+      if (b.company)     { var el2=document.getElementById('prod_company');   if(el2) el2.value=b.company; }
+      if (b.booking_ref) { var el3=document.getElementById('booking_ref');    if(el3) el3.value=b.booking_ref; }
+      if (b.recipient)   { var el4=document.getElementById('to_email');       if(el4) el4.value=b.recipient; }
+      if (b.sender) {
+        var senderEmail = Object.keys(SENDERS).find(function(k){ return SENDERS[k].name === b.sender; });
+        if (senderEmail) { var sf=document.getElementById('from_email'); if(sf) sf.value=senderEmail; }
+      }
+      updatePreview();
+    } else if (tab === 'land') {
+      if (b.site_name) {
+        var si2 = sites.findIndex(function(s){ return s.site_name === b.site_name; });
+        if (si2 !== -1) { document.getElementById('siteSelect').value = si2; onSiteChange(); }
+      }
+      if (b.production)  { var lel=document.getElementById('land_production_name'); if(lel) lel.value=b.production; }
+      if (b.booking_ref) { var lel2=document.getElementById('land_booking_ref');    if(lel2) lel2.value=b.booking_ref; }
+      if (b.recipient)   { var lel3=document.getElementById('land_to_email');       if(lel3) lel3.value=b.recipient; }
+      if (b.sender) {
+        var se2 = Object.keys(SENDERS).find(function(k){ return SENDERS[k].name === b.sender; });
+        if (se2) { var lsf=document.getElementById('land_from_email'); if(lsf) lsf.value=se2; }
+      }
+      updateLandPreview();
+    }
+    showToast('Booking recalled — edit and resend', 'success');
+  }
+
+
+  // ── Productions (Monday board) ────────────────────────────────────
+  async function loadProductions() {
+    var keys = getKeys();
+    if (!keys.monday) return;
+    var query = '{ boards(ids: ' + MONDAY_PRODUCTIONS_BOARD_ID + ') { items_page(limit: 200) { items { name column_values { column { title } text } } } } }';
+    try {
+      var res  = await fetch('https://api.monday.com/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': keys.monday, 'API-Version': '2024-01' },
+        body: JSON.stringify({ query: query })
+      });
+      var json = await res.json();
+      if (json.errors || !json.data) return;
+      var items = json.data.boards[0].items_page.items;
+      productions = items.map(function(item) {
+        var p = { production_name: item.name };
+        item.column_values.forEach(function(col) {
+          var t = col.column.title.toLowerCase().trim();
+          if (t === 'production company')         p.prod_company = col.text || '';
+          if (t === 'production company address') p.prod_address = col.text || '';
+          if (t === 'contact 1 name')             p.c1_name      = col.text || '';
+          if (t === 'contact 1 role')             p.c1_role      = col.text || '';
+          if (t === 'contact 1 phone')            p.c1_phone     = col.text || '';
+          if (t === 'contact 1 email')            p.c1_email     = col.text || '';
+          if (t === 'contact 2 name')             p.c2_name      = col.text || '';
+          if (t === 'contact 2 role')             p.c2_role      = col.text || '';
+          if (t === 'contact 2 phone')            p.c2_phone     = col.text || '';
+          if (t === 'contact 2 email')            p.c2_email     = col.text || '';
+        });
+        return p;
+      }).filter(function(p){ return p.production_name; });
+      productions.sort(function(a,b){ return a.production_name.localeCompare(b.production_name); });
+      populateProductionSelect();
+    } catch(e) { console.warn('Could not load productions:', e); }
+  }
+
+  function populateProductionSelect() {
+    var sel = document.getElementById('productionSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Select a production (optional) —</option>';
+    productions.forEach(function(p, i) {
+      var opt = document.createElement('option');
+      opt.value = i; opt.textContent = p.production_name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function onProductionChange() {
+    var idx = document.getElementById('productionSelect').value;
+    if (idx === '') { currentProduction = null; return; }
+    currentProduction = productions[parseInt(idx)];
+    var p = currentProduction;
+
+    // Prod tab
+    var pn = document.getElementById('production_name');
+    var pc = document.getElementById('prod_company');
+    if (pn) pn.value = p.production_name;
+    if (pc) pc.value = p.prod_company || '';
+    document.getElementById('prodContactsContainer').innerHTML = '';
+    prodContactCounter = 0;
+    addProdContact(p.c1_name||'', p.c1_role||'', p.c1_phone||'');
+    addProdContact(p.c2_name||'', p.c2_role||'', p.c2_phone||'');
+
+    // Land tab
+    var lp = document.getElementById('land_production_name');
+    var lc = document.getElementById('land_prod_company');
+    if (lp) lp.value = p.production_name;
+    if (lc) lc.value = p.prod_company || '';
+    document.getElementById('landContactsContainer').innerHTML = '';
+    landContactCounter = 0;
+    addLandContact(p.c1_name||'', p.c1_role||'', p.c1_phone||'');
+    addLandContact(p.c2_name||'', p.c2_role||'', p.c2_phone||'');
+
+    // Agree tab
+    var apt = document.getElementById('agree_production_title');
+    var apl = document.getElementById('agree_licensee');
+    var apc = document.getElementById('agree_prod_contact_name');
+    var apd = document.getElementById('agree_prod_contact_details');
+    var aoc = document.getElementById('agree_onsite_contact_name');
+    var aod = document.getElementById('agree_onsite_contact_details');
+    if (apt) apt.value = p.production_name;
+    if (apl) apl.value = [p.prod_company, p.prod_address].filter(Boolean).join(', ');
+    if (apc) apc.value = p.c1_name || '';
+    if (apd) apd.value = [p.c1_email, p.c1_phone].filter(Boolean).join(' / ');
+    if (aoc) aoc.value = p.c2_name || '';
+    if (aod) aod.value = [p.c2_email, p.c2_phone].filter(Boolean).join(' / ');
+
+    updatePreview(); updateLandPreview(); updateAgreePreview();
+  }
+
+  function updateProductionSelectorVisibility(mode) {
+    var wrap = document.getElementById('productionSelectorWrap');
+    if (wrap) wrap.style.display = (mode === 'prod' || mode === 'land' || mode === 'agree') ? 'block' : 'none';
+  }
 
   function updateAgreePreview() {
     var el = document.getElementById('agree_preview_body');
@@ -3455,5 +3657,5 @@
   }
 
 </script>
-</body>
-</html>
+
+</body></html>
