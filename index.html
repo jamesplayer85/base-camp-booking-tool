@@ -947,6 +947,7 @@
             <div class="ep-row"><span class="ep-rl">Site</span><span class="ep-rv" id="pv_site">[SITE]</span></div>
             <div class="ep-row"><span class="ep-rl">Address</span><span class="ep-rv" id="pv_addr">[ADDRESS]</span></div>
             <div class="ep-row"><span class="ep-rl">What3Words</span><span class="ep-rv"><a id="pv_w3w" href="#">[///words]</a></span></div>
+            <div class="ep-row"><span class="ep-rl">Google Maps</span><span class="ep-rv"><a id="pv_maps" href="#" style="color:#006766;">View map pin &rarr;</a></span></div>
             <div class="ep-row"><span class="ep-rl">Start</span><span class="ep-rv" id="pv_start">[START]</span></div>
             <div class="ep-row"><span class="ep-rl">End</span><span class="ep-rv" id="pv_end">[END]</span></div>
             <div class="ep-row"><span class="ep-rl">Company</span><span class="ep-rv" id="pv_company">[COMPANY]</span></div>
@@ -1428,6 +1429,11 @@
       pv('pv_addr', currentSite.address);
       var w3w = document.getElementById('pv_w3w');
       if (w3w) { w3w.textContent = '///' + currentSite.w3w; w3w.href = 'https://w3w.co/' + currentSite.w3w; }
+      var mapsEl = document.getElementById('pv_maps');
+      if (mapsEl) {
+        if (currentSite.maps_url) { mapsEl.href = currentSite.maps_url; mapsEl.textContent = 'View map pin →'; mapsEl.closest('.ep-row').style.display = ''; }
+        else { mapsEl.closest('.ep-row').style.display = 'none'; }
+      }
 
       var steps = getSteps();
       document.getElementById('pv_steps').innerHTML = steps.length
