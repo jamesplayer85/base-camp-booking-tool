@@ -1395,6 +1395,8 @@
     pv('pv_end',      g('end_date')           || '[END]');
     pv('pv_company',  g('prod_company')       || '[COMPANY]');
     pv('pv_title',    g('production_name')         || '[TITLE]');
+    var fromEmail = (document.getElementById('from_email')||{}).value || 'james@thebasecampco.com';
+    var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
     var contacts = getProdContacts();
     var contactRows = document.getElementById('pv_contacts_rows');
     if (contactRows) {
@@ -1407,9 +1409,6 @@
     pv('pv_your_phone',g('your_phone')        || '[PHONE]');
     pv('pv_site_inline', currentSite ? currentSite.site_name : '[SITE]');
     syncToLandlord();
-
-    var fromEmail = (document.getElementById('from_email')||{}).value || 'james@thebasecampco.com';
-    var sender    = SENDERS[fromEmail] || SENDERS['james@thebasecampco.com'];
 
     // Auto-fill Base Camp Co. contact fields from sender
     var yourNameEl  = document.getElementById('your_name');
