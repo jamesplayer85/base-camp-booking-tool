@@ -180,6 +180,10 @@
       <label>Monday.com API key</label>
       <input type="password" id="setup_monday" placeholder="eyJhbGci...">
     </div>
+    <div class="field">
+      <label>Google Calendar API key <span style="font-size:11px;font-weight:400;color:var(--muted);">(for 10-day overview)</span></label>
+      <input type="password" id="setup_gcal" placeholder="AIza..." style="font-family:'DM Mono',monospace; font-size:13px;">
+    </div>
     <button class="setup-save" onclick="saveSetup()">Save &amp; continue</button>
     <br>
     <button class="setup-link" onclick="clearSetup()">
@@ -207,13 +211,14 @@
     </div>
 
     <!-- Mode tabs -->
-    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;">
+    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
       <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
       <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
       <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
       <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Generator</button>
       <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 PO Generator</button>
       <button class="mode-tab" id="tab-agree" onclick="switchMode('agree')">📝 Hire Agreement</button>
+      <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Site Diaries</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -825,6 +830,25 @@
       </button>
 
     </div><!-- /section-agree -->
+    <!-- ══════════════════════════════════
+         SITE DIARIES MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-diary">
+      <div class="site-selector">
+        <label>Select site calendar</label>
+        <select id="calendarSelect" onchange="onCalendarChange()">
+          <option value="">— Loading calendars… —</option>
+        </select>
+      </div>
+
+      <div class="form-card" id="diary_overview_card" style="margin-top:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <h2 style="margin:0;">Upcoming — next 10 days</h2>
+          <button onclick="refreshOverview()" style="background:none; border:1px solid var(--border); border-radius:6px; padding:5px 12px; font-size:12px; font-family:'DM Sans',sans-serif; color:var(--mid); cursor:pointer;">↻ Refresh</button>
+        </div>
+        <div id="diary_overview" style="font-size:13px; color:var(--mid);">Select a calendar to load events…</div>
+      </div>
+    </div><!-- /section-diary -->
 
     <!-- Per-tab history panels -->
     <div class="history-panel" id="history-prod" style="display:none;">
@@ -1064,6 +1088,25 @@
       </div>
     </div>
 
+    <!-- Site Diary panel -->
+    <div id="rp_diary" style="display:none; height:100%; flex-direction:column;">
+      <div style="background:#006766; padding:10px 16px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <h3 style="color:#fff; margin:0; font-size:13px; font-weight:600;" id="diary_panel_title">Site Diary</h3>
+          <p style="color:rgba(255,255,255,0.7); margin:2px 0 0; font-size:10px;">Navigate to the month you want, then print</p>
+        </div>
+        <button onclick="printCalendar()" style="background:rgba(255,255,255,0.15); border:none; color:#fff; border-radius:6px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:6px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print / PDF
+        </button>
+      </div>
+      <div id="diary_placeholder" style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:40px; text-align:center; color:var(--muted);">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#006766" stroke-width="1.2" style="margin-bottom:16px; opacity:0.5;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <p style="font-size:13px; margin:0;">Select a site calendar from the left to view its diary</p>
+      </div>
+      <iframe id="calendarIframe" src="" style="display:none; flex:1; border:none; width:100%; height:100%;" allowfullscreen></iframe>
+    </div>
+
   </div>
 </div>
 
@@ -1073,6 +1116,9 @@
   // 
   var MONDAY_BOARD_ID = '18411582352';
   var MONDAY_PRODUCTIONS_BOARD_ID = '18414060671';
+  var MONDAY_CALENDARS_BOARD_ID = '18415456355';
+  var calendars = [];
+  var currentCalendar = null;
   var productions = [];
   var currentProduction = null;
 
@@ -1086,16 +1132,19 @@
   function getKeys() {
     return {
       resend: localStorage.getItem('tbc_resend_key') || '',
-      monday: localStorage.getItem('tbc_monday_key') || ''
+      monday: localStorage.getItem('tbc_monday_key') || '',
+      gcal:   localStorage.getItem('tbc_gcal_key')   || ''
     };
   }
 
   function saveSetup() {
     var resend = document.getElementById('setup_resend').value.trim();
     var monday = document.getElementById('setup_monday').value.trim();
+    var gcal   = (document.getElementById('setup_gcal')||{}).value.trim() || '';
     if (!resend || !monday) { alert('Please enter both API keys.'); return; }
     localStorage.setItem('tbc_resend_key', resend);
     localStorage.setItem('tbc_monday_key', monday);
+    if (gcal) localStorage.setItem('tbc_gcal_key', gcal);
     document.getElementById('setupOverlay').classList.remove('show');
     loadSites();
   }
@@ -1104,8 +1153,10 @@
     if (!confirm('Clear saved API keys? You will need to re-enter them.')) return;
     localStorage.removeItem('tbc_resend_key');
     localStorage.removeItem('tbc_monday_key');
+    localStorage.removeItem('tbc_gcal_key');
     document.getElementById('setup_resend').value = '';
     document.getElementById('setup_monday').value = '';
+    var gcalEl = document.getElementById('setup_gcal'); if (gcalEl) gcalEl.value = '';
     alert('Keys cleared. Reload the page to re-enter them.');
   }
 
@@ -1118,6 +1169,7 @@
     // Pre-fill setup fields with masked values so user knows they're set
     document.getElementById('setup_resend').value = keys.resend;
     document.getElementById('setup_monday').value = keys.monday;
+    var gcalEl = document.getElementById('setup_gcal'); if (gcalEl) gcalEl.value = keys.gcal;
     return true;
   }
 
@@ -2059,7 +2111,7 @@
 
   function updateRightPanel(mode) {
     // Hide every right panel unconditionally first
-    ['rp_email','rp_qr','rp_po','rp_agree'].forEach(function(id) {
+    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -2067,9 +2119,10 @@
     var target = mode === 'qrgen' ? 'rp_qr'
                : mode === 'po'    ? 'rp_po'
                : mode === 'agree' ? 'rp_agree'
+               : mode === 'diary' ? 'rp_diary'
                : 'rp_email';
     var show = document.getElementById(target);
-    if (show) show.style.display = 'block';
+    if (show) show.style.display = mode === 'diary' ? 'flex' : 'block';
 
     // Swap email banners
     ['prod','land','info'].forEach(function(t) {
@@ -2089,17 +2142,17 @@
   var currentMode = 'prod';
   function switchMode(mode) {
     currentMode = mode;
-    ['prod','land','info','qrgen','po','agree'].forEach(function(m) {
+    ['prod','land','info','qrgen','po','agree','diary'].forEach(function(m) {
       document.getElementById('section-' + m).classList.toggle('active', m === mode);
       var tab = document.getElementById('tab-' + m);
       tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement' };
+    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Site Diaries' };
     document.getElementById('modeTitle').textContent = titles[mode];
     updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
     // Show correct history panel
-    ['prod','land','info','qrgen','po','agree'].forEach(function(t) {
+    ['prod','land','info','qrgen','po','agree','diary'].forEach(function(t) {
       var hp = document.getElementById('history-' + t);
       if (hp) hp.style.display = t === mode ? 'block' : 'none';
     });
@@ -2109,6 +2162,7 @@
     if (mode === 'po')    updatePOPreview();
     if (mode === 'info')  updateInfoPreview();
     if (mode === 'agree') { syncToAgree(); updateAgreePreview(); }
+    if (mode === 'diary') refreshOverview();
     updateRightPanel(mode);
   }
 
@@ -3168,7 +3222,7 @@
   if (poDateEl) poDateEl.value = todayStr;
   addPOItem();
   updatePreview();
-  if (checkSetup()) { loadSites(); loadProductions(); }
+  if (checkSetup()) { loadSites(); loadProductions(); loadCalendars(); }
   initDefaultContacts();
   updateProductionSelectorVisibility('prod');
 
@@ -3237,6 +3291,185 @@
     }
   }
 
+
+  // ── Site Diaries (Google Calendar) ────────────────────────────────
+  async function loadCalendars() {
+    var keys = getKeys();
+    if (!keys.monday) return;
+    var query = '{ boards(ids: ' + MONDAY_CALENDARS_BOARD_ID + ') { items_page(limit: 100) { items { name column_values { column { title } text } } } } }';
+    try {
+      var res = await fetch('https://api.monday.com/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': keys.monday, 'API-Version': '2024-01' },
+        body: JSON.stringify({ query: query })
+      });
+      var json = await res.json();
+      if (json.errors || !json.data) return;
+      var items = json.data.boards[0].items_page.items;
+      calendars = items.map(function(item) {
+        var c = { name: item.name, url: '' };
+        item.column_values.forEach(function(col) {
+          var t = col.column.title.toLowerCase().trim();
+          if (t === 'calendar url' || t === 'calendar embed url' || t === 'embed url') c.url = col.text || '';
+        });
+        return c;
+      }).filter(function(c){ return c.name; });
+      calendars.sort(function(a,b){ return a.name.localeCompare(b.name); });
+      populateCalendarSelect();
+    } catch(e) { console.warn('Could not load calendars:', e); }
+  }
+
+  function populateCalendarSelect() {
+    var sel = document.getElementById('calendarSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Select a site —</option>';
+    calendars.forEach(function(c, i) {
+      var opt = document.createElement('option');
+      opt.value = i; opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function onCalendarChange() {
+    var idx = document.getElementById('calendarSelect').value;
+    if (idx === '') { currentCalendar = null; showDiaryPlaceholder(); return; }
+    currentCalendar = calendars[parseInt(idx)];
+    var titleEl = document.getElementById('diary_panel_title');
+    if (titleEl) titleEl.textContent = currentCalendar.name + ' \u2014 Site Diary';
+    var baseUrl = currentCalendar.url.trim();
+    if (!baseUrl) { showDiaryPlaceholder('No Calendar URL set for this site in Monday.com'); return; }
+    var sep = baseUrl.indexOf('?') !== -1 ? '&' : '?';
+    if (baseUrl.indexOf('mode=') === -1)        baseUrl += sep + 'mode=MONTH';        sep = '&';
+    if (baseUrl.indexOf('showWeekends') === -1)  baseUrl += sep + 'showWeekends=1';
+    if (baseUrl.indexOf('showNav') === -1)       baseUrl += sep + 'showNav=1';
+    if (baseUrl.indexOf('showTitle') === -1)     baseUrl += sep + 'showTitle=1';
+    if (baseUrl.indexOf('showPrint') === -1)     baseUrl += sep + 'showPrint=0';
+    if (baseUrl.indexOf('ctz') === -1)           baseUrl += sep + 'ctz=Europe%2FLondon';
+    var iframe = document.getElementById('calendarIframe');
+    var placeholder = document.getElementById('diary_placeholder');
+    if (iframe) { iframe.src = baseUrl; iframe.style.display = 'block'; }
+    if (placeholder) placeholder.style.display = 'none';
+    refreshOverview();
+  }
+
+  async function refreshOverview() {
+    var el = document.getElementById('diary_overview');
+    if (!el) return;
+    el.innerHTML = '<span style="color:var(--muted);">Loading events…</span>';
+    var keys = getKeys();
+    if (!keys.gcal) {
+      el.innerHTML = '<span style="color:var(--muted); font-size:12px;">Add a Google Calendar API key in ⚙ API Keys to see the 10-day overview.</span>';
+      return;
+    }
+    var now   = new Date();
+    var end   = new Date(now); end.setDate(end.getDate() + 10);
+    var tMin  = now.toISOString();
+    var tMax  = end.toISOString();
+
+    // Fetch from all calendars
+    var allEvents = [];
+    var calList = calendars.length ? calendars : (currentCalendar ? [currentCalendar] : []);
+    await Promise.all(calList.map(async function(cal) {
+      if (!cal.url) return;
+      // Extract calendar ID from embed URL src param
+      var calId = '';
+      var srcMatch = cal.url.match(/[?&]src=([^&]+)/);
+      if (srcMatch) calId = decodeURIComponent(srcMatch[1]);
+      else {
+        // Try extracting from path-style URL
+        var pathMatch = cal.url.match(/calendar\/embed\?.*src=([^&]+)/);
+        if (pathMatch) calId = decodeURIComponent(pathMatch[1]);
+      }
+      if (!calId) return;
+      try {
+        var apiUrl = 'https://www.googleapis.com/calendar/v3/calendars/'
+          + encodeURIComponent(calId) + '/events?key=' + keys.gcal
+          + '&timeMin=' + encodeURIComponent(tMin)
+          + '&timeMax=' + encodeURIComponent(tMax)
+          + '&singleEvents=true&orderBy=startTime&maxResults=50';
+        var res  = await fetch(apiUrl);
+        var json = await res.json();
+        if (json.items) {
+          json.items.forEach(function(ev) {
+            allEvents.push({
+              title:   ev.summary || '(No title)',
+              start:   ev.start.dateTime || ev.start.date,
+              end:     ev.end.dateTime   || ev.end.date,
+              allDay:  !ev.start.dateTime,
+              cal:     cal.name
+            });
+          });
+        }
+      } catch(e) {}
+    }));
+
+    if (!allEvents.length) {
+      el.innerHTML = '<span style="color:var(--muted);">No events in the next 10 days.</span>';
+      return;
+    }
+
+    // Sort by start
+    allEvents.sort(function(a,b){ return new Date(a.start) - new Date(b.start); });
+
+    // Group by date
+    var byDate = {};
+    allEvents.forEach(function(ev) {
+      var d = ev.start.substring(0,10);
+      if (!byDate[d]) byDate[d] = [];
+      byDate[d].push(ev);
+    });
+
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var html   = '';
+    Object.keys(byDate).sort().forEach(function(date) {
+      var d    = new Date(date + 'T00:00:00');
+      var isToday = date === now.toISOString().substring(0,10);
+      html += '<div style="margin-bottom:12px;">'
+        + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:' + (isToday ? 'var(--teal)' : 'var(--muted)') + ';margin-bottom:5px;">'
+        + days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + (isToday ? ' — Today' : '') + '</div>';
+      byDate[date].forEach(function(ev) {
+        var timeStr = ev.allDay ? 'All day' : (function(){
+          var s = new Date(ev.start);
+          var e = new Date(ev.end);
+          return s.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
+            + ' – ' + e.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+        })();
+        html += '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 10px;background:var(--bg);border-radius:5px;margin-bottom:3px;border-left:3px solid var(--teal);">'
+          + '<span style="font-size:11px;color:var(--muted);white-space:nowrap;min-width:90px;">' + escHtml(timeStr) + '</span>'
+          + '<span style="font-size:13px;font-weight:500;color:var(--dark);flex:1;">' + escHtml(ev.title) + '</span>'
+          + (calList.length > 1 ? '<span style="font-size:10px;color:var(--muted);">' + escHtml(ev.cal) + '</span>' : '')
+          + '</div>';
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  }
+
+  function showDiaryPlaceholder(msg) {
+    var iframe = document.getElementById('calendarIframe');
+    var placeholder = document.getElementById('diary_placeholder');
+    if (iframe) { iframe.src = ''; iframe.style.display = 'none'; }
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+      var p = placeholder.querySelector('p');
+      if (p) p.textContent = msg || 'Select a site calendar from the left to view its diary';
+    }
+  }
+
+  function printCalendar() {
+    var iframe = document.getElementById('calendarIframe');
+    if (!iframe || !iframe.src || iframe.style.display === 'none') {
+      showToast('Select a calendar first', ''); return;
+    }
+    var printUrl = iframe.src.replace('showPrint=0','showPrint=1');
+    var win = window.open(printUrl, '_blank');
+    if (win) {
+      win.addEventListener('load', function() {
+        setTimeout(function(){ win.print(); }, 1500);
+      });
+    }
+  }
 
   // ── Productions (Monday board) ────────────────────────────────────
   async function loadProductions() {
@@ -3332,6 +3565,9 @@
   function updateProductionSelectorVisibility(mode) {
     var wrap = document.getElementById('productionSelectorWrap');
     if (wrap) wrap.style.display = (mode === 'prod' || mode === 'land' || mode === 'agree') ? 'block' : 'none';
+    // Hide site selector on diary tab (has its own dropdown)
+    var siteWrap = document.getElementById('siteSelect');
+    if (siteWrap) siteWrap.closest('.site-selector').style.display = mode === 'diary' ? 'none' : '';
   }
 
   function updateAgreePreview() {
