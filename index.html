@@ -958,7 +958,8 @@
             <div id="pv_steps">Select a site to see steps</div>
           </div>
           <div class="ep-note" id="pv_note_box" style="display:none;">
-            <strong>Important:</strong> <span id="pv_note"></span>
+            <strong>Important:</strong>
+            <div id="pv_note" style="margin-top:4px;"></div>
           </div>
           <p class="ep-sec">Site map</p>
           <div class="ep-map">
@@ -973,8 +974,8 @@
             <p style="font-size:10px; color:#888; margin:4px 0 10px; line-height:1.5;">All vehicle registrations must be logged by scanning the QR code with your phone camera. A direct link to the form can be found <a id="pv_qr_link" href="#" style="color:#006766;">here</a>.</p>
           </div>
           <p class="ep-sec" style="margin-top:10px;">Key contacts</p>
-          <div class="ep-box" style="font-size:11px;">
-            <div class="ep-row"><span class="ep-rv" id="pv_pc_name">[PROD CONTACT]</span><span class="ep-rl" style="padding-left:6px;" id="pv_pc_role">Production</span><span style="color:#006766; font-weight:700; margin-left:auto;" id="pv_pc_phone">[PHONE]</span></div>
+          <div class="ep-box" style="font-size:11px;" id="pv_contacts_box">
+            <div id="pv_contacts_rows"></div>
             <div class="ep-row" style="margin-top:4px;"><span class="ep-rv" id="pv_your_name">[YOUR NAME]</span><span class="ep-rl" style="padding-left:6px;" id="pv_your_role">The Base Camp Co.</span><span style="color:#006766; font-weight:700; margin-left:auto;" id="pv_your_phone">[PHONE]</span></div>
           </div>
           <div id="pv_footer" style="margin-top:16px; padding-top:14px; border-top:1px solid #EAE8E2; display:none;">
@@ -1396,10 +1397,14 @@
     pv('pv_end',      g('end_date')           || '[END]');
     pv('pv_company',  g('prod_company')       || '[COMPANY]');
     pv('pv_title',    g('production_name')         || '[TITLE]');
-    pv('pv_pc_name',  g('prod_contact_name')  || '[PROD CONTACT]');
-    pv('pv_pc_role',  g('prod_contact_role')  || 'Production');
-    pv('pv_pc_phone', g('prod_contact_phone') || '[PHONE]');
-    pv('pv_your_name',g('your_name')          || '[YOUR NAME]');
+    var contacts = getProdContacts();
+    var contactRows = document.getElementById('pv_contacts_rows');
+    if (contactRows) {
+      contactRows.innerHTML = contacts.map(function(c) {
+        return '<div class="ep-row" style="margin-bottom:3px;"><span class="ep-rv">' + escHtml(c.name||'') + '</span><span class="ep-rl" style="padding-left:6px;">' + escHtml(c.role||'') + '</span><span style="color:#006766;font-weight:700;margin-left:auto;">' + escHtml(c.phone||'') + '</span></div>';
+      }).join('');
+    }
+    pv('pv_your_name', g('your_name') || sender.name || '[YOUR NAME]');
     pv('pv_your_role',g('your_role')          || 'The Base Camp Co.');
     pv('pv_your_phone',g('your_phone')        || '[PHONE]');
     pv('pv_site_inline', currentSite ? currentSite.site_name : '[SITE]');
@@ -1442,7 +1447,11 @@
 
       var noteBox = document.getElementById('pv_note_box');
       var note = g('note_text');
-      if (note) { noteBox.style.display = 'block'; pv('pv_note', note); } else { noteBox.style.display = 'none'; }
+      if (note) {
+        noteBox.style.display = 'block';
+        var noteEl = document.getElementById('pv_note');
+        if (noteEl) noteEl.innerHTML = note.split('\n').filter(function(l){ return l.trim(); }).map(function(l){ return '<p style="margin:3px 0;">' + escHtml(l) + '</p>'; }).join('');
+      } else { noteBox.style.display = 'none'; }
 
       var mapImg = document.getElementById('pv_map_img');
       if (currentSite.site_map_url) { mapImg.src = currentSite.site_map_url; mapImg.style.display = 'block'; document.getElementById('pv_map_ph').style.display = 'none'; }
@@ -1477,7 +1486,11 @@
       ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>'
         +'<td width="3" style="background:#E8A020;border-radius:3px 0 0 3px;">&nbsp;</td>'
         +'<td style="background:#FFF8EC;border-radius:0 6px 6px 0;padding:12px 14px;font-size:13px;color:#6A4A10;line-height:1.55;">'
-        +'<strong style="color:#4A3008;">Important:</strong> '+d.important_note+'</td></tr></table>' : '';
+        +'<strong style="color:#4A3008;">Important:</strong> '
+        + d.important_note.split('\n').filter(function(l){return l.trim();}).map(function(l,i){
+            return i === 0 ? escHtml(l) : '<br><br>' + escHtml(l);
+          }).join('')
+        +'</td></tr></table>' : '';
 
     var mapHtml = d.site_map_url
       ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
@@ -1642,8 +1655,7 @@
       var json = await res.json();
       if (res.ok) {
         showToast('Confirmation sent to ' + d.to_emails.join(', '), 'success');
-        ['to_email','contact_name','booking_ref','production_name','prod_company','prod_title',
-         'prod_contact_name','prod_contact_role','prod_contact_phone',
+        ['to_email','contact_name','booking_ref','production_name','prod_company',
          'emergency_note','email_subject','qr_form_url'].forEach(function(id){
           var el = document.getElementById(id); if(el) el.value = '';
         });
@@ -1652,13 +1664,14 @@
         });
         uploadedFiles  = [];
         qrUploadedFile = null;
-        document.getElementById('extraContactsContainer').innerHTML = '';
-        extraContactCounter = 0;
+        document.getElementById('prodContactsContainer').innerHTML = '';
+        prodContactCounter = 0;
+        addProdContact(); addProdContact();
         document.getElementById('qrImagePreview').style.display = 'none';
         document.getElementById('qrImagePlaceholder').style.display = 'block';
         renderAttachmentChips();
         updatePreview();
-        loadHistory();
+        loadHistory('prod');
       } else {
         showToast('Send failed: ' + (json.message || 'Unknown error'), 'error');
       }
@@ -1811,6 +1824,7 @@
         + '<span class="h-resend">'
         + (tab === 'prod' ? '<button class="resend-btn" onclick="triggerResend(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Resend</button>' : '')
         + '<button class="resend-btn" style="background:#2563eb;" onclick="recallBooking(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Duplicate</button>'
+        + (tab === 'qrgen' ? '<button class="resend-btn" style="background:#006766;" onclick="redownloadQR(event,\'' + escHtml(b.id) + '\')">Download</button>' : '')
         + '</span>'
         + '</div>';
     }).join('');
@@ -3122,6 +3136,20 @@
 
 
   // ── Recall / Duplicate ─────────────────────────────────────────────
+  function redownloadQR(event, bookingId) {
+    event.stopPropagation();
+    var all = allHistoryByTab['qrgen'] || [];
+    var b = all.find(function(x){ return x.id === bookingId; });
+    if (!b) return;
+    switchMode('qrgen');
+    var qs = document.getElementById('qrgen_site');
+    var qp = document.getElementById('qrgen_production');
+    if (qs && b.site_name)  qs.value = b.site_name;
+    if (qp && b.production) qp.value = b.production;
+    // Render then download after canvas has updated
+    renderQRCard().then(function(){ downloadQRCard(); });
+  }
+
   function recallBooking(event, bookingId, tab) {
     event.stopPropagation();
     var all = allHistoryByTab[tab] || [];
@@ -3158,8 +3186,15 @@
         if (se2) { var lsf=document.getElementById('land_from_email'); if(lsf) lsf.value=se2; }
       }
       updateLandPreview();
+    } else if (tab === 'qrgen') {
+      // Pre-fill QR form fields from history entry
+      var qs = document.getElementById('qrgen_site');
+      var qp = document.getElementById('qrgen_production');
+      var qd = document.getElementById('qrgen_date');
+      if (qs && b.site_name)  qs.value = b.site_name;
+      if (qp && b.production) qp.value = b.production;
+      updateQRCard();
     }
-    showToast('Booking recalled — edit and resend', 'success');
   }
 
 
