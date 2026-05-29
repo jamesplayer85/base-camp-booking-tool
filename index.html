@@ -3411,12 +3411,47 @@
     // Sort by start
     allEvents.sort(function(a,b){ return new Date(a.start) - new Date(b.start); });
 
+    // Expand multi-day events across all days they cover
+    var expanded = [];
+    allEvents.forEach(function(ev) {
+      var startDate = new Date(ev.allDay ? ev.start + 'T00:00:00' : ev.start);
+      var endDate   = new Date(ev.allDay ? ev.end   + 'T00:00:00' : ev.end);
+      // For all-day events Google sets end to midnight of the day AFTER the last day
+      if (ev.allDay) endDate.setDate(endDate.getDate() - 1);
+      // Count total days
+      var msPerDay = 86400000;
+      var totalDays = Math.max(1, Math.round((endDate - startDate) / msPerDay) + 1);
+      // Emit one entry per day within the 10-day window
+      for (var day = 0; day < totalDays; day++) {
+        var d = new Date(startDate);
+        d.setDate(d.getDate() + day);
+        var dateStr = d.toISOString().substring(0, 10);
+        // Only include days within our window
+        if (dateStr >= now.toISOString().substring(0,10) && dateStr <= end.toISOString().substring(0,10)) {
+          expanded.push({
+            title:    ev.title,
+            start:    ev.start,
+            end:      ev.end,
+            allDay:   ev.allDay,
+            cal:      ev.cal,
+            date:     dateStr,
+            dayNum:   day + 1,
+            totalDays: totalDays
+          });
+        }
+      }
+    });
+
+    if (!expanded.length) {
+      el.innerHTML = '<span style="color:var(--muted);">No events in the next 10 days.</span>';
+      return;
+    }
+
     // Group by date
     var byDate = {};
-    allEvents.forEach(function(ev) {
-      var d = ev.start.substring(0,10);
-      if (!byDate[d]) byDate[d] = [];
-      byDate[d].push(ev);
+    expanded.forEach(function(ev) {
+      if (!byDate[ev.date]) byDate[ev.date] = [];
+      byDate[ev.date].push(ev);
     });
 
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -3433,11 +3468,14 @@
           var s = new Date(ev.start);
           var e = new Date(ev.end);
           return s.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
-            + ' – ' + e.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+            + ' \u2013 ' + e.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
         })();
+        var dayLabel = ev.totalDays > 1
+          ? '<span style="font-size:10px;color:var(--teal);font-weight:600;margin-left:6px;">Day ' + ev.dayNum + ' of ' + ev.totalDays + '</span>'
+          : '';
         html += '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 10px;background:var(--bg);border-radius:5px;margin-bottom:3px;border-left:3px solid var(--teal);">'
           + '<span style="font-size:11px;color:var(--muted);white-space:nowrap;min-width:90px;">' + escHtml(timeStr) + '</span>'
-          + '<span style="font-size:13px;font-weight:500;color:var(--dark);flex:1;">' + escHtml(ev.title) + '</span>'
+          + '<span style="font-size:13px;font-weight:500;color:var(--dark);flex:1;">' + escHtml(ev.title) + dayLabel + '</span>'
           + (calList.length > 1 ? '<span style="font-size:10px;color:var(--muted);">' + escHtml(ev.cal) + '</span>' : '')
           + '</div>';
       });
