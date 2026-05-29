@@ -381,7 +381,7 @@
       Send booking confirmation
     </button>
 
-    <div class="form-card" style="margin-top:32px;">
+    <div class="form-card" style="margin-top:32px; display:none;">
       <h2>Monday.com board reference</h2>
       <p style="font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:14px;">
         Board: <strong>Unit Base Sites</strong> · ID: <code style="font-family:'DM Mono',monospace; background:var(--bg); padding:1px 5px; border-radius:3px;">18411582352</code>
@@ -617,6 +617,11 @@
             <label>Date</label>
             <input type="text" id="qrgen_date" placeholder="11/05" oninput="updateQRCard()">
           </div>
+        </div>
+        <div class="field">
+          <label>Booking reference</label>
+          <input type="text" id="qrgen_booking_ref" placeholder="BC-UB3001">
+          <span class="hint">For history only — not shown on the QR card</span>
         </div>
       </div>
 
@@ -1816,9 +1821,8 @@
         + '<span class="h-date">' + dateStr + '</span>'
         + '<span class="h-site">' + escHtml(b.site_name||'') + '</span>'
         + '<span class="h-prod">' + escHtml(b.production||'') + (b.booking_ref ? ' \u00b7 ' + escHtml(b.booking_ref) : '') + '</span>'
-        + '<span class="h-sender">' + escHtml((b.sender||'').split(' ')[0]) + '</span>'
         + '<span class="h-resend">'
-        + (tab === 'prod' ? '<button class="resend-btn" onclick="triggerResend(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Resend</button>' : '')
+        + (tab === 'prod' ? '<button class="resend-btn" style="background:#006766;color:#fff;" onclick="triggerResend(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Resend</button>' : '')
         + '<button class="resend-btn" style="background:#006766;color:#fff;" onclick="recallBooking(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Duplicate</button>'
         + (tab === 'qrgen' ? '<button class="resend-btn" style="background:#006766;color:#fff;" onclick="redownloadQR(event,\'' + escHtml(b.id) + '\')">Download</button>' : '')
         + '</span>'
@@ -3145,7 +3149,7 @@
     link.download = fname;
     link.href     = canvas.toDataURL('image/png');
     link.click();
-    saveLocalHistory('qrgen', { site_name: site, production: prod, sent_at: new Date().toISOString() });
+    saveLocalHistory('qrgen', { site_name: site, production: prod, booking_ref: (document.getElementById('qrgen_booking_ref')||{}).value||'', sent_at: new Date().toISOString() });
   }
 
   function showToast(msg, type) {
@@ -3178,8 +3182,10 @@
     switchMode('qrgen');
     var qs = document.getElementById('qrgen_site');
     var qp = document.getElementById('qrgen_production');
-    if (qs && b.site_name)  qs.value = b.site_name;
-    if (qp && b.production) qp.value = b.production;
+    var qr = document.getElementById('qrgen_booking_ref');
+    if (qs && b.site_name)   qs.value = b.site_name;
+    if (qp && b.production)  qp.value = b.production;
+    if (qr && b.booking_ref) qr.value = b.booking_ref;
     // Render then download after canvas has updated
     renderQRCard().then(function(){ downloadQRCard(); });
   }
@@ -3221,12 +3227,12 @@
       }
       updateLandPreview();
     } else if (tab === 'qrgen') {
-      // Pre-fill QR form fields from history entry
       var qs = document.getElementById('qrgen_site');
       var qp = document.getElementById('qrgen_production');
-      var qd = document.getElementById('qrgen_date');
-      if (qs && b.site_name)  qs.value = b.site_name;
-      if (qp && b.production) qp.value = b.production;
+      var qr = document.getElementById('qrgen_booking_ref');
+      if (qs && b.site_name)   qs.value = b.site_name;
+      if (qp && b.production)  qp.value = b.production;
+      if (qr && b.booking_ref) qr.value = b.booking_ref;
       updateQRCard();
     }
   }
