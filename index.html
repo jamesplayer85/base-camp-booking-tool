@@ -330,7 +330,7 @@
     <div class="form-card">
       <h2>Opening message — edit if needed</h2>
       <div class="field">
-        <textarea id="prod_opening_note" rows="3" oninput="updatePreview()">Your unit base booking is confirmed. Please find below access details and site information. A copy of the hire agreement and invoice is attached for your reference.</textarea>
+        <textarea id="prod_opening_note" rows="3" oninput="updatePreview()" placeholder="Opening message — auto-filled when site and production are selected"></textarea>
       </div>
     </div>
 
@@ -1491,8 +1491,8 @@
 
     var mapHtml = d.site_map_url
       ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
-        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
-        +'<img src="'+d.site_map_url+'" alt="Site map" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
+        +'<td style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:12px 0;">'
+        +'<img src="'+d.site_map_url+'" alt="Site map" width="100%" style="display:block;width:100%;height:auto;border-radius:4px;">'
         +'</td></tr></table>' : '';
 
     var qrHtml = (d.qr_data_url || d.qr_form_url)
@@ -1992,6 +1992,20 @@
     }
   }
 
+  function updateProdOpeningNote() {
+    var el = document.getElementById('prod_opening_note');
+    if (!el) return;
+    var prod = g('production_name') || '';
+    var site = currentSite ? currentSite.site_name : '';
+    if (prod || site) {
+      el.value = 'Your unit base booking'
+        + (prod ? ' for ' + prod : '')
+        + (site ? ' at ' + site : '')
+        + ' is confirmed. Please find below the access details and site information for your reference.';
+    }
+    updatePreview();
+  }
+
   function updateLandlordOpeningNote() {
     var el   = document.getElementById('land_opening_note');
     var site = currentSite ? currentSite.site_name : '[SITE NAME]';
@@ -2127,6 +2141,7 @@
       var parts = [currentSite.landlord_company, currentSite.landlord_address].filter(Boolean);
       agPrin.value = parts.join(', ');
     }
+    updateProdOpeningNote();
   }
 
   // -- Fee line items --
@@ -2312,8 +2327,8 @@
 
     var mapHtml = d.site_map_url
       ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;"><tr>'
-        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
-        +'<img src="'+d.site_map_url+'" alt="Site map" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
+        +'<td style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:12px 0;">'
+        +'<img src="'+d.site_map_url+'" alt="Site map" width="100%" style="display:block;width:100%;height:auto;border-radius:4px;">'
         +'</td></tr></table>' : '';
 
     return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
@@ -3305,6 +3320,7 @@
     if (aod) aod.value = [p.c2_email, p.c2_phone].filter(Boolean).join(' / ');
 
     updatePreview(); updateLandPreview(); updateAgreePreview();
+    updateProdOpeningNote();
   }
 
   function updateProductionSelectorVisibility(mode) {
