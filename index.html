@@ -1277,13 +1277,13 @@
       + '<div class="field"><label>Phone</label><input type="text" id="' + id + '_phone" value="' + escHtml(phone||'') + '" placeholder="+44 7700 900000" oninput="updatePreview()"></div>'
       + '</div>';
     container.appendChild(row);
-    updatePreview();
+    if (document.getElementById('pv_contacts_rows')) updatePreview();
     return id;
   }
 
   function removeProdContact(id) {
     var row = document.querySelector('[data-prod-contact-id="' + id + '"]');
-    if (row) { row.remove(); updatePreview(); }
+    if (row) { row.remove(); if (document.getElementById('pv_contacts_rows')) updatePreview(); }
   }
 
   function getProdContacts() {
@@ -1314,7 +1314,7 @@
       + '<div class="field"><label>Phone</label><input type="text" id="' + id + '_phone" value="' + escHtml(phone||'') + '" placeholder="+44 7700 900000" oninput="updateLandPreview()"></div>'
       + '</div>';
     container.appendChild(row);
-    updateLandPreview();
+    if (document.getElementById('landContactsContainer')) updateLandPreview();
     return id;
   }
 
@@ -1336,13 +1336,11 @@
 
   function initDefaultContacts() {
     // Prod: default 2 empty contact rows
-    document.getElementById('prodContactsContainer').innerHTML = '';
-    prodContactCounter = 0;
-    addProdContact(); addProdContact();
+    var pc = document.getElementById('prodContactsContainer');
+    if (pc) { pc.innerHTML = ''; prodContactCounter = 0; addProdContact(); addProdContact(); }
     // Land: default 2 empty contact rows
-    document.getElementById('landContactsContainer').innerHTML = '';
-    landContactCounter = 0;
-    addLandContact(); addLandContact();
+    var lc = document.getElementById('landContactsContainer');
+    if (lc) { lc.innerHTML = ''; landContactCounter = 0; addLandContact(); addLandContact(); }
   }
 
   // Legacy aliases so existing email builders keep working
@@ -1823,8 +1821,8 @@
         + '<span class="h-sender">' + escHtml((b.sender||'').split(' ')[0]) + '</span>'
         + '<span class="h-resend">'
         + (tab === 'prod' ? '<button class="resend-btn" onclick="triggerResend(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Resend</button>' : '')
-        + '<button class="resend-btn" style="background:#2563eb;" onclick="recallBooking(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Duplicate</button>'
-        + (tab === 'qrgen' ? '<button class="resend-btn" style="background:#006766;" onclick="redownloadQR(event,\'' + escHtml(b.id) + '\')">Download</button>' : '')
+        + '<button class="resend-btn" style="background:#006766;color:#fff;" onclick="recallBooking(event,\'' + escHtml(b.id) + '\',\'' + tab + '\')">Duplicate</button>'
+        + (tab === 'qrgen' ? '<button class="resend-btn" style="background:#006766;color:#fff;" onclick="redownloadQR(event,\'' + escHtml(b.id) + '\')">Download</button>' : '')
         + '</span>'
         + '</div>';
     }).join('');
