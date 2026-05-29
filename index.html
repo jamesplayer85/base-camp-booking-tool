@@ -3345,6 +3345,7 @@
     if (baseUrl.indexOf('showTitle') === -1)     baseUrl += sep + 'showTitle=1';
     if (baseUrl.indexOf('showPrint') === -1)     baseUrl += sep + 'showPrint=0';
     if (baseUrl.indexOf('ctz') === -1)           baseUrl += sep + 'ctz=Europe%2FLondon';
+    if (baseUrl.indexOf('wkst') === -1)          baseUrl += sep + 'wkst=2';
     var iframe = document.getElementById('calendarIframe');
     var placeholder = document.getElementById('diary_placeholder');
     if (iframe) { iframe.src = baseUrl; iframe.style.display = 'block'; }
@@ -3414,29 +3415,35 @@
     // Expand multi-day events across all days they cover
     var expanded = [];
     allEvents.forEach(function(ev) {
-      var startDate = new Date(ev.allDay ? ev.start + 'T00:00:00' : ev.start);
-      var endDate   = new Date(ev.allDay ? ev.end   + 'T00:00:00' : ev.end);
+      // Parse dates without timezone shift — treat as local dates
+      function parseLocalDate(str) {
+        // date-only strings e.g. '2026-05-20' — treat as local midnight
+        if (str.length === 10) {
+          var p = str.split('-');
+          return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+        }
+        return new Date(str); // datetime strings include timezone offset
+      }
+      var startDate = parseLocalDate(ev.allDay ? ev.start : ev.start.substring(0,10));
+      var endDate   = parseLocalDate(ev.allDay ? ev.end   : ev.end.substring(0,10));
       // For all-day events Google sets end to midnight of the day AFTER the last day
       if (ev.allDay) endDate.setDate(endDate.getDate() - 1);
-      // Count total days
-      var msPerDay = 86400000;
-      var totalDays = Math.max(1, Math.round((endDate - startDate) / msPerDay) + 1);
-      // Emit one entry per day within the 10-day window
+      var msPerDay   = 86400000;
+      var totalDays  = Math.max(1, Math.round((endDate - startDate) / msPerDay) + 1);
+      var todayStr   = now.toISOString().substring(0, 10);
+      var endWinStr  = end.toISOString().substring(0, 10);
       for (var day = 0; day < totalDays; day++) {
         var d = new Date(startDate);
         d.setDate(d.getDate() + day);
-        var dateStr = d.toISOString().substring(0, 10);
-        // Only include days within our window
-        if (dateStr >= now.toISOString().substring(0,10) && dateStr <= end.toISOString().substring(0,10)) {
+        // Format as local date string to avoid UTC shift
+        var dateStr = d.getFullYear() + '-'
+          + String(d.getMonth()+1).padStart(2,'0') + '-'
+          + String(d.getDate()).padStart(2,'0');
+        if (dateStr >= todayStr && dateStr <= endWinStr) {
           expanded.push({
-            title:    ev.title,
-            start:    ev.start,
-            end:      ev.end,
-            allDay:   ev.allDay,
-            cal:      ev.cal,
-            date:     dateStr,
-            dayNum:   day + 1,
-            totalDays: totalDays
+            title: ev.title, start: ev.start, end: ev.end,
+            allDay: ev.allDay, cal: ev.cal, date: dateStr,
+            dayNum: day + 1, totalDays: totalDays
           });
         }
       }
@@ -3458,8 +3465,10 @@
     var days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     var html   = '';
     Object.keys(byDate).sort().forEach(function(date) {
-      var d    = new Date(date + 'T00:00:00');
-      var isToday = date === now.toISOString().substring(0,10);
+      var p    = date.split('-');
+      var d    = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+      var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+      var isToday  = date === todayStr;
       html += '<div style="margin-bottom:12px;">'
         + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:' + (isToday ? 'var(--teal)' : 'var(--muted)') + ';margin-bottom:5px;">'
         + days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + (isToday ? ' — Today' : '') + '</div>';
