@@ -1495,14 +1495,13 @@
         +'<img src="'+d.site_map_url+'" alt="Site map" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
         +'</td></tr></table>' : '';
 
-    var qrHtml = d.qr_data_url
-      ? '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 10px;">QR Code</p>'
+    var qrHtml = (d.qr_data_url || d.qr_form_url)
+      ? '<p style="font-size:11px;font-weight:700;color:#888880;text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 10px;">QR Code — Vehicle Registration</p>'
         +'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
-        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
-        +'<img src="'+d.qr_data_url+'" alt="QR Code" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
-        +'</td></tr></table>'
-        +'<p style="font-size:12px;color:#888880;margin:0 0 20px;">All vehicle registrations must be logged by scanning the QR code with your phone camera.'
-        +(d.qr_form_url ? ' A direct link to the form can be found <a href="'+d.qr_form_url+'" style="color:#006766;">here</a>.' : '')+'</p>' : '';
+        +'<td style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:14px 18px;font-size:13px;color:#444440;">'
+        +'All vehicle registrations must be logged via the QR code.'
+        +(d.qr_form_url ? ' <a href="'+d.qr_form_url+'" style="color:#006766;font-weight:600;">Access the registration form here &rarr;</a>' : '')
+        +'</td></tr></table><p style="font-size:11px;color:#888880;margin:0 0 20px;">The QR card for on-site use will be provided separately.</p>' : '';
 
     var extraContactsHtml = (d.extra_contacts||[]).map(function(c){
       return '<tr><td style="font-size:13px;font-weight:700;color:#1A1A1A;padding:7px 0;border-bottom:1px solid #EEECEA;">'+c.name+'</td>'
@@ -1598,7 +1597,6 @@
       steps:              getSteps(),
       important_note:     g('note_text'),
       site_map_url:       currentSite.site_map_url,
-      qr_data_url:        qrUploadedFile ? qrUploadedFile.dataUrl : '',
       qr_form_url:        g('qr_form_url'),
       sender:             sender
     };
