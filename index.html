@@ -1490,9 +1490,9 @@
         +'</td></tr></table>' : '';
 
     var mapHtml = d.site_map_url
-      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
-        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
-        +'<img src="'+d.site_map_url+'" alt="Site map" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;"><tr>'
+        +'<td style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:14px 18px;font-size:13px;color:#444440;">'
+        +'<a href="'+d.site_map_url+'" style="color:#006766;font-weight:600;text-decoration:none;">View site map &#8594;</a>'
         +'</td></tr></table>' : '';
 
     var qrHtml = (d.qr_data_url || d.qr_form_url)
@@ -1608,57 +1608,48 @@
     document.getElementById('sendBtn').disabled = true;
 
     try {
-      var keys = getKeys();
-
-      // Send directly to Resend from browser — avoids Cloudflare's 1MB limit
-      var resendPayload = {
+      var payload = {
         from:    sender.name + ' <' + fromEmail + '>',
         to:      d.to_emails,
-        bcc:     ['james@thebasecampco.com','tom@thebasecampco.com','ben@thebasecampco.com'],
         subject: g('email_subject') || 'Unit Base Booking Confirmed \u2014 ' + d.production_name + ' | Ref: ' + d.booking_ref,
-        html:    buildEmailHTML(d)
+        html:    buildEmailHTML(d),
+        tab:     'prod',
+        bookingMeta: {
+          booking_ref:     d.booking_ref,
+          site_name:       d.site_name,
+          production_name: d.production_name,
+          prod_company:    d.prod_company,
+          to_emails:       d.to_emails,
+          sender_name:     sender.name,
+          start_date:      d.start_date,
+          end_date:        d.end_date,
+          reminder_data: {
+            booking_ref:   d.booking_ref,
+            contact_name:  d.contact_name,
+            site_name:     d.site_name,
+            address:       d.address,
+            w3w:           d.w3w,
+            start_date:    d.start_date,
+            end_date:      d.end_date,
+            steps:         d.steps,
+            your_name:     sender.name,
+            your_phone:    sender.mobile,
+            sender_name:   sender.name,
+            sender_email:  sender.email,
+            sender_mobile: sender.mobile
+          }
+        }
       };
-      if (attachments.length) resendPayload.attachments = attachments;
+      if (attachments.length) payload.attachments = attachments;
 
-      var res  = await fetch('https://api.resend.com/emails', {
+      var res  = await fetch(WORKER_URL + '/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + keys.resend },
-        body: JSON.stringify(resendPayload)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
       var json = await res.json();
 
       if (res.ok) {
-        // Log to KV via worker (small payload, no attachments)
-        fetch(WORKER_URL + '/log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tab: 'prod', bookingMeta: {
-            booking_ref:     d.booking_ref,
-            site_name:       d.site_name,
-            production_name: d.production_name,
-            prod_company:    d.prod_company,
-            to_emails:       d.to_emails,
-            sender_name:     sender.name,
-            start_date:      d.start_date,
-            end_date:        d.end_date,
-            reminder_data: {
-              booking_ref:   d.booking_ref,
-              contact_name:  d.contact_name,
-              site_name:     d.site_name,
-              address:       d.address,
-              w3w:           d.w3w,
-              start_date:    d.start_date,
-              end_date:      d.end_date,
-              steps:         d.steps,
-              your_name:     sender.name,
-              your_phone:    sender.mobile,
-              sender_name:   sender.name,
-              sender_email:  sender.email,
-              sender_mobile: sender.mobile
-            }
-          }})
-        }).catch(function(){}); // fire and forget — logging failure shouldn't block UX
-
         showToast('Confirmation sent to ' + d.to_emails.join(', '), 'success');
         ['to_email','contact_name','booking_ref','production_name','prod_company',
          'emergency_note','email_subject','qr_form_url'].forEach(function(id){
@@ -1920,16 +1911,14 @@
 
     document.getElementById('loadingOverlay').classList.add('show');
     try {
-      var keys2 = getKeys();
-      var res  = await fetch('https://api.resend.com/emails', {
+      var res  = await fetch(WORKER_URL + '/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + keys2.resend },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from:    sender.name + ' <' + fromEmail + '>',
           to:      b.recipient ? b.recipient.split(',').map(function(e){ return e.trim(); }) : [],
-          bcc:     ['james@thebasecampco.com','tom@thebasecampco.com','ben@thebasecampco.com'],
-          subject: 'Unit Base Booking Confirmation \u2014 ' + d.production_name + ' | Ref: ' + d.booking_ref,
-          html:    buildEmailHTML(d)
+          html:    buildEmailHTML(d),
+          tab:     'prod'
         })
       });
       var json = await res.json();
@@ -2418,16 +2407,16 @@
     document.getElementById('loadingOverlay').classList.add('show');
     document.getElementById('landSendBtn').disabled = true;
     try {
-      var keysL = getKeys();
-      var res  = await fetch('https://api.resend.com/emails', {
+      var res  = await fetch(WORKER_URL + '/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + keysL.resend },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from:    sender.name + ' <' + fromEmail + '>',
           to:      toEmails,
-          bcc:     ['james@thebasecampco.com','tom@thebasecampco.com','ben@thebasecampco.com'],
           subject: (document.getElementById('land_email_subject')||{}).value || ('Unit Base Booking Confirmation - ' + (d.site_name||'') + (d.production ? ' - ' + d.production : '')),
-          html:    buildLandlordEmailHTML(d)
+          html:    buildLandlordEmailHTML(d),
+          tab:     'land',
+          meta:    inlineMeta
         })
       });
       var json = await res.json();
@@ -2475,16 +2464,16 @@
     document.getElementById('loadingOverlay').classList.add('show');
     document.getElementById('infoSendBtn').disabled = true;
     try {
-      var keysI = getKeys();
-      var res  = await fetch('https://api.resend.com/emails', {
+      var res  = await fetch(WORKER_URL + '/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + keysI.resend },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from:    sender.name + ' <' + fromEmail + '>',
           to:      toEmails,
-          bcc:     ['james@thebasecampco.com','tom@thebasecampco.com','ben@thebasecampco.com'],
           subject: 'Site Information \u2014 ' + d.site_name,
-          html:    buildInfoSheetHTML(d)
+          html:    buildInfoSheetHTML(d),
+          tab:     'info',
+          meta:    { site_name: d.site_name, production: '', booking_ref: '', recipient: toEmails[0], sender: sender.name, sent_at: new Date().toISOString() }
         })
       });
       var json = await res.json();
