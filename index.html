@@ -1490,9 +1490,9 @@
         +'</td></tr></table>' : '';
 
     var mapHtml = d.site_map_url
-      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;"><tr>'
-        +'<td style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:14px 18px;font-size:13px;color:#444440;">'
-        +'<a href="'+d.site_map_url+'" style="color:#006766;font-weight:600;text-decoration:none;">View site map &#8594;</a>'
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:6px;"><tr>'
+        +'<td align="center" style="background:#F0EEE8;border-radius:6px;border:1px dashed #C8C6C0;padding:18px;">'
+        +'<img src="'+d.site_map_url+'" alt="Site map" width="400" style="display:block;width:400px;max-width:100%;height:auto;border-radius:4px;margin:0 auto;">'
         +'</td></tr></table>' : '';
 
     var qrHtml = (d.qr_data_url || d.qr_form_url)
