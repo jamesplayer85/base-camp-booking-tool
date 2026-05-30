@@ -211,7 +211,7 @@
     </div>
 
     <!-- Mode tabs -->
-    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
+    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
       <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
       <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
       <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
@@ -219,6 +219,7 @@
       <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 PO Generator</button>
       <button class="mode-tab" id="tab-agree" onclick="switchMode('agree')">📝 Hire Agreement</button>
       <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Site Diaries</button>
+      <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Site Map</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -850,6 +851,19 @@
       </div>
     </div><!-- /section-diary -->
 
+    <!-- ══════════════════════════════════
+         SITE MAP MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-map">
+      <div class="form-card">
+        <h2>Filter by type</h2>
+        <div id="mapTypeFilters" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:0;"></div>
+      </div>
+      <div class="form-card" style="padding:0; overflow:hidden;">
+        <div id="mapSiteList" style="max-height:400px; overflow-y:auto;"></div>
+      </div>
+    </div><!-- /section-map -->
+
     <!-- Per-tab history panels -->
     <div class="history-panel" id="history-prod" style="display:none;">
       <div class="history-header" onclick="toggleHistory('prod')">
@@ -1088,6 +1102,24 @@
       </div>
     </div>
 
+    <!-- Site Map panel -->
+    <div id="rp_map" style="display:none; height:100%; flex-direction:column;">
+      <div id="map_container" style="flex:1; position:relative;">
+        <div id="siteMap" style="width:100%; height:100%;"></div>
+        <!-- Site info popup -->
+        <div id="mapPopup" style="display:none; position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#fff; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.2); padding:16px 20px; min-width:260px; max-width:320px; z-index:10;">
+          <button onclick="document.getElementById('mapPopup').style.display='none'" style="position:absolute;top:8px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#888;">✕</button>
+          <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:4px;" id="popup_name"></div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="popup_type"></div>
+          <div style="font-size:12px;color:#444;margin-bottom:4px;" id="popup_addr"></div>
+          <div style="font-size:12px;" id="popup_w3w"></div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <a id="popup_maps" href="#" target="_blank" style="font-size:12px;color:#006766;font-weight:600;text-decoration:none;">Open in Maps →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Site Diary panel -->
     <div id="rp_diary" style="display:none; height:100%; flex-direction:column;">
       <div style="background:#006766; padding:10px 16px; display:flex; align-items:center; justify-content:space-between;">
@@ -1210,6 +1242,8 @@
           if (t === 'qr required')      s.qr_required    = col.checked || false;
           if (t === 'landlord company') s.landlord_company = col.text || '';
           if (t === 'landlord address') s.landlord_address = col.text || '';
+          if (t === 'coordinates')      s.coordinates      = col.text || '';
+          if (t === 'site type')        s.site_type        = col.text || '';
         });
         return s;
       }).filter(function(s){ return s.site_name; });
@@ -2110,44 +2144,39 @@
   // Old land extra contact functions removed — replaced by addLandContact/getLandContacts above
 
   function updateRightPanel(mode) {
-    // Hide every right panel unconditionally first
-    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary'].forEach(function(id) {
+    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary','rp_map'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    // Show the correct one
     var target = mode === 'qrgen' ? 'rp_qr'
                : mode === 'po'    ? 'rp_po'
                : mode === 'agree' ? 'rp_agree'
                : mode === 'diary' ? 'rp_diary'
+               : mode === 'map'   ? 'rp_map'
                : 'rp_email';
     var show = document.getElementById(target);
-    if (show) show.style.display = mode === 'diary' ? 'flex' : 'block';
+    if (show) show.style.display = (mode === 'diary' || mode === 'map') ? 'flex' : 'block';
 
-    // Swap email banners
     ['prod','land','info'].forEach(function(t) {
       var b = document.getElementById('rp_banner_' + t);
       if (b) b.style.display = t === mode ? 'block' : 'none';
     });
-
-    // Swap email body sections
     ['prod','land','info'].forEach(function(t) {
       var b = document.getElementById('rp_' + t + '_body');
       if (b) b.style.display = t === mode ? 'block' : 'none';
     });
-
     if (mode === 'land') updateLandPreview();
   }
 
   var currentMode = 'prod';
   function switchMode(mode) {
     currentMode = mode;
-    ['prod','land','info','qrgen','po','agree','diary'].forEach(function(m) {
+    ['prod','land','info','qrgen','po','agree','diary','map'].forEach(function(m) {
       document.getElementById('section-' + m).classList.toggle('active', m === mode);
       var tab = document.getElementById('tab-' + m);
-      tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
+      if (tab) tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Site Diaries' };
+    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Site Diaries', map: 'Site Map' };
     document.getElementById('modeTitle').textContent = titles[mode];
     updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
@@ -3292,6 +3321,220 @@
   }
 
 
+  // ── Site Map ──────────────────────────────────────────────────────
+  var mapInstance    = null;
+  var mapMarkers     = [];
+  var activeFilters  = {};
+  var mapInitialised = false;
+
+  // Pin colours per site type
+  var TYPE_COLOURS = {
+    'Unit Base':    '#006766',
+    'Crew Parking': '#E8A020',
+    'Base Camp':    '#2563eb',
+    'Other':        '#888888'
+  };
+
+  function getSiteTypeColour(type) {
+    return TYPE_COLOURS[type] || TYPE_COLOURS['Other'];
+  }
+
+  function initSiteMap() {
+    var keys = getKeys();
+    if (!keys.gcal) {
+      document.getElementById('mapSiteList').innerHTML = '<div style="padding:20px;font-size:13px;color:var(--muted);">Add a Google Maps API key in ⚙ API Keys to enable the map.</div>';
+      return;
+    }
+
+    // Load Google Maps JS API if not already loaded
+    if (!window.google || !window.google.maps) {
+      var script = document.createElement('script');
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=' + keys.gcal + '&callback=onGoogleMapsLoaded';
+      script.async = true;
+      document.head.appendChild(script);
+      window.onGoogleMapsLoaded = function() { buildSiteMap(); };
+    } else {
+      buildSiteMap();
+    }
+  }
+
+  function buildSiteMap() {
+    // Collect all unique site types
+    var types = {};
+    sites.forEach(function(s) {
+      var t = s.site_type || 'Other';
+      types[t] = true;
+    });
+
+    // Build filter toggles
+    var filtersEl = document.getElementById('mapTypeFilters');
+    filtersEl.innerHTML = '';
+    // All toggle
+    activeFilters = {};
+    Object.keys(types).forEach(function(t) { activeFilters[t] = true; });
+
+    var allBtn = document.createElement('button');
+    allBtn.textContent = 'All';
+    allBtn.dataset.type = '__all__';
+    allBtn.style.cssText = 'padding:6px 14px;border-radius:20px;border:2px solid #006766;background:#006766;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;';
+    allBtn.onclick = function() { Object.keys(activeFilters).forEach(function(t){ activeFilters[t]=true; }); renderMapMarkers(); updateFilterButtons(); };
+    filtersEl.appendChild(allBtn);
+
+    Object.keys(types).sort().forEach(function(type) {
+      var col = getSiteTypeColour(type);
+      var btn = document.createElement('button');
+      btn.textContent = type;
+      btn.dataset.type = type;
+      btn.style.cssText = 'padding:6px 14px;border-radius:20px;border:2px solid ' + col + ';background:' + col + ';color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;';
+      btn.onclick = function() {
+        // Solo toggle — show only this type
+        Object.keys(activeFilters).forEach(function(t){ activeFilters[t] = (t === type); });
+        renderMapMarkers();
+        updateFilterButtons();
+      };
+      filtersEl.appendChild(btn);
+    });
+
+    // Build site list
+    renderMapSiteList();
+
+    // Init map centred on London
+    var mapEl = document.getElementById('siteMap');
+    if (!mapEl) return;
+    mapInstance = new google.maps.Map(mapEl, {
+      center: { lat: 51.505, lng: -0.09 },
+      zoom: 10,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+      styles: [{ featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}] }]
+    });
+
+    renderMapMarkers();
+    mapInitialised = true;
+  }
+
+  function renderMapMarkers() {
+    // Clear existing markers
+    mapMarkers.forEach(function(m){ m.setMap(null); });
+    mapMarkers = [];
+
+    var bounds = new google.maps.LatLngBounds();
+    var hasAny = false;
+
+    sites.forEach(function(site) {
+      if (!site.coordinates) return;
+      var type = site.site_type || 'Other';
+      if (!activeFilters[type]) return;
+
+      var parts = site.coordinates.split(',');
+      if (parts.length < 2) return;
+      var lat = parseFloat(parts[0].trim());
+      var lng = parseFloat(parts[1].trim());
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      var colour = getSiteTypeColour(type);
+      var pos = { lat: lat, lng: lng };
+
+      // Custom SVG pin
+      var marker = new google.maps.Marker({
+        position: pos,
+        map: mapInstance,
+        title: site.site_name,
+        icon: {
+          path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+          fillColor: colour,
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 1.5,
+          scale: 1.6,
+          anchor: new google.maps.Point(12, 22)
+        }
+      });
+
+      marker.addListener('click', function() { showMapPopup(site, colour); });
+      mapMarkers.push(marker);
+      bounds.extend(pos);
+      hasAny = true;
+    });
+
+    if (hasAny && mapMarkers.length > 1) mapInstance.fitBounds(bounds);
+    else if (hasAny) { mapInstance.setCenter(bounds.getCenter()); mapInstance.setZoom(14); }
+
+    renderMapSiteList();
+  }
+
+  function renderMapSiteList() {
+    var el = document.getElementById('mapSiteList');
+    if (!el) return;
+    var filtered = sites.filter(function(s){
+      var t = s.site_type || 'Other';
+      return activeFilters[t] && s.coordinates;
+    });
+    var noCoords = sites.filter(function(s){
+      var t = s.site_type || 'Other';
+      return activeFilters[t] && !s.coordinates;
+    });
+
+    var html = '';
+    filtered.forEach(function(site) {
+      var col = getSiteTypeColour(site.site_type || 'Other');
+      html += '<div onclick="flyToSite(\'' + escHtml(site.site_name) + '\')" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">'
+        + '<div style="width:10px;height:10px;border-radius:50%;background:' + col + ';flex-shrink:0;"></div>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:13px;font-weight:600;color:var(--dark);">' + escHtml(site.site_name) + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);">' + escHtml(site.site_type||'') + (site.address ? ' · ' + escHtml(site.address.split(',')[0]) : '') + '</div>'
+        + '</div>'
+        + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>'
+        + '</div>';
+    });
+    if (noCoords.length) {
+      html += '<div style="padding:8px 16px;font-size:11px;color:var(--muted);background:var(--bg);">' + noCoords.length + ' site' + (noCoords.length>1?'s':'') + ' without coordinates</div>';
+    }
+    if (!filtered.length && !noCoords.length) {
+      html = '<div style="padding:20px;font-size:13px;color:var(--muted);">No sites match the current filter.</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  function flyToSite(siteName) {
+    var site = sites.find(function(s){ return s.site_name === siteName; });
+    if (!site || !site.coordinates || !mapInstance) return;
+    var parts = site.coordinates.split(',');
+    var lat = parseFloat(parts[0].trim()), lng = parseFloat(parts[1].trim());
+    if (isNaN(lat)||isNaN(lng)) return;
+    mapInstance.panTo({ lat: lat, lng: lng });
+    mapInstance.setZoom(15);
+    showMapPopup(site, getSiteTypeColour(site.site_type||'Other'));
+  }
+
+  function showMapPopup(site, colour) {
+    document.getElementById('popup_name').textContent = site.site_name;
+    document.getElementById('popup_type').textContent = site.site_type || '';
+    document.getElementById('popup_type').style.color = colour;
+    document.getElementById('popup_addr').textContent = site.address || '';
+    var w3wEl = document.getElementById('popup_w3w');
+    if (site.w3w) {
+      w3wEl.innerHTML = '<a href="https://w3w.co/' + escHtml(site.w3w) + '" target="_blank" style="color:#006766;text-decoration:none;">///' + escHtml(site.w3w) + '</a>';
+    } else { w3wEl.textContent = ''; }
+    var mapsEl = document.getElementById('popup_maps');
+    if (site.maps_url) { mapsEl.href = site.maps_url; mapsEl.style.display='inline'; }
+    else { mapsEl.style.display='none'; }
+    document.getElementById('mapPopup').style.display = 'block';
+  }
+
+  function updateFilterButtons() {
+    var allActive = Object.values(activeFilters).every(function(v){ return v; });
+    document.querySelectorAll('#mapTypeFilters button').forEach(function(btn) {
+      var type = btn.dataset.type;
+      if (type === '__all__') {
+        btn.style.opacity = allActive ? '1' : '0.4';
+      } else {
+        btn.style.opacity = activeFilters[type] ? '1' : '0.4';
+      }
+    });
+  }
+
   // ── Site Diaries (Google Calendar) ────────────────────────────────
   async function loadCalendars() {
     var keys = getKeys();
@@ -3612,9 +3855,9 @@
   function updateProductionSelectorVisibility(mode) {
     var wrap = document.getElementById('productionSelectorWrap');
     if (wrap) wrap.style.display = (mode === 'prod' || mode === 'land' || mode === 'agree') ? 'block' : 'none';
-    // Hide site selector on diary tab (has its own dropdown)
     var siteWrap = document.getElementById('siteSelect');
-    if (siteWrap) siteWrap.closest('.site-selector').style.display = mode === 'diary' ? 'none' : '';
+    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map') ? 'none' : '';
+    if (mode === 'map') initSiteMap();
   }
 
   function updateAgreePreview() {
