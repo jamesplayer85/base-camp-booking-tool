@@ -1132,8 +1132,9 @@
           <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="popup_type"></div>
           <div style="font-size:12px;color:#444;margin-bottom:4px;" id="popup_addr"></div>
           <div style="font-size:12px;" id="popup_w3w"></div>
-          <div style="margin-top:10px;display:flex;gap:8px;">
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <a id="popup_maps" href="#" target="_blank" style="font-size:12px;color:#006766;font-weight:600;text-decoration:none;">Open in Maps →</a>
+            <button id="popup_clear_directions" onclick="clearDirections()" style="display:none;font-size:12px;color:#e53935;background:none;border:none;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;padding:0;">✕ Clear route</button>
           </div>
         </div>
       </div>
@@ -3343,6 +3344,8 @@
   // ── Site Map ──────────────────────────────────────────────────────
   var mapInstance    = null;
   var mapMarkers     = [];
+  var markerClusterer = null;
+  var directionsRenderer = null;
   var activeFilters  = {};
   var mapInitialised = false;
 
@@ -3369,7 +3372,7 @@
     // Load Google Maps JS API if not already loaded
     if (!window.google || !window.google.maps) {
       var script = document.createElement('script');
-      script.src = 'https://maps.googleapis.com/maps/api/js?key=' + keys.gcal + '&libraries=marker&callback=onGoogleMapsLoaded';
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=' + keys.gcal + '&libraries=marker,geometry&callback=onGoogleMapsLoaded';
       script.async = true;
       document.head.appendChild(script);
       window.onGoogleMapsLoaded = function() { buildSiteMap(); };
@@ -3447,14 +3450,30 @@
       styles: [{ featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}] }]
     });
 
-    renderMapMarkers();
+    // Set up directions renderer
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: true,
+      polylineOptions: { strokeColor: '#006766', strokeWeight: 4, strokeOpacity: 0.8 }
+    });
+    directionsRenderer.setMap(mapInstance);
+
+    // Load MarkerClusterer from CDN
+    if (!window.markerClusterer) {
+      var clusterScript = document.createElement('script');
+      clusterScript.src = 'https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js';
+      clusterScript.onload = function() { renderMapMarkers(); };
+      document.head.appendChild(clusterScript);
+    } else {
+      renderMapMarkers();
+    }
     mapInitialised = true;
   }
 
   function renderMapMarkers() {
-    // Clear existing markers
+    // Clear existing markers and clusterer
     mapMarkers.forEach(function(m){ m.map = null; });
     mapMarkers = [];
+    if (markerClusterer) { markerClusterer.clearMarkers(); markerClusterer = null; }
 
     var bounds = new google.maps.LatLngBounds();
     var hasAny = false;
@@ -3488,6 +3507,28 @@
       bounds.extend(pos);
       hasAny = true;
     });
+
+    // Apply clustering if library is loaded
+    if (hasAny && window.markerClusterer) {
+      // Remove markers from map — clusterer will manage visibility
+      mapMarkers.forEach(function(m){ m.map = null; });
+      markerClusterer = new markerClusterer.MarkerClusterer({
+        map: mapInstance,
+        markers: mapMarkers,
+        renderer: {
+          render: function(cluster) {
+            var count = cluster.count;
+            var div = document.createElement('div');
+            div.style.cssText = 'background:#006766;color:#fff;border-radius:50%;width:' + (count > 9 ? 38 : 32) + 'px;height:' + (count > 9 ? 38 : 32) + 'px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-family:\'DM Sans\',sans-serif;cursor:pointer;';
+            div.textContent = count;
+            return new google.maps.marker.AdvancedMarkerElement({
+              position: cluster.position,
+              content: div
+            });
+          }
+        }
+      });
+    }
 
     if (hasAny && mapMarkers.length > 1) mapInstance.fitBounds(bounds);
     else if (hasAny) { mapInstance.setCenter(bounds.getCenter()); mapInstance.setZoom(14); }
@@ -3537,6 +3578,35 @@
     mapInstance.panTo({ lat: lat, lng: lng });
     mapInstance.setZoom(15);
     showMapPopup(site, getSiteTypeColour(site.site_type||'Other'));
+  }
+
+  function showDirections(destCoords, siteName) {
+    if (!searchLatLng || !directionsRenderer) return;
+    var directionsService = new google.maps.DirectionsService();
+    var parts = destCoords.split(',');
+    directionsService.route({
+      origin: searchLatLng,
+      destination: { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) },
+      travelMode: google.maps.TravelMode.DRIVING
+    }, function(result, status) {
+      if (status === 'OK') {
+        directionsRenderer.setDirections(result);
+        // Show clear button in popup
+        document.getElementById('mapPopup').style.display = 'block';
+        document.getElementById('popup_name').textContent = siteName;
+        var clearBtn = document.getElementById('popup_clear_directions');
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+        flyToSite(siteName);
+      } else {
+        showToast('Could not get directions: ' + status, 'error');
+      }
+    });
+  }
+
+  function clearDirections() {
+    if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
+    var clearBtn = document.getElementById('popup_clear_directions');
+    if (clearBtn) clearBtn.style.display = 'none';
   }
 
   function showMapPopup(site, colour) {
@@ -3622,6 +3692,7 @@
 
   function clearPostcodePin() {
     if (searchPin) { searchPin.map = null; searchPin = null; }
+    clearDirections();
     searchLatLng = null;
     document.getElementById('mapPostcode').value = '';
     document.getElementById('mapPostcodeResult').textContent = '';
@@ -3733,9 +3804,8 @@
           + '<div style="font-size:10px;color:#ccc;">' + escHtml(item.miles) + ' mi direct</div>'
           + '</div>'
         : '<div style="font-size:12px;font-weight:600;color:var(--teal);white-space:nowrap;">' + escHtml(item.miles) + ' mi</div>';
-      var directionsUrl = searchLatLng
-        ? 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(searchLatLng.lat + ',' + searchLatLng.lng)
-          + '&destination=' + encodeURIComponent(site.coordinates.trim()) + '&travelmode=driving'
+      var directionsBtn = searchLatLng && site.coordinates
+        ? '<button onclick="showDirections(\'' + escHtml(site.coordinates.trim()) + '\',\'' + escHtml(site.site_name) + '\')" style="flex-shrink:0;background:#006766;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:\'DM Sans\',sans-serif;">&#8599; Directions</button>'
         : '';
       html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);">'
         + '<div onclick="flyToSite(\'' + escHtml(site.site_name) + '\')" style="display:flex;align-items:center;gap:12px;flex:1;cursor:pointer;" onmouseover="this.parentElement.style.background=\'var(--bg)\'" onmouseout="this.parentElement.style.background=\'\'">'
@@ -3746,7 +3816,7 @@
         + '</div>'
         + distHtml
         + '</div>'
-        + (directionsUrl ? '<a href="' + directionsUrl + '" target="_blank" title="Get directions" style="flex-shrink:0;background:#006766;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap;font-family:\'DM Sans\',sans-serif;">↗ Directions</a>' : '')
+        + directionsBtn
         + '</div>';
     });
     el.innerHTML = html;
@@ -3780,30 +3850,66 @@
   function populateCalendarSelect() {
     var sel = document.getElementById('calendarSelect');
     if (!sel) return;
-    sel.innerHTML = '<option value="">— Select a site —</option>';
+    sel.innerHTML = '<option value="">— Select a calendar —</option>';
+    // Add "All Sites" as first option if there are multiple calendars
+    if (calendars.length > 1) {
+      var allOpt = document.createElement('option');
+      allOpt.value = '__all__';
+      allOpt.textContent = '📅 All Sites';
+      sel.appendChild(allOpt);
+    }
     calendars.forEach(function(c, i) {
       var opt = document.createElement('option');
       opt.value = i; opt.textContent = c.name;
       sel.appendChild(opt);
     });
+    // Auto-select All Sites on load
+    if (calendars.length > 1) {
+      sel.value = '__all__';
+      onCalendarChange();
+    } else if (calendars.length === 1) {
+      sel.value = '0';
+      onCalendarChange();
+    }
   }
 
   function onCalendarChange() {
     var idx = document.getElementById('calendarSelect').value;
     if (idx === '') { currentCalendar = null; showDiaryPlaceholder(); return; }
-    currentCalendar = calendars[parseInt(idx)];
+
     var titleEl = document.getElementById('diary_panel_title');
-    if (titleEl) titleEl.textContent = currentCalendar.name + ' \u2014 Site Diary';
-    var baseUrl = currentCalendar.url.trim();
-    if (!baseUrl) { showDiaryPlaceholder('No Calendar URL set for this site in Monday.com'); return; }
+    var baseUrl;
+
+    if (idx === '__all__') {
+      currentCalendar = null;
+      if (titleEl) titleEl.textContent = 'All Sites — Site Diary';
+      // Build multi-calendar embed URL
+      var calIds = [];
+      calendars.forEach(function(c) {
+        if (!c.url) return;
+        var srcMatch = c.url.match(/[?&]src=([^&]+)/);
+        if (srcMatch) calIds.push(decodeURIComponent(srcMatch[1]));
+      });
+      if (!calIds.length) { showDiaryPlaceholder('No calendar URLs configured in Monday.com'); return; }
+      baseUrl = 'https://calendar.google.com/calendar/embed?'
+        + calIds.map(function(id){ return 'src=' + encodeURIComponent(id); }).join('&');
+    } else {
+      currentCalendar = calendars[parseInt(idx)];
+      if (titleEl) titleEl.textContent = currentCalendar.name + ' \u2014 Site Diary';
+      baseUrl = currentCalendar.url.trim();
+      if (!baseUrl) { showDiaryPlaceholder('No Calendar URL set for this site in Monday.com'); return; }
+    }
+
+    // Append display params
     var sep = baseUrl.indexOf('?') !== -1 ? '&' : '?';
-    if (baseUrl.indexOf('mode=') === -1)        baseUrl += sep + 'mode=MONTH';        sep = '&';
-    if (baseUrl.indexOf('showWeekends') === -1)  baseUrl += sep + 'showWeekends=1';
-    if (baseUrl.indexOf('showNav') === -1)       baseUrl += sep + 'showNav=1';
-    if (baseUrl.indexOf('showTitle') === -1)     baseUrl += sep + 'showTitle=1';
-    if (baseUrl.indexOf('showPrint') === -1)     baseUrl += sep + 'showPrint=0';
-    if (baseUrl.indexOf('ctz') === -1)           baseUrl += sep + 'ctz=Europe%2FLondon';
-    if (baseUrl.indexOf('wkst') === -1)          baseUrl += sep + 'wkst=2';
+    if (baseUrl.indexOf('mode=') === -1)        { baseUrl += sep + 'mode=MONTH';       sep = '&'; }
+    if (baseUrl.indexOf('showWeekends') === -1)   baseUrl += sep + 'showWeekends=1';
+    if (baseUrl.indexOf('showNav') === -1)         baseUrl += sep + 'showNav=1';
+    if (baseUrl.indexOf('showTitle') === -1)       baseUrl += sep + 'showTitle=1';
+    if (baseUrl.indexOf('showPrint') === -1)       baseUrl += sep + 'showPrint=0';
+    if (baseUrl.indexOf('ctz') === -1)             baseUrl += sep + 'ctz=Europe%2FLondon';
+    if (baseUrl.indexOf('wkst') === -1)            baseUrl += sep + 'wkst=2';
+
     var iframe = document.getElementById('calendarIframe');
     var placeholder = document.getElementById('diary_placeholder');
     if (iframe) { iframe.src = baseUrl; iframe.style.display = 'block'; }
