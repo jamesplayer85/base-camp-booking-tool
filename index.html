@@ -3368,7 +3368,7 @@
     // Load Google Maps JS API if not already loaded
     if (!window.google || !window.google.maps) {
       var script = document.createElement('script');
-      script.src = 'https://maps.googleapis.com/maps/api/js?key=' + keys.gcal + '&callback=onGoogleMapsLoaded';
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=' + keys.gcal + '&libraries=marker&callback=onGoogleMapsLoaded';
       script.async = true;
       document.head.appendChild(script);
       window.onGoogleMapsLoaded = function() { buildSiteMap(); };
@@ -3437,6 +3437,7 @@
     mapInstance = new google.maps.Map(mapEl, {
       center: { lat: 51.505, lng: -0.09 },
       zoom: 10,
+      mapId: 'basecamp_sites_map',
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: true,
@@ -3449,7 +3450,7 @@
 
   function renderMapMarkers() {
     // Clear existing markers
-    mapMarkers.forEach(function(m){ m.setMap(null); });
+    mapMarkers.forEach(function(m){ m.map = null; });
     mapMarkers = [];
 
     var bounds = new google.maps.LatLngBounds();
@@ -3470,19 +3471,13 @@
       var pos = { lat: lat, lng: lng };
 
       // Custom SVG pin
-      var marker = new google.maps.Marker({
+      var pinEl = document.createElement('div');
+      pinEl.style.cssText = 'width:20px;height:20px;border-radius:50% 50% 50% 0;background:' + colour + ';border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);transform:rotate(-45deg);cursor:pointer;';
+      var marker = new google.maps.marker.AdvancedMarkerElement({
         position: pos,
         map: mapInstance,
         title: site.site_name,
-        icon: {
-          path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
-          fillColor: colour,
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5,
-          scale: 1.6,
-          anchor: new google.maps.Point(12, 22)
-        }
+        content: pinEl
       });
 
       marker.addListener('click', function() { showMapPopup(site, colour); });
@@ -3599,19 +3594,13 @@
 
       // Drop red search pin
       if (searchPin) searchPin.setMap(null);
-      searchPin = new google.maps.Marker({
+      var searchPinEl = document.createElement('div');
+      searchPinEl.style.cssText = 'width:24px;height:24px;border-radius:50% 50% 50% 0;background:#e53935;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);transform:rotate(-45deg);z-index:999;';
+      searchPin = new google.maps.marker.AdvancedMarkerElement({
         position: searchLatLng,
         map: mapInstance,
         title: name,
-        icon: {
-          path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
-          fillColor: '#e53935',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2,
-          scale: 1.8,
-          anchor: new google.maps.Point(12, 22)
-        },
+        content: searchPinEl,
         zIndex: 999
       });
 
@@ -3629,7 +3618,7 @@
   }
 
   function clearPostcodePin() {
-    if (searchPin) { searchPin.setMap(null); searchPin = null; }
+    if (searchPin) { searchPin.map = null; searchPin = null; }
     searchLatLng = null;
     document.getElementById('mapPostcode').value = '';
     document.getElementById('mapPostcodeResult').textContent = '';
