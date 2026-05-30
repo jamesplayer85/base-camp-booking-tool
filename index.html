@@ -3584,12 +3584,9 @@
     if (!query) return;
     var resultEl = document.getElementById('mapPostcodeResult');
     resultEl.textContent = 'Searching…';
-    var keys = getKeys();
-    if (!keys.gcal) { resultEl.textContent = 'API key required.'; return; }
 
     try {
-      var res  = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='
-        + encodeURIComponent(query) + '&key=' + keys.gcal + '&region=gb');
+      var res  = await fetch(WORKER_URL + '/geocode?address=' + encodeURIComponent(query));
       var json = await res.json();
       if (!json.results || !json.results.length) {
         resultEl.textContent = 'No results found — try a postcode or full address.';
@@ -3653,7 +3650,6 @@
 
   async function showNearestSites(origin, label) {
     var resultEl = document.getElementById('mapPostcodeResult');
-    var keys = getKeys();
 
     // Get all sites with coordinates
     var sitesWithCoords = sites.filter(function(s) {
@@ -3692,10 +3688,9 @@
       var destStr = batch.join('|');
       var originStr = origin.lat + ',' + origin.lng;
       try {
-        var res  = await fetch('https://maps.googleapis.com/maps/api/distancematrix/json?origins='
+        var res  = await fetch(WORKER_URL + '/distance?origins='
           + encodeURIComponent(originStr)
-          + '&destinations=' + encodeURIComponent(destStr)
-          + '&mode=driving&units=imperial&region=gb&key=' + keys.gcal);
+          + '&destinations=' + encodeURIComponent(destStr));
         var json = await res.json();
         if (json.rows && json.rows[0]) {
           json.rows[0].elements.forEach(function(el, j) {
