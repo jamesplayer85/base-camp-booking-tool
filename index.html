@@ -3588,6 +3588,7 @@
     try {
       var res  = await fetch(WORKER_URL + '/geocode?address=' + encodeURIComponent(query));
       var json = await res.json();
+      console.log('Geocode response:', JSON.stringify(json).substring(0, 500));
       if (!json.results || !json.results.length) {
         resultEl.textContent = 'No results found — try a postcode or full address.';
         return;
