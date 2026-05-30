@@ -3359,6 +3359,7 @@
   }
 
   function initSiteMap() {
+    if (mapInitialised) return; // already built — don't reinitialise
     var keys = getKeys();
     if (!keys.gcal) {
       document.getElementById('mapSiteList').innerHTML = '<div style="padding:20px;font-size:13px;color:var(--muted);">Add a Google Maps API key in ⚙ API Keys to enable the map.</div>';
