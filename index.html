@@ -3442,6 +3442,8 @@
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: true,
+      zoomControl: true,
+      zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
       styles: [{ featureType:'poi',elementType:'labels',stylers:[{visibility:'off'}] }]
     });
 
@@ -3731,13 +3733,20 @@
           + '<div style="font-size:10px;color:#ccc;">' + escHtml(item.miles) + ' mi direct</div>'
           + '</div>'
         : '<div style="font-size:12px;font-weight:600;color:var(--teal);white-space:nowrap;">' + escHtml(item.miles) + ' mi</div>';
-      html += '<div onclick="flyToSite(\'' + escHtml(site.site_name) + '\')" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">'
+      var directionsUrl = searchLatLng
+        ? 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(searchLatLng.lat + ',' + searchLatLng.lng)
+          + '&destination=' + encodeURIComponent(site.coordinates.trim()) + '&travelmode=driving'
+        : '';
+      html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);">'
+        + '<div onclick="flyToSite(\'' + escHtml(site.site_name) + '\')" style="display:flex;align-items:center;gap:12px;flex:1;cursor:pointer;" onmouseover="this.parentElement.style.background=\'var(--bg)\'" onmouseout="this.parentElement.style.background=\'\'">'
         + '<div style="width:10px;height:10px;border-radius:50%;background:' + col + ';flex-shrink:0;"></div>'
         + '<div style="flex:1;">'
         + '<div style="font-size:13px;font-weight:600;color:var(--dark);">' + escHtml(site.site_name) + '</div>'
         + '<div style="font-size:11px;color:var(--muted);">' + escHtml(site.site_type||'') + (site.address ? ' · ' + escHtml(site.address.split(',')[0]) : '') + '</div>'
         + '</div>'
         + distHtml
+        + '</div>'
+        + (directionsUrl ? '<a href="' + directionsUrl + '" target="_blank" title="Get directions" style="flex-shrink:0;background:#006766;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap;font-family:\'DM Sans\',sans-serif;">↗ Directions</a>' : '')
         + '</div>';
     });
     el.innerHTML = html;
