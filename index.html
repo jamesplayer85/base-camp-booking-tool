@@ -3450,12 +3450,15 @@
 
     try {
       var hash = await hashPassword(password);
+      console.log('Attempting login to:', WORKER_URL + '/auth/login', 'email:', email);
       var res  = await fetch(WORKER_URL + '/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, passwordHash: hash })
       });
+      console.log('Login response status:', res.status, res.ok);
       var json = await res.json();
+      console.log('Login response body:', JSON.stringify(json));
 
       if (json.firstLogin) {
         // No password set yet — show set password form
@@ -3471,7 +3474,8 @@
         errEl.style.display = 'block';
       }
     } catch(e) {
-      errEl.textContent = 'Connection error — please try again.';
+      console.error('Login fetch error:', e.message, e);
+      errEl.textContent = 'Connection error: ' + e.message;
       errEl.style.display = 'block';
     }
 
