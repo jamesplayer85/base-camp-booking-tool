@@ -128,11 +128,15 @@
     .mode-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; background: var(--dark); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
     .mode-tab { padding: 13px 10px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
     .mode-tab:last-child { border-right: none; }
-    .mode-tab.active-prod { background: #006766; color: #fff; }
-    .mode-tab.active-land { background: #006766; color: #fff; }
-    .mode-tab.active-qrgen { background: #2D3748; color: #fff; }
-    .mode-tab.active-po    { background: #744210; color: #fff; }
-    .mode-tab:not(.active-prod):not(.active-land):not(.active-info):hover { background: #1A2A26; color: #fff; }
+    .mode-tab.active-prod,
+    .mode-tab.active-land,
+    .mode-tab.active-info,
+    .mode-tab.active-qrgen,
+    .mode-tab.active-po,
+    .mode-tab.active-agree,
+    .mode-tab.active-diary,
+    .mode-tab.active-map   { background: #006766; color: #fff; }
+    .mode-tab:not([class*="active"]):hover { background: #1A2A26; color: #fff; }
     .mode-section { display: none; }
     .mode-section.active { display: block; }
 
@@ -218,8 +222,8 @@
       <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Generator</button>
       <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 PO Generator</button>
       <button class="mode-tab" id="tab-agree" onclick="switchMode('agree')">📝 Hire Agreement</button>
-      <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Site Diaries</button>
-      <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Site Map</button>
+      <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Calendars</button>
+      <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Master Map</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -2196,7 +2200,7 @@
       var tab = document.getElementById('tab-' + m);
       if (tab) tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Site Diaries', map: 'Site Map' };
+    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map' };
     document.getElementById('modeTitle').textContent = titles[mode];
     updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
