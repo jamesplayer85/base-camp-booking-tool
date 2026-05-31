@@ -172,6 +172,85 @@
 <div class="toast" id="toast"><span id="toastMsg">Email sent</span></div>
 
 <!-- Setup modal -->
+<!-- ── Login overlay ──────────────────────────────────────────── -->
+<div class="setup-overlay" id="loginOverlay" style="display:flex; z-index:400;">
+  <div class="setup-card" style="max-width:420px;">
+    <div style="text-align:center; margin-bottom:24px;">
+      <img src="https://images.squarespace-cdn.com/content/v1/5f049f7511f51177ac761620/5a6da5a5-53fe-4894-ba34-22e947b0b197/Screenshot+2023-11-10+at+17.29.48.jpg?format=1500w" alt="The Base Camp Co." style="width:140px; height:auto;">
+    </div>
+    <h2 style="text-align:center;">Sign in</h2>
+    <p style="text-align:center;">The Base Camp Co. Booking Tool</p>
+
+    <!-- Login form -->
+    <div id="loginForm">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login_email" placeholder="you@thebasecampco.com" onkeydown="if(event.key==='Enter')attemptLogin()">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login_password" placeholder="Your password" onkeydown="if(event.key==='Enter')attemptLogin()">
+      </div>
+      <div id="login_error" style="font-size:12px; color:#e53935; margin:-8px 0 14px; display:none;"></div>
+      <button class="setup-save" onclick="attemptLogin()" id="loginBtn">Sign in</button>
+      <div style="text-align:center; margin-top:14px;">
+        <button class="setup-link" onclick="showForgotPassword()">Forgot password?</button>
+      </div>
+    </div>
+
+    <!-- Set password form (first login) -->
+    <div id="setPasswordForm" style="display:none;">
+      <p style="background:#E8F5E9; border-radius:6px; padding:10px 14px; font-size:12px; color:#2E7D32; margin-bottom:16px;">
+        👋 Welcome! This is your first time signing in. Please set a password for your account.
+      </p>
+      <div class="field">
+        <label>New password</label>
+        <input type="password" id="new_password" placeholder="At least 8 characters" onkeydown="if(event.key==='Enter')setPassword()">
+      </div>
+      <div class="field">
+        <label>Confirm password</label>
+        <input type="password" id="confirm_password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')setPassword()">
+      </div>
+      <div id="setpw_error" style="font-size:12px; color:#e53935; margin:-8px 0 14px; display:none;"></div>
+      <button class="setup-save" onclick="setPassword()" id="setPasswordBtn">Set password &amp; sign in</button>
+      <div style="text-align:center; margin-top:14px;">
+        <button class="setup-link" onclick="showLoginForm()">← Back</button>
+      </div>
+    </div>
+
+    <!-- Forgot password form -->
+    <div id="forgotPasswordForm" style="display:none;">
+      <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">Enter your email and we'll send you a reset link.</p>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="reset_email" placeholder="you@thebasecampco.com" onkeydown="if(event.key==='Enter')sendResetEmail()">
+      </div>
+      <div id="reset_msg" style="font-size:12px; margin:-8px 0 14px; display:none;"></div>
+      <button class="setup-save" onclick="sendResetEmail()" id="resetBtn">Send reset link</button>
+      <div style="text-align:center; margin-top:14px;">
+        <button class="setup-link" onclick="showLoginForm()">← Back to sign in</button>
+      </div>
+    </div>
+
+    <!-- Reset password form (from email link) -->
+    <div id="resetPasswordForm" style="display:none;">
+      <p style="background:#E3F2FD; border-radius:6px; padding:10px 14px; font-size:12px; color:#1565C0; margin-bottom:16px;">
+        Enter your new password below.
+      </p>
+      <div class="field">
+        <label>New password</label>
+        <input type="password" id="reset_new_password" placeholder="At least 8 characters">
+      </div>
+      <div class="field">
+        <label>Confirm password</label>
+        <input type="password" id="reset_confirm_password" placeholder="Repeat password">
+      </div>
+      <div id="resetpw_error" style="font-size:12px; color:#e53935; margin:-8px 0 14px; display:none;"></div>
+      <button class="setup-save" onclick="submitResetPassword()" id="resetPwBtn">Set new password</button>
+    </div>
+  </div>
+</div>
+
 <div class="setup-overlay" id="setupOverlay">
   <div class="setup-card">
     <h2>Welcome to The Base Camp Co. Booking Tool</h2>
@@ -204,7 +283,9 @@
   <div class="header-status">
     <div class="status-dot" id="statusDot"></div>
     <span id="statusText">Loading sites…</span>
-    <button onclick="document.getElementById('setupOverlay').classList.add('show')" style="margin-left:12px; background:none; border:1px solid var(--border); border-radius:6px; color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.15s, color 0.15s;" onmouseover="this.style.color='var(--teal)';this.style.borderColor='var(--teal)';" onmouseout="this.style.color='';this.style.borderColor='';">⚙ API Keys</button>
+    <span id="headerUser" style="margin-left:12px; font-size:11px; color:var(--muted);"></span>
+    <button onclick="document.getElementById('setupOverlay').classList.add('show')" style="margin-left:8px; background:none; border:1px solid var(--border); border-radius:6px; color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.15s, color 0.15s;" onmouseover="this.style.color='var(--teal)';this.style.borderColor='var(--teal)';" onmouseout="this.style.color='';this.style.borderColor='';">⚙ API Keys</button>
+    <button onclick="logout()" style="margin-left:4px; background:none; border:1px solid var(--border); border-radius:6px; color:var(--muted); font-size:11px; padding:4px 10px; cursor:pointer; font-family:'DM Sans',sans-serif;" onmouseover="this.style.color='#e53935';this.style.borderColor='#e53935';" onmouseout="this.style.color='';this.style.borderColor='';">Sign out</button>
   </div>
 </header>
 
@@ -3269,15 +3350,278 @@
 
   // Init
   addStep(''); addStep(''); addStep('');
-  // Set PO date to today by default
+
+  // ── Authentication ─────────────────────────────────────────────────
+  var ALLOWED_EMAILS = [
+    'james@thebasecampco.com',
+    'tom@thebasecampco.com',
+    'ben@thebasecampco.com'
+  ];
+
+  var SESSION_KEY  = 'tbc_session_token';
+  var SESSION_USER = 'tbc_session_user';
+  var currentUser  = null;
+
+  // Hash a password using SHA-256
+  async function hashPassword(password) {
+    var msgBuffer = new TextEncoder().encode(password);
+    var hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    var hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  }
+
+  // Check for reset token in URL
+  function checkResetToken() {
+    var params = new URLSearchParams(window.location.search);
+    var token  = params.get('reset');
+    var email  = params.get('email');
+    if (token && email) {
+      // Store for use in reset form
+      window._resetToken = token;
+      window._resetEmail = decodeURIComponent(email);
+      showResetPasswordForm();
+      return true;
+    }
+    return false;
+  }
+
+  async function initAuth() {
+    // Check for password reset token in URL first
+    if (checkResetToken()) return;
+
+    // Check existing session
+    var token = localStorage.getItem(SESSION_KEY);
+    var user  = localStorage.getItem(SESSION_USER);
+    if (token && user) {
+      // Validate session with worker
+      try {
+        var res  = await fetch(WORKER_URL + '/auth/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, email: user })
+        });
+        var json = await res.json();
+        if (json.valid) {
+          onLoginSuccess(user, json.name);
+          return;
+        }
+      } catch(e) {}
+    }
+    // Show login
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('login_email').focus();
+  }
+
+  function showLoginForm() {
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('setPasswordForm').style.display = 'none';
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'none';
+  }
+
+  function showForgotPassword() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('forgotPasswordForm').style.display = 'block';
+    var email = document.getElementById('login_email').value;
+    if (email) document.getElementById('reset_email').value = email;
+    document.getElementById('reset_email').focus();
+  }
+
+  function showResetPasswordForm() {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'block';
+    document.getElementById('reset_new_password').focus();
+  }
+
+  async function attemptLogin() {
+    var email    = (document.getElementById('login_email').value    || '').trim().toLowerCase();
+    var password = (document.getElementById('login_password').value || '').trim();
+    var errEl    = document.getElementById('login_error');
+    var btn      = document.getElementById('loginBtn');
+
+    errEl.style.display = 'none';
+
+    if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+    if (!ALLOWED_EMAILS.includes(email)) { errEl.textContent = 'This email is not authorised to access this tool.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = 'Signing in…';
+
+    try {
+      var hash = await hashPassword(password);
+      var res  = await fetch(WORKER_URL + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, passwordHash: hash })
+      });
+      var json = await res.json();
+
+      if (json.firstLogin) {
+        // No password set yet — show set password form
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('setPasswordForm').style.display = 'block';
+        document.getElementById('new_password').focus();
+      } else if (json.token) {
+        localStorage.setItem(SESSION_KEY, json.token);
+        localStorage.setItem(SESSION_USER, email);
+        onLoginSuccess(email, json.name);
+      } else {
+        errEl.textContent = json.error || 'Incorrect password. Please try again.';
+        errEl.style.display = 'block';
+      }
+    } catch(e) {
+      errEl.textContent = 'Connection error — please try again.';
+      errEl.style.display = 'block';
+    }
+
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+
+  async function setPassword() {
+    var email    = (document.getElementById('login_email').value || '').trim().toLowerCase();
+    var password = (document.getElementById('new_password').value     || '').trim();
+    var confirm  = (document.getElementById('confirm_password').value  || '').trim();
+    var errEl    = document.getElementById('setpw_error');
+    var btn      = document.getElementById('setPasswordBtn');
+
+    errEl.style.display = 'none';
+    if (password.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+    if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = 'Setting password…';
+
+    try {
+      var hash = await hashPassword(password);
+      var res  = await fetch(WORKER_URL + '/auth/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, passwordHash: hash })
+      });
+      var json = await res.json();
+      if (json.token) {
+        localStorage.setItem(SESSION_KEY, json.token);
+        localStorage.setItem(SESSION_USER, email);
+        onLoginSuccess(email, json.name);
+      } else {
+        errEl.textContent = json.error || 'Could not set password. Please try again.';
+        errEl.style.display = 'block';
+      }
+    } catch(e) {
+      errEl.textContent = 'Connection error.';
+      errEl.style.display = 'block';
+    }
+
+    btn.disabled = false; btn.textContent = 'Set password & sign in';
+  }
+
+  async function sendResetEmail() {
+    var email = (document.getElementById('reset_email').value || '').trim().toLowerCase();
+    var msgEl = document.getElementById('reset_msg');
+    var btn   = document.getElementById('resetBtn');
+
+    msgEl.style.display = 'none';
+    if (!ALLOWED_EMAILS.includes(email)) { msgEl.style.color='#e53935'; msgEl.textContent='This email is not authorised.'; msgEl.style.display='block'; return; }
+
+    btn.disabled = true; btn.textContent = 'Sending…';
+
+    try {
+      var res  = await fetch(WORKER_URL + '/auth/reset-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      });
+      var json = await res.json();
+      msgEl.style.color = '#2E7D32';
+      msgEl.textContent = 'Reset link sent — check your inbox.';
+      msgEl.style.display = 'block';
+    } catch(e) {
+      msgEl.style.color = '#e53935';
+      msgEl.textContent = 'Could not send email. Please try again.';
+      msgEl.style.display = 'block';
+    }
+
+    btn.disabled = false; btn.textContent = 'Send reset link';
+  }
+
+  async function submitResetPassword() {
+    var password = (document.getElementById('reset_new_password').value   || '').trim();
+    var confirm  = (document.getElementById('reset_confirm_password').value|| '').trim();
+    var errEl    = document.getElementById('resetpw_error');
+    var btn      = document.getElementById('resetPwBtn');
+
+    errEl.style.display = 'none';
+    if (password.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+    if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = 'Setting password…';
+
+    try {
+      var hash = await hashPassword(password);
+      var res  = await fetch(WORKER_URL + '/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: window._resetEmail, token: window._resetToken, passwordHash: hash })
+      });
+      var json = await res.json();
+      if (json.token) {
+        localStorage.setItem(SESSION_KEY, json.token);
+        localStorage.setItem(SESSION_USER, window._resetEmail);
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        onLoginSuccess(window._resetEmail, json.name);
+      } else {
+        errEl.textContent = json.error || 'Reset link may have expired. Please request a new one.';
+        errEl.style.display = 'block';
+      }
+    } catch(e) {
+      errEl.textContent = 'Connection error.';
+      errEl.style.display = 'block';
+    }
+
+    btn.disabled = false; btn.textContent = 'Set new password';
+  }
+
+  function onLoginSuccess(email, name) {
+    currentUser = { email: email, name: name || email.split('@')[0] };
+    document.getElementById('loginOverlay').style.display = 'none';
+    // Show name in header
+    var headerUser = document.getElementById('headerUser');
+    if (headerUser) headerUser.textContent = '👤 ' + currentUser.name;
+    // Now check API keys and load data
+    if (checkSetup()) { loadSites(); loadProductions(); loadCalendars(); }
+    initDefaultContacts();
+    updateProductionSelectorVisibility('prod');
+  }
+
+  function logout() {
+    if (!confirm('Sign out of the booking tool?')) return;
+    var token = localStorage.getItem(SESSION_KEY);
+    var email = localStorage.getItem(SESSION_USER);
+    // Invalidate session on server (fire and forget)
+    if (token) {
+      fetch(WORKER_URL + '/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, email: email })
+      }).catch(function(){});
+    }
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_USER);
+    currentUser = null;
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('login_password').value = '';
+    document.getElementById('headerUser').textContent = '';
+    showLoginForm();
+  }
+
+
   var todayStr = new Date().toISOString().slice(0,10);
   var poDateEl = document.getElementById('po_date');
   if (poDateEl) poDateEl.value = todayStr;
   addPOItem();
   updatePreview();
-  if (checkSetup()) { loadSites(); loadProductions(); loadCalendars(); }
-  initDefaultContacts();
-  updateProductionSelectorVisibility('prod');
+  initAuth();
 
 
   // ── Recall / Duplicate ─────────────────────────────────────────────
