@@ -3326,18 +3326,31 @@
       ctx.font = '300 ' + prodFs + 'px ' + LIGHT_FONT + ', Arial, sans-serif';
       ctx.fillText(dValue, startX + plW + pvW + dlW, prodLineY);
     }
+
+    // 4px teal border around the entire image
+    var TEAL = '#006766';
+    var borderW = 4;
+    ctx.strokeStyle = TEAL;
+    ctx.lineWidth   = borderW * 2; // strokeRect draws half inside/half outside so double it
+    ctx.strokeRect(0, 0, DIM, DIM);
   }
 
   function downloadQRCard() {
     var canvas = document.getElementById('qrCardCanvas');
-    var site   = (document.getElementById('qrgen_site')||{}).value.trim()       || 'QR-Card';
-    var prod   = (document.getElementById('qrgen_production')||{}).value.trim() || '';
-    var fname  = (site + (prod ? '-' + prod : '')).replace(/[^a-z0-9]/gi, '_') + '_QR.png';
+    var site   = (document.getElementById('qrgen_site')||{}).value.trim()        || '';
+    var prod   = (document.getElementById('qrgen_production')||{}).value.trim()  || '';
+    var ref    = (document.getElementById('qrgen_booking_ref')||{}).value.trim() || '';
+    // Format: QR Code - BC-UB3001 - Production Title  (or without ref if not set)
+    var parts  = ['QR Code'];
+    if (ref)  parts.push(ref);
+    if (prod) parts.push(prod);
+    else if (site) parts.push(site);
+    var fname  = parts.join(' - ').replace(/[^a-z0-9 \-]/gi, '').trim() + '.png';
     var link = document.createElement('a');
     link.download = fname;
     link.href     = canvas.toDataURL('image/png');
     link.click();
-    saveLocalHistory('qrgen', { site_name: site, production: prod, booking_ref: (document.getElementById('qrgen_booking_ref')||{}).value||'', sent_at: new Date().toISOString() });
+    saveLocalHistory('qrgen', { site_name: site, production: prod, booking_ref: ref, sent_at: new Date().toISOString() });
   }
 
   function showToast(msg, type) {
