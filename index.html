@@ -1217,6 +1217,7 @@
           <div style="font-size:11px;color:var(--muted);margin-bottom:8px;" id="popup_type"></div>
           <div style="font-size:12px;color:#444;margin-bottom:4px;" id="popup_addr"></div>
           <div style="font-size:12px;" id="popup_w3w"></div>
+          <div id="popup_steps" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #eee;max-height:180px;overflow-y:auto;"></div>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <a id="popup_maps" href="#" target="_blank" style="font-size:12px;color:#006766;font-weight:600;text-decoration:none;">Open in Maps →</a>
             <button id="popup_clear_directions" onclick="clearDirections()" style="display:none;font-size:12px;color:#e53935;background:none;border:none;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;padding:0;">✕ Clear route</button>
@@ -4078,6 +4079,25 @@
     if (site.w3w) {
       w3wEl.innerHTML = '<a href="https://w3w.co/' + escHtml(site.w3w) + '" target="_blank" style="color:#006766;text-decoration:none;">///' + escHtml(site.w3w) + '</a>';
     } else { w3wEl.textContent = ''; }
+
+    // Site access steps
+    var stepsEl = document.getElementById('popup_steps');
+    var steps = [site.step1, site.step2, site.step3, site.step4].filter(Boolean);
+    if (stepsEl) {
+      if (steps.length) {
+        stepsEl.style.display = 'block';
+        stepsEl.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin-bottom:6px;">Site Access</div>'
+          + steps.map(function(step, i) {
+            return '<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:5px;">'
+              + '<div style="width:16px;height:16px;border-radius:50%;background:#006766;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">' + (i+1) + '</div>'
+              + '<div style="font-size:11px;color:#444;line-height:1.4;">' + escHtml(step) + '</div>'
+              + '</div>';
+          }).join('');
+      } else {
+        stepsEl.style.display = 'none';
+      }
+    }
+
     var mapsEl = document.getElementById('popup_maps');
     if (site.maps_url) { mapsEl.href = site.maps_url; mapsEl.style.display='inline'; }
     else { mapsEl.style.display='none'; }
