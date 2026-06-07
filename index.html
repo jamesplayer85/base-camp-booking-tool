@@ -1322,30 +1322,38 @@
     var keys = getKeys();
     if (!keys.monday) { setStatus(false, 'API key required'); return; }
     setStatus(false, 'Loading from Monday.com...');
-    var query = '{ boards(ids: ' + MONDAY_BOARD_ID + ') { items_page(limit: 100) { items { name column_values { column { title } text ... on CheckboxValue { checked } } } } } }';
+    var allItems = [];
+    var cursor   = null;
     try {
-      var res  = await fetch('https://api.monday.com/v2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': keys.monday, 'API-Version': '2024-01' },
-        body: JSON.stringify({ query: query })
-      });
-      var json = await res.json();
-      if (json.errors) { setStatus(false, 'Monday.com error \u2014 check API key'); return; }
-      var items = json.data.boards[0].items_page.items;
-      sites = items.map(function(item) {
+      do {
+        var cursorParam = cursor ? ', cursor: "' + cursor + '"' : '';
+        var query = '{ boards(ids: ' + MONDAY_BOARD_ID + ') { items_page(limit: 100' + cursorParam + ') { cursor items { name column_values { column { title } text ... on CheckboxValue { checked } } } } } }';
+        var res  = await fetch('https://api.monday.com/v2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': keys.monday, 'API-Version': '2024-01' },
+          body: JSON.stringify({ query: query })
+        });
+        var json = await res.json();
+        if (json.errors) { setStatus(false, 'Monday.com error — check API key'); return; }
+        var page = json.data.boards[0].items_page;
+        allItems = allItems.concat(page.items);
+        cursor = page.cursor || null;
+      } while (cursor);
+
+      sites = allItems.map(function(item) {
         var s = { site_name: item.name };
         item.column_values.forEach(function(col) {
           var t = col.column.title.toLowerCase().trim();
-          if (t === 'address')         s.address        = col.text  || '';
-          if (t === 'what3words')      s.w3w            = col.text  || '';
-          if (t === 'google maps url') s.maps_url       = col.text  || '';
-          if (t === 'step 1')          s.step1          = col.text  || '';
-          if (t === 'step 2')          s.step2          = col.text  || '';
-          if (t === 'step 3')          s.step3          = col.text  || '';
-          if (t === 'step 4')          s.step4          = col.text  || '';
-          if (t === 'important note')  s.important_note = col.text  || '';
-          if (t === 'site map url')     s.site_map_url   = col.text  || '';
-          if (t === 'qr required')      s.qr_required    = col.checked || false;
+          if (t === 'address')         s.address          = col.text  || '';
+          if (t === 'what3words')      s.w3w              = col.text  || '';
+          if (t === 'google maps url') s.maps_url         = col.text  || '';
+          if (t === 'step 1')          s.step1            = col.text  || '';
+          if (t === 'step 2')          s.step2            = col.text  || '';
+          if (t === 'step 3')          s.step3            = col.text  || '';
+          if (t === 'step 4')          s.step4            = col.text  || '';
+          if (t === 'important note')  s.important_note   = col.text  || '';
+          if (t === 'site map url')    s.site_map_url     = col.text  || '';
+          if (t === 'qr required')     s.qr_required      = col.checked || false;
           if (t === 'landlord company') s.landlord_company = col.text || '';
           if (t === 'landlord address') s.landlord_address = col.text || '';
           if (t === 'coordinates')      s.coordinates      = col.text || '';
