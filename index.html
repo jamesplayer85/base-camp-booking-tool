@@ -1351,6 +1351,7 @@
           if (t === 'step 2')          s.step2            = col.text  || '';
           if (t === 'step 3')          s.step3            = col.text  || '';
           if (t === 'step 4')          s.step4            = col.text  || '';
+          if (t === 'step 5')          s.step5            = col.text  || '';
           if (t === 'important note')  s.important_note   = col.text  || '';
           if (t === 'site map url')    s.site_map_url     = col.text  || '';
           if (t === 'qr required')     s.qr_required      = col.checked || false;
@@ -1558,7 +1559,7 @@
     if (idx === '') { currentSite = null; return; }
     currentSite = sites[parseInt(idx)];
     clearSteps();
-    ['step1','step2','step3','step4'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addStep(currentSite[k]); });
+    ['step1','step2','step3','step4','step5'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addStep(currentSite[k]); });
     if (getSteps().length === 0) { addStep(''); addStep(''); addStep(''); }
     document.getElementById('note_text').value = currentSite.important_note || '';
     var qrCard = document.getElementById('qrCard');
@@ -2097,7 +2098,7 @@
       address:            site.address   || '',
       w3w:                site.w3w       || '',
       maps_url:           site.maps_url  || '',
-      steps:              [site.step1, site.step2, site.step3, site.step4].filter(Boolean),
+      steps:              [site.step1, site.step2, site.step3, site.step4, site.step5].filter(Boolean),
       important_note:     site.important_note || '',
       site_map_url:       site.site_map_url   || '',
       qr_data_url:        '',
@@ -2327,7 +2328,7 @@
     updateLandlordOpeningNote();
     // Info sheet -- pre-fill steps
     if (document.getElementById('infoStepsContainer').children.length === 0) {
-      ['step1','step2','step3','step4'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
+      ['step1','step2','step3','step4','step5'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
       if (document.getElementById('infoStepsContainer').children.length === 0) { addInfoStep(''); addInfoStep(''); addInfoStep(''); }
       document.getElementById('info_note_text').value = currentSite.important_note || '';
     }
@@ -3874,7 +3875,12 @@
       center: { lat: 51.505, lng: -0.09 },
       zoom: 10,
       mapId: 'basecamp_sites_map',
-      mapTypeControl: false,
+      mapTypeControl: true,
+      mapTypeControlOptions: {
+        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+        position: google.maps.ControlPosition.TOP_RIGHT,
+        mapTypeIds: ['roadmap', 'satellite', 'hybrid']
+      },
       streetViewControl: false,
       fullscreenControl: true,
       zoomControl: true,
@@ -4090,7 +4096,7 @@
 
     // Site access steps
     var stepsEl = document.getElementById('popup_steps');
-    var steps = [site.step1, site.step2, site.step3, site.step4].filter(Boolean);
+    var steps = [site.step1, site.step2, site.step3, site.step4, site.step5].filter(Boolean);
     if (stepsEl) {
       if (steps.length) {
         stepsEl.style.display = 'block';
