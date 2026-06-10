@@ -163,6 +163,7 @@
     .draft-load { background: var(--bg); color: var(--mid); border: 1px solid var(--border); }
     .draft-load:hover { border-color: var(--teal); color: var(--teal); }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -296,7 +297,7 @@
     </div>
 
     <!-- Mode tabs -->
-    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
+    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
       <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
       <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
       <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
@@ -305,6 +306,7 @@
       <button class="mode-tab" id="tab-agree" onclick="switchMode('agree')">📝 Hire Agreement</button>
       <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Calendars</button>
       <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Master Map</button>
+      <button class="mode-tab" id="tab-finance" onclick="switchMode('finance')">📊 Booking Data</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -968,6 +970,45 @@
       </div>
     </div><!-- /section-map -->
 
+    <!-- ══════════════════════════════════
+         BOOKING DATA MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-finance">
+
+      <div class="form-card">
+        <h2>Period</h2>
+        <div class="field-row">
+          <div class="field">
+            <label>View</label>
+            <select id="finance_period_type" onchange="onFinancePeriodChange()">
+              <option value="calendar">Calendar year</option>
+              <option value="financial">Financial year (Aug–Jul)</option>
+              <option value="alltime">All time</option>
+            </select>
+          </div>
+          <div class="field" id="finance_year_wrap">
+            <label>Year</label>
+            <select id="finance_year" onchange="renderFinanceCharts()">
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Filter by type</label>
+          <select id="finance_type_filter" onchange="renderFinanceCharts()">
+            <option value="all">All types</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-card" id="finance_status_card">
+        <div id="finance_status" style="font-size:13px;color:var(--muted);">Loading booking data…</div>
+      </div>
+
+    </div><!-- /section-finance -->
+
     <!-- Per-tab history panels -->
     <div class="history-panel" id="history-prod" style="display:none;">
       <div class="history-header" onclick="toggleHistory('prod')">
@@ -1226,6 +1267,54 @@
       </div>
     </div>
 
+    <!-- Finance panel -->
+    <div id="rp_finance" style="display:none; height:100%; flex-direction:column; overflow-y:auto; background:var(--bg); padding:20px; gap:20px; box-sizing:border-box;">
+
+      <!-- Summary KPIs -->
+      <div id="finance_kpis" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;"></div>
+
+      <!-- Monthly income bar chart -->
+      <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px;">
+        <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Monthly Income</h3>
+        <canvas id="chart_monthly_income" height="200"></canvas>
+      </div>
+
+      <!-- Monthly booking days -->
+      <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px;">
+        <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Booking Days by Month</h3>
+        <canvas id="chart_monthly_days" height="200"></canvas>
+      </div>
+
+      <!-- Revenue by site -->
+      <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px;">
+        <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Revenue by Site</h3>
+        <canvas id="chart_site_revenue" height="250"></canvas>
+      </div>
+
+      <!-- Days by site -->
+      <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px;">
+        <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Booking Days by Site</h3>
+        <canvas id="chart_site_days" height="250"></canvas>
+      </div>
+
+      <!-- All time / annual (shown only in alltime mode) -->
+      <div id="chart_alltime_wrap" style="display:none;">
+        <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px; margin-bottom:20px;">
+          <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Annual Income — by Calendar Year</h3>
+          <canvas id="chart_annual" height="200"></canvas>
+        </div>
+        <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px; margin-bottom:20px;">
+          <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Annual Income — by Financial Year (Aug–Jul)</h3>
+          <canvas id="chart_financial_year" height="200"></canvas>
+        </div>
+        <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px; margin-bottom:20px;">
+          <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Quarterly Income — All Time</h3>
+          <canvas id="chart_quarterly" height="200"></canvas>
+        </div>
+      </div>
+
+    </div>
+
     <!-- Site Diary panel -->
     <div id="rp_diary" style="display:none; height:100%; flex-direction:column;">
       <div style="background:#006766; padding:10px 16px; display:flex; align-items:center; justify-content:space-between;">
@@ -1255,6 +1344,8 @@
   var MONDAY_BOARD_ID = '18411582352';
   var MONDAY_PRODUCTIONS_BOARD_ID = '18414060671';
   var MONDAY_CALENDARS_BOARD_ID = '18415456355';
+  var MONDAY_FINANCIALS_BOARD_ID = '3180102740';
+  var financialData = [];
   var calendars = [];
   var currentCalendar = null;
   var productions = [];
@@ -2259,18 +2350,19 @@
   // Old land extra contact functions removed — replaced by addLandContact/getLandContacts above
 
   function updateRightPanel(mode) {
-    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary','rp_map'].forEach(function(id) {
+    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary','rp_map','rp_finance'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    var target = mode === 'qrgen' ? 'rp_qr'
-               : mode === 'po'    ? 'rp_po'
-               : mode === 'agree' ? 'rp_agree'
-               : mode === 'diary' ? 'rp_diary'
-               : mode === 'map'   ? 'rp_map'
+    var target = mode === 'qrgen'   ? 'rp_qr'
+               : mode === 'po'      ? 'rp_po'
+               : mode === 'agree'   ? 'rp_agree'
+               : mode === 'diary'   ? 'rp_diary'
+               : mode === 'map'     ? 'rp_map'
+               : mode === 'finance' ? 'rp_finance'
                : 'rp_email';
     var show = document.getElementById(target);
-    if (show) show.style.display = (mode === 'diary' || mode === 'map') ? 'flex' : 'block';
+    if (show) show.style.display = (mode === 'diary' || mode === 'map' || mode === 'finance') ? 'flex' : 'block';
 
     ['prod','land','info'].forEach(function(t) {
       var b = document.getElementById('rp_banner_' + t);
@@ -2286,12 +2378,12 @@
   var currentMode = 'prod';
   function switchMode(mode) {
     currentMode = mode;
-    ['prod','land','info','qrgen','po','agree','diary','map'].forEach(function(m) {
+    ['prod','land','info','qrgen','po','agree','diary','map','finance'].forEach(function(m) {
       document.getElementById('section-' + m).classList.toggle('active', m === mode);
       var tab = document.getElementById('tab-' + m);
       if (tab) tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map' };
+    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map', finance: 'Booking Data' };
     document.getElementById('modeTitle').textContent = titles[mode];
     updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
@@ -4315,6 +4407,285 @@
     });
     el.innerHTML = html;
   }
+
+  // ── Booking Data / Financial Tab ──────────────────────────────────
+  var financeLoaded   = false;
+  var financeCharts   = {};
+  var CHART_COLORS    = {
+    bookingValue:  '#006766',
+    bookingProfit: '#2563eb',
+    inExVat:       '#E8A020',
+    outExVat:      '#e53935',
+    days:          '#7c3aed'
+  };
+
+  function fmt(n) {
+    return '£' + Number(n||0).toLocaleString('en-GB', { minimumFractionDigits:0, maximumFractionDigits:0 });
+  }
+
+  function parseAmount(str) {
+    if (!str) return 0;
+    return parseFloat(str.toString().replace(/[£,\s]/g,'')) || 0;
+  }
+
+  async function initFinanceTab() {
+    if (financeLoaded) { renderFinanceCharts(); return; }
+    document.getElementById('finance_status').textContent = 'Loading booking data from Monday.com…';
+    var keys = getKeys();
+    if (!keys.monday) { document.getElementById('finance_status').textContent = 'API key required.'; return; }
+
+    var allItems = [];
+    var cursor   = null;
+    try {
+      do {
+        var cp    = cursor ? ', cursor: "' + cursor + '"' : '';
+        var query = '{ boards(ids: ' + MONDAY_FINANCIALS_BOARD_ID + ') { items_page(limit: 100' + cp + ') { cursor items { name column_values { column { title } text } } } } }';
+        var res   = await fetch('https://api.monday.com/v2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': keys.monday, 'API-Version': '2024-01' },
+          body: JSON.stringify({ query: query })
+        });
+        var json  = await res.json();
+        if (json.errors || !json.data) break;
+        var page  = json.data.boards[0].items_page;
+        allItems  = allItems.concat(page.items);
+        cursor    = page.cursor || null;
+      } while (cursor);
+
+      financialData = allItems.map(function(item) {
+        var r = { name: item.name };
+        item.column_values.forEach(function(col) {
+          var t = col.column.title.toLowerCase().trim();
+          if (t === 'invoice date')   r.invoiceDate   = col.text || '';
+          if (t === 'type')           r.type          = col.text || '';
+          if (t === 'site')           r.site          = col.text || '';
+          if (t === 'days')           r.days          = parseAmount(col.text);
+          if (t === 'in - ex vat')    r.inExVat       = parseAmount(col.text);
+          if (t === 'out - ex vat')   r.outExVat      = parseAmount(col.text);
+          if (t === 'booking profit') r.bookingProfit = parseAmount(col.text);
+          if (t === 'booking value')  r.bookingValue  = parseAmount(col.text);
+        });
+        return r;
+      }).filter(function(r){ return r.invoiceDate; });
+
+      financeLoaded = true;
+      document.getElementById('finance_status_card').style.display = 'none';
+
+      // Populate type filter
+      var types = {};
+      financialData.forEach(function(r){ if (r.type) types[r.type] = true; });
+      var tf = document.getElementById('finance_type_filter');
+      tf.innerHTML = '<option value="all">All types</option>';
+      Object.keys(types).sort().forEach(function(t){
+        var opt = document.createElement('option'); opt.value = t; opt.textContent = t; tf.appendChild(opt);
+      });
+
+      // Populate year selector
+      var years = {};
+      financialData.forEach(function(r){ var y = parseInvoiceYear(r.invoiceDate); if (y) years[y] = true; });
+      var ys = document.getElementById('finance_year');
+      ys.innerHTML = '';
+      Object.keys(years).sort().forEach(function(y){
+        var opt = document.createElement('option'); opt.value = y; opt.textContent = y;
+        if (y == new Date().getFullYear()) opt.selected = true;
+        ys.appendChild(opt);
+      });
+
+      renderFinanceCharts();
+    } catch(e) {
+      document.getElementById('finance_status').textContent = 'Error loading data: ' + e.message;
+    }
+  }
+
+  function parseInvoiceYear(dateStr) {
+    if (!dateStr) return null;
+    var m = dateStr.match(/(\d{4})/);
+    return m ? parseInt(m[1]) : null;
+  }
+
+  function parseInvoiceDate(dateStr) {
+    if (!dateStr) return null;
+    var parts;
+    if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+    }
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      parts = dateStr.split('-');
+      return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    }
+    return null;
+  }
+
+  function getFinancialYear(date) {
+    var m = date.getMonth();
+    var y = date.getFullYear();
+    return m >= 7 ? y + 1 : y;
+  }
+
+  function filterData() {
+    var periodType = document.getElementById('finance_period_type').value;
+    var typeFilter = document.getElementById('finance_type_filter').value;
+    var year       = parseInt(document.getElementById('finance_year').value);
+    return financialData.filter(function(r) {
+      var d = parseInvoiceDate(r.invoiceDate);
+      if (!d) return false;
+      if (typeFilter !== 'all' && r.type !== typeFilter) return false;
+      if (periodType === 'calendar')  return d.getFullYear() === year;
+      if (periodType === 'financial') return getFinancialYear(d) === year;
+      return true;
+    });
+  }
+
+  function onFinancePeriodChange() {
+    var periodType = document.getElementById('finance_period_type').value;
+    document.getElementById('finance_year_wrap').style.display   = periodType === 'alltime' ? 'none' : '';
+    document.getElementById('chart_alltime_wrap').style.display  = periodType === 'alltime' ? 'block' : 'none';
+    renderFinanceCharts();
+  }
+
+  function destroyChart(id) {
+    if (financeCharts[id]) { financeCharts[id].destroy(); delete financeCharts[id]; }
+  }
+
+  function makeChart(id, type, labels, datasets, opts) {
+    destroyChart(id);
+    var ctx = document.getElementById(id);
+    if (!ctx) return;
+    var isDays = opts && opts.isDays;
+    financeCharts[id] = new Chart(ctx, {
+      type: type,
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        indexAxis: (opts && opts.indexAxis) || 'x',
+        plugins: {
+          legend: { position: 'top', labels: { font: { family: "'DM Sans',sans-serif", size: 11 } } },
+          tooltip: { callbacks: { label: function(c){ return c.dataset.label + ': ' + (isDays ? c.raw + ' days' : fmt(c.raw)); } } }
+        },
+        scales: {
+          x: { stacked: opts && opts.stacked, ticks: { font: { family: "'DM Sans',sans-serif", size: 11 }, callback: function(v){ return typeof v === 'number' ? (isDays ? v+'d' : fmt(v)) : v; } } },
+          y: { stacked: opts && opts.stacked, ticks: { font: { family: "'DM Sans',sans-serif", size: 11 }, callback: function(v){ return typeof v === 'number' ? (isDays ? v+'d' : fmt(v)) : v; } } }
+        }
+      }
+    });
+  }
+
+  function renderFinanceCharts() {
+    if (!financeLoaded) return;
+    var data       = filterData();
+    var periodType = document.getElementById('finance_period_type').value;
+    var typeFilter = document.getElementById('finance_type_filter').value;
+    var MONTHS     = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var monthLabels = periodType === 'financial'
+      ? ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'] : MONTHS;
+
+    // KPIs
+    var totalValue  = data.reduce(function(s,r){ return s+r.bookingValue; }, 0);
+    var totalProfit = data.reduce(function(s,r){ return s+r.bookingProfit; }, 0);
+    var totalDays   = data.reduce(function(s,r){ return s+r.days; }, 0);
+    var kpiEl = document.getElementById('finance_kpis');
+    if (kpiEl) {
+      kpiEl.innerHTML = [
+        { label:'Booking Value',  value:fmt(totalValue),        color:CHART_COLORS.bookingValue  },
+        { label:'Booking Profit', value:fmt(totalProfit),       color:CHART_COLORS.bookingProfit },
+        { label:'Total Days',     value:totalDays+' days',      color:CHART_COLORS.days          }
+      ].map(function(k){
+        return '<div style="background:#fff;border-radius:10px;border:1px solid var(--border);padding:16px;text-align:center;">'
+          + '<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">' + k.label + '</div>'
+          + '<div style="font-size:20px;font-weight:700;color:' + k.color + ';">' + k.value + '</div></div>';
+      }).join('');
+    }
+
+    // Monthly income
+    var mV=new Array(12).fill(0), mP=new Array(12).fill(0), mI=new Array(12).fill(0);
+    data.forEach(function(r){
+      var d=parseInvoiceDate(r.invoiceDate); if(!d) return;
+      var m=periodType==='financial' ? (d.getMonth()+5)%12 : d.getMonth();
+      mV[m]+=r.bookingValue; mP[m]+=r.bookingProfit; mI[m]+=r.inExVat;
+    });
+    makeChart('chart_monthly_income','bar',monthLabels,[
+      {label:'Booking Value',  data:mV, backgroundColor:CHART_COLORS.bookingValue +'cc'},
+      {label:'Booking Profit', data:mP, backgroundColor:CHART_COLORS.bookingProfit+'cc'},
+      {label:'In - Ex VAT',    data:mI, backgroundColor:CHART_COLORS.inExVat      +'cc'}
+    ]);
+
+    // Monthly days by type
+    var typesInData={};
+    data.forEach(function(r){ if(r.type) typesInData[r.type]=true; });
+    var typeKeys = typeFilter!=='all' ? [typeFilter] : Object.keys(typesInData).sort();
+    var dayColors=['#006766','#2563eb','#E8A020','#e53935','#7c3aed','#059669'];
+    var dayDs=typeKeys.map(function(type,ti){
+      var md=new Array(12).fill(0);
+      data.forEach(function(r){
+        if(r.type!==type) return;
+        var d=parseInvoiceDate(r.invoiceDate); if(!d) return;
+        var m=periodType==='financial'?(d.getMonth()+5)%12:d.getMonth();
+        md[m]+=r.days;
+      });
+      return {label:type, data:md, backgroundColor:(dayColors[ti%dayColors.length])+'cc'};
+    });
+    makeChart('chart_monthly_days','bar',monthLabels,dayDs,{isDays:true,stacked:true});
+
+    // Revenue by site
+    var sV={},sP={},sO={};
+    data.forEach(function(r){
+      if(!r.site) return;
+      sV[r.site]=(sV[r.site]||0)+r.bookingValue;
+      sP[r.site]=(sP[r.site]||0)+r.bookingProfit;
+      sO[r.site]=(sO[r.site]||0)+r.outExVat;
+    });
+    var sKeys=Object.keys(sV).sort(function(a,b){return sV[b]-sV[a];});
+    makeChart('chart_site_revenue','bar',sKeys,[
+      {label:'Booking Value',  data:sKeys.map(function(s){return sV[s];}), backgroundColor:CHART_COLORS.bookingValue +'cc'},
+      {label:'Booking Profit', data:sKeys.map(function(s){return sP[s];}), backgroundColor:CHART_COLORS.bookingProfit+'cc'},
+      {label:'Out - Ex VAT',   data:sKeys.map(function(s){return sO[s];}), backgroundColor:CHART_COLORS.outExVat     +'cc'}
+    ],{indexAxis:'y'});
+
+    // Days by site
+    var sd={};
+    data.forEach(function(r){ if(r.site) sd[r.site]=(sd[r.site]||0)+r.days; });
+    var sdK=Object.keys(sd).sort(function(a,b){return sd[b]-sd[a];});
+    makeChart('chart_site_days','bar',sdK,
+      [{label:'Days',data:sdK.map(function(s){return sd[s];}),backgroundColor:CHART_COLORS.days+'cc'}],
+      {isDays:true,indexAxis:'y'}
+    );
+
+    // All time charts
+    if (periodType==='alltime') {
+      var aV={},aP={},fyV={},fyP={},qV={},qP={};
+      financialData.forEach(function(r){
+        if(typeFilter!=='all'&&r.type!==typeFilter) return;
+        var d=parseInvoiceDate(r.invoiceDate); if(!d) return;
+        var y=d.getFullYear().toString();
+        aV[y]=(aV[y]||0)+r.bookingValue; aP[y]=(aP[y]||0)+r.bookingProfit;
+        var fy='FY'+getFinancialYear(d);
+        fyV[fy]=(fyV[fy]||0)+r.bookingValue; fyP[fy]=(fyP[fy]||0)+r.bookingProfit;
+        var q='Q'+(Math.floor(d.getMonth()/3)+1)+' '+y;
+        qV[q]=(qV[q]||0)+r.bookingValue; qP[q]=(qP[q]||0)+r.bookingProfit;
+      });
+      var aK=Object.keys(aV).sort();
+      makeChart('chart_annual','bar',aK,[
+        {label:'Booking Value', data:aK.map(function(y){return aV[y];}),backgroundColor:CHART_COLORS.bookingValue +'cc'},
+        {label:'Booking Profit',data:aK.map(function(y){return aP[y];}),backgroundColor:CHART_COLORS.bookingProfit+'cc'}
+      ]);
+      var fyK=Object.keys(fyV).sort();
+      makeChart('chart_financial_year','bar',fyK,[
+        {label:'Booking Value', data:fyK.map(function(y){return fyV[y];}),backgroundColor:CHART_COLORS.bookingValue +'cc'},
+        {label:'Booking Profit',data:fyK.map(function(y){return fyP[y];}),backgroundColor:CHART_COLORS.bookingProfit+'cc'}
+      ]);
+      var qK=Object.keys(qV).sort(function(a,b){
+        var ay=parseInt(a.split(' ')[1]),aq=parseInt(a[1]);
+        var by=parseInt(b.split(' ')[1]),bq=parseInt(b[1]);
+        return ay!==by?ay-by:aq-bq;
+      });
+      makeChart('chart_quarterly','bar',qK,[
+        {label:'Booking Value', data:qK.map(function(q){return qV[q];}),backgroundColor:CHART_COLORS.bookingValue +'cc'},
+        {label:'Booking Profit',data:qK.map(function(q){return qP[q];}),backgroundColor:CHART_COLORS.bookingProfit+'cc'}
+      ]);
+    }
+  }
+
   async function loadCalendars() {
     var keys = getKeys();
     if (!keys.monday) return;
@@ -4671,8 +5042,9 @@
     var wrap = document.getElementById('productionSelectorWrap');
     if (wrap) wrap.style.display = (mode === 'prod' || mode === 'land' || mode === 'agree') ? 'block' : 'none';
     var siteWrap = document.getElementById('siteSelect');
-    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map') ? 'none' : '';
-    if (mode === 'map') initSiteMap();
+    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map' || mode === 'finance') ? 'none' : '';
+    if (mode === 'map')     initSiteMap();
+    if (mode === 'finance') initFinanceTab();
   }
 
   function updateAgreePreview() {
