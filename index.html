@@ -160,8 +160,9 @@
     .draft-btn { flex: 1; padding: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
     .draft-save { background: var(--teal-light); color: var(--teal); border: 1px solid var(--teal-mid); }
     .draft-save:hover { background: #cdeee8; }
-    .draft-load { background: var(--bg); color: var(--mid); border: 1px solid var(--border); }
-    .draft-load:hover { border-color: var(--teal); color: var(--teal); }
+    .qtf-btn { padding:6px 14px; border-radius:20px; border:2px solid #006766; background:#fff; color:#006766; font-size:12px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+    .qtf-btn:hover { background:#006766; color:#fff; }
+    .qtf-active { background:#006766 !important; color:#fff !important; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -949,6 +950,15 @@
         <select id="mapSiteSelect" onchange="onMapSiteSelect()">
           <option value="">— Select a site —</option>
         </select>
+      </div>
+
+      <div class="form-card">
+        <h2>Site type</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0;" id="mapQuickTypeFilter">
+          <button onclick="setQuickType('all')"          id="qtf_all"     class="qtf-btn qtf-active">All</button>
+          <button onclick="setQuickType('Unit Base')"    id="qtf_ub"      class="qtf-btn">Unit Base</button>
+          <button onclick="setQuickType('Crew Parking')" id="qtf_cp"      class="qtf-btn">Crew Parking</button>
+        </div>
       </div>
 
       <div class="form-card">
@@ -4225,6 +4235,30 @@
   var searchPin    = null;
   var searchLatLng = null;
 
+  var quickTypeFilter = 'all';
+
+  function setQuickType(type) {
+    quickTypeFilter = type;
+    // Update button states
+    ['all','ub','cp'].forEach(function(k){
+      var btn = document.getElementById('qtf_' + k);
+      if (btn) btn.classList.remove('qtf-active');
+    });
+    var map = { 'all':'qtf_all', 'Unit Base':'qtf_ub', 'Crew Parking':'qtf_cp' };
+    var btn = document.getElementById(map[type] || 'qtf_all');
+    if (btn) btn.classList.add('qtf-active');
+    // Also update the main type filter on the map
+    if (mapInstance) {
+      Object.keys(activeFilters).forEach(function(t){
+        activeFilters[t] = (type === 'all' || t === type);
+      });
+      renderMapMarkers();
+      updateFilterButtons();
+    }
+    // If a search pin exists, re-run the nearest sites with new filter
+    if (searchLatLng) showNearestSites(searchLatLng, document.getElementById('mapPostcode').value || 'your location');
+  }
+
   function onMapSiteSelect() {
     var name = document.getElementById('mapSiteSelect').value;
     if (!name) return;
@@ -4300,12 +4334,16 @@
 
   async function showNearestSites(origin, label) {
     var resultEl = document.getElementById('mapPostcodeResult');
+    var MAX_MILES  = 10;   // don't show sites beyond this
+    var MAX_MATRIX = 10;   // only call Distance Matrix for this many nearest sites
 
-    // Get all sites with coordinates
+    // Get all sites with coordinates, filtered by quick type selection
     var sitesWithCoords = sites.filter(function(s) {
       if (!s.coordinates) return false;
       var p = s.coordinates.split(',');
-      return p.length >= 2 && !isNaN(parseFloat(p[0])) && !isNaN(parseFloat(p[1]));
+      if (p.length < 2 || isNaN(parseFloat(p[0])) || isNaN(parseFloat(p[1]))) return false;
+      if (quickTypeFilter !== 'all' && (s.site_type || '') !== quickTypeFilter) return false;
+      return true;
     });
 
     if (!sitesWithCoords.length) {
@@ -4313,7 +4351,7 @@
       return;
     }
 
-    // First sort by crow-flies distance so we can show something immediately
+    // Sort all by crow-flies and filter to within MAX_MILES
     var withDist = sitesWithCoords.map(function(site) {
       var parts = site.coordinates.split(',');
       var lat = parseFloat(parts[0].trim()), lng = parseFloat(parts[1].trim());
@@ -4321,60 +4359,69 @@
       return { site: site, km: km, miles: (km * 0.621371).toFixed(1), driveKm: null, driveTime: null };
     });
     withDist.sort(function(a,b){ return a.km - b.km; });
-    renderNearestList(withDist, label, false);
-    resultEl.textContent = 'Getting driving distances…';
 
-    // Now fetch driving distances via Distance Matrix API (max 25 destinations per call)
-    var destinations = sitesWithCoords.map(function(s){
-      var p = s.coordinates.split(',');
+    // Filter to within MAX_MILES
+    withDist = withDist.filter(function(item){ return parseFloat(item.miles) <= MAX_MILES; });
+
+    if (!withDist.length) {
+      resultEl.textContent = 'No sites found within ' + MAX_MILES + ' miles. Try a different location.';
+      renderNearestList([], label, false);
+      return;
+    }
+
+    // Show crow-flies list immediately while we fetch driving distances
+    renderNearestList(withDist, label, false);
+    resultEl.textContent = 'Getting driving distances for ' + Math.min(withDist.length, MAX_MATRIX) + ' nearest sites…';
+
+    // Only call Distance Matrix for the nearest MAX_MATRIX sites
+    var nearest = withDist.slice(0, MAX_MATRIX);
+    var destinations = nearest.map(function(item){
+      var p = item.site.coordinates.split(',');
       return parseFloat(p[0].trim()) + ',' + parseFloat(p[1].trim());
     });
 
-    // Batch into groups of 25
-    var batchSize = 25;
+    var originStr = origin.lat + ',' + origin.lng;
     var allResults = {};
-    for (var i = 0; i < destinations.length; i += batchSize) {
-      var batch = destinations.slice(i, i + batchSize);
-      var destStr = batch.join('|');
-      var originStr = origin.lat + ',' + origin.lng;
-      try {
-        var res  = await fetch(WORKER_URL + '/distance?origins='
-          + encodeURIComponent(originStr)
-          + '&destinations=' + encodeURIComponent(destStr));
-        var json = await res.json();
-        if (json.rows && json.rows[0]) {
-          json.rows[0].elements.forEach(function(el, j) {
-            var siteIdx = i + j;
-            if (el.status === 'OK') {
-              allResults[siteIdx] = {
-                driveKm:   el.distance.value / 1000,
-                driveMiles: el.distance.text,
-                driveTime:  el.duration.text
-              };
-            }
-          });
-        }
-      } catch(e) {}
-    }
-
-    // Merge driving data back and re-sort by driving distance
-    withDist.forEach(function(item, idx) {
-      var res = allResults[sitesWithCoords.indexOf(item.site)];
-      if (res) {
-        item.driveKm    = res.driveKm;
-        item.driveMiles = res.driveMiles;
-        item.driveTime  = res.driveTime;
+    try {
+      var res  = await fetch(WORKER_URL + '/distance?origins='
+        + encodeURIComponent(originStr)
+        + '&destinations=' + encodeURIComponent(destinations.join('|')));
+      var json = await res.json();
+      if (json.rows && json.rows[0]) {
+        json.rows[0].elements.forEach(function(el, j) {
+          if (el.status === 'OK') {
+            allResults[j] = {
+              driveKm:    el.distance.value / 1000,
+              driveMiles: el.distance.text,
+              driveTime:  el.duration.text
+            };
+          }
+        });
       }
+    } catch(e) {}
+
+    // Merge driving data into nearest sites
+    nearest.forEach(function(item, idx) {
+      var r = allResults[idx];
+      if (r) { item.driveKm = r.driveKm; item.driveMiles = r.driveMiles; item.driveTime = r.driveTime; }
     });
-    withDist.sort(function(a,b){
+
+    // Re-sort nearest by driving distance, rest stays by crow-flies
+    nearest.sort(function(a,b){
       var ak = a.driveKm !== null ? a.driveKm : a.km;
       var bk = b.driveKm !== null ? b.driveKm : b.km;
       return ak - bk;
     });
 
-    renderNearestList(withDist, label, true);
-    resultEl.textContent = withDist.length + ' sites — nearest is ' + withDist[0].site.site_name
-      + (withDist[0].driveTime ? ' (' + withDist[0].driveTime + ' drive)' : ' (' + withDist[0].miles + ' mi)');
+    // Combine: driving-sorted nearest + remaining crow-flies only
+    var rest = withDist.slice(MAX_MATRIX);
+    var combined = nearest.concat(rest);
+
+    renderNearestList(combined, label, true);
+    var nearest0 = combined[0];
+    resultEl.textContent = combined.length + ' sites within ' + MAX_MILES + ' miles — nearest is '
+      + nearest0.site.site_name
+      + (nearest0.driveTime ? ' (' + nearest0.driveTime + ' drive)' : ' (' + nearest0.miles + ' mi as crow flies)');
   }
 
   function renderNearestList(withDist, label, hasDriving) {
