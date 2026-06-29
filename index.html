@@ -1281,7 +1281,7 @@
     <div id="rp_finance" style="display:none; height:100%; flex-direction:column; overflow-y:auto; background:var(--bg); padding:20px; gap:20px; box-sizing:border-box;">
 
       <!-- Summary KPIs -->
-      <div id="finance_kpis" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;"></div>
+      <div id="finance_kpis" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px;"></div>
 
       <!-- Monthly income bar chart -->
       <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px;">
@@ -1305,6 +1305,23 @@
       <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px;">
         <h3 style="margin:0 0 14px; font-size:13px; font-weight:700; color:var(--dark);">Booking Days by Site</h3>
         <canvas id="chart_site_days" height="250"></canvas>
+      </div>
+
+      <!-- Site breakdown table -->
+      <div style="background:#fff; border-radius:10px; border:1px solid var(--border); padding:18px;" id="site_table_wrap">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <h3 style="margin:0; font-size:13px; font-weight:700; color:var(--dark);">Site Breakdown by Month</h3>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <label style="font-size:11px; color:var(--muted);">Show</label>
+            <select id="site_table_metric" onchange="renderSiteTable()" style="font-size:11px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-family:'DM Sans',sans-serif; background:var(--bg);">
+              <option value="value">Booking Value</option>
+              <option value="days">Days</option>
+            </select>
+          </div>
+        </div>
+        <div id="site_table_container" style="overflow-x:auto;">
+          <table id="site_breakdown_table" style="width:100%; border-collapse:collapse; font-size:11px; min-width:600px;"></table>
+        </div>
       </div>
 
       <!-- All time / annual (shown only in alltime mode) -->
@@ -4503,9 +4520,13 @@
         var r = { name: item.name };
         item.column_values.forEach(function(col) {
           var t = col.column.title.toLowerCase().trim();
-          if (t === 'invoice date')   r.invoiceDate   = col.text || '';
-          if (t === 'type')           r.type          = col.text || '';
-          if (t === 'site')           r.site          = col.text || '';
+          if (t === 'invoice date')        r.invoiceDate   = col.text || '';
+          if (t === 'type')                r.type          = col.text || '';
+          if (t === 'site')                r.site          = col.text || '';
+          if (t === 'production / company') r.production   = col.text || '';
+          if (t === 'production/company')   r.production   = col.text || '';
+          if (t === 'production')           r.production   = col.text || '';
+          if (t === 'company')              r.production   = r.production || col.text || '';
           if (t === 'days')           r.days          = parseAmount(col.text);
           if (t === 'in - ex vat')    r.inExVat       = parseAmount(col.text);
           if (t === 'out - ex vat')   r.outExVat      = parseAmount(col.text);
@@ -4514,6 +4535,17 @@
         });
         return r;
       }).filter(function(r){ return r.invoiceDate; });
+
+      // Debug: log all unique column names from first item
+      if (allItems.length) {
+        var colNames = allItems[0].column_values.map(function(c){ return '"' + c.column.title + '"'; });
+        console.log('Financial board columns:', colNames.join(', '));
+        // Log a sample of production field values
+        var sample = financialData.slice(0,5).map(function(r){ return r.production || '(empty)'; });
+        console.log('Sample production values:', sample);
+        var withProd = financialData.filter(function(r){ return r.production; }).length;
+        console.log('Records with production:', withProd, '/', financialData.length);
+      }
 
       financeLoaded = true;
       document.getElementById('finance_status_card').style.display = 'none';
@@ -4628,15 +4660,17 @@
       ? ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'] : MONTHS;
 
     // KPIs
-    var totalValue  = data.reduce(function(s,r){ return s+r.bookingValue; }, 0);
-    var totalProfit = data.reduce(function(s,r){ return s+r.bookingProfit; }, 0);
-    var totalDays   = data.reduce(function(s,r){ return s+r.days; }, 0);
+    var totalValue      = data.reduce(function(s,r){ return s+r.bookingValue; }, 0);
+    var totalProfit     = data.reduce(function(s,r){ return s+r.bookingProfit; }, 0);
+    var totalDays       = data.reduce(function(s,r){ return s+r.days; }, 0);
+    var uniqueProds     = new Set(data.map(function(r){ return (r.production||'').toLowerCase().trim(); }).filter(Boolean));
     var kpiEl = document.getElementById('finance_kpis');
     if (kpiEl) {
       kpiEl.innerHTML = [
-        { label:'Booking Value',  value:fmt(totalValue),        color:CHART_COLORS.bookingValue  },
-        { label:'Booking Profit', value:fmt(totalProfit),       color:CHART_COLORS.bookingProfit },
-        { label:'Total Days',     value:totalDays+' days',      color:CHART_COLORS.days          }
+        { label:'Booking Value',   value:fmt(totalValue),          color:CHART_COLORS.bookingValue  },
+        { label:'Booking Profit',  value:fmt(totalProfit),         color:CHART_COLORS.bookingProfit },
+        { label:'Total Days',      value:totalDays+' days',        color:CHART_COLORS.days          },
+        { label:'Productions',     value:uniqueProds.size+' clients', color:'#059669'               }
       ].map(function(k){
         return '<div style="background:#fff;border-radius:10px;border:1px solid var(--border);padding:16px;text-align:center;">'
           + '<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">' + k.label + '</div>'
@@ -4731,6 +4765,75 @@
         {label:'Booking Profit',data:qK.map(function(q){return qP[q];}),backgroundColor:CHART_COLORS.bookingProfit+'cc'}
       ]);
     }
+    renderSiteTable();
+  }
+
+  function renderSiteTable() {
+    if (!financeLoaded) return;
+    var data        = filterData();
+    var periodType  = document.getElementById('finance_period_type').value;
+    var metric      = (document.getElementById('site_table_metric')||{}).value || 'value';
+    var isDays      = metric === 'days';
+    var MONTHS      = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var monthLabels = periodType === 'financial'
+      ? ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'] : MONTHS;
+
+    var siteMap = {};
+    data.forEach(function(r) {
+      if (!r.site) return;
+      var d = parseInvoiceDate(r.invoiceDate); if (!d) return;
+      var m = periodType === 'financial' ? (d.getMonth() + 5) % 12 : d.getMonth();
+      if (!siteMap[r.site]) siteMap[r.site] = new Array(12).fill(0);
+      siteMap[r.site][m] += isDays ? r.days : r.bookingValue;
+    });
+
+    var siteKeys = Object.keys(siteMap).sort(function(a, b) {
+      var ta = siteMap[a].reduce(function(s,v){ return s+v; }, 0);
+      var tb = siteMap[b].reduce(function(s,v){ return s+v; }, 0);
+      return tb - ta;
+    });
+
+    var tbl = document.getElementById('site_breakdown_table');
+    if (!tbl) return;
+    if (!siteKeys.length) { tbl.innerHTML = '<tr><td style="padding:12px;color:#888;">No data for selected period.</td></tr>'; return; }
+
+    var colTotals = new Array(12).fill(0);
+    siteKeys.forEach(function(site) {
+      siteMap[site].forEach(function(v, i) { colTotals[i] += v; });
+    });
+    var grandTotal = colTotals.reduce(function(s,v){ return s+v; }, 0);
+
+    function fmtCell(v) { return isDays ? (v ? v+'d' : '—') : (v ? fmt(v) : '—'); }
+    function td(v, bold, bg) {
+      return '<td style="padding:6px 8px;text-align:right;border-bottom:1px solid #f0eeea;white-space:nowrap;'
+        + (bold?'font-weight:700;':'') + (bg?'background:'+bg+';':'') + (v===0?'color:#ddd;':'') + '">'
+        + fmtCell(v) + '</td>';
+    }
+
+    var html = '<thead><tr style="background:#006766;">'
+      + '<th style="padding:7px 10px;text-align:left;color:#fff;font-size:11px;position:sticky;left:0;background:#006766;white-space:nowrap;">Site</th>'
+      + monthLabels.map(function(m){ return '<th style="padding:7px 8px;text-align:right;color:#fff;font-size:11px;">'+m+'</th>'; }).join('')
+      + '<th style="padding:7px 10px;text-align:right;color:#fff;font-size:11px;">Total</th>'
+      + '</tr></thead><tbody>';
+
+    siteKeys.forEach(function(site, i) {
+      var row   = siteMap[site];
+      var total = row.reduce(function(s,v){ return s+v; }, 0);
+      var bg    = i % 2 !== 0 ? '#faf9f7' : '#fff';
+      html += '<tr>'
+        + '<td style="padding:6px 10px;font-weight:600;color:#1A1A1A;border-bottom:1px solid #f0eeea;position:sticky;left:0;background:'+bg+';white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="'+escHtml(site)+'">'+escHtml(site)+'</td>'
+        + row.map(function(v){ return td(v, false, bg); }).join('')
+        + td(total, true, '#f0f9f8')
+        + '</tr>';
+    });
+
+    html += '<tr style="background:#f0f9f8;">'
+      + '<td style="padding:7px 10px;font-weight:700;color:#006766;border-top:2px solid #006766;position:sticky;left:0;background:#f0f9f8;">Total</td>'
+      + colTotals.map(function(v){ return td(v, true, '#f0f9f8'); }).join('')
+      + td(grandTotal, true, '#e0f2f0')
+      + '</tr></tbody>';
+
+    tbl.innerHTML = html;
   }
 
   async function loadCalendars() {
