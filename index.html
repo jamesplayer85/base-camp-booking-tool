@@ -954,15 +954,6 @@
       </div>
 
       <div class="form-card">
-        <h2>Site type</h2>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:0;" id="mapQuickTypeFilter">
-          <button onclick="setQuickType('all')"          id="qtf_all"     class="qtf-btn qtf-active">All</button>
-          <button onclick="setQuickType('Unit Base')"    id="qtf_ub"      class="qtf-btn">Unit Base</button>
-          <button onclick="setQuickType('Crew Parking')" id="qtf_cp"      class="qtf-btn">Crew Parking</button>
-        </div>
-      </div>
-
-      <div class="form-card">
         <h2>Postcode / address lookup</h2>
         <div style="display:flex; gap:8px; margin-bottom:0;">
           <input type="text" id="mapPostcode" placeholder="e.g. SE1 7PB or Waterloo Station" style="flex:1;" onkeydown="if(event.key==='Enter')lookupPostcode()">
@@ -2524,12 +2515,12 @@
     if (poSupAddr && !poSupAddr.value) poSupAddr.value = currentSite.landlord_address || '';
     updatePOPreview();
     updateLandlordOpeningNote();
-    // Info sheet -- pre-fill steps
-    if (document.getElementById('infoStepsContainer').children.length === 0) {
-      ['step1','step2','step3','step4','step5'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
-      if (document.getElementById('infoStepsContainer').children.length === 0) { addInfoStep(''); addInfoStep(''); addInfoStep(''); }
-      document.getElementById('info_note_text').value = currentSite.important_note || '';
-    }
+    // Info sheet -- always re-fill steps and note from selected site
+    document.getElementById('infoStepsContainer').innerHTML = '';
+    infoStepCounter = 0;
+    ['step1','step2','step3','step4','step5'].forEach(function(k){ if(currentSite[k] && currentSite[k].trim()) addInfoStep(currentSite[k]); });
+    if (document.getElementById('infoStepsContainer').children.length === 0) { addInfoStep(''); addInfoStep(''); addInfoStep(''); }
+    document.getElementById('info_note_text').value = currentSite.important_note || '';
     updateInfoPreview();
     // Agree -- pre-fill from Monday site data
     var agSite = document.getElementById('agree_site_name');
@@ -3982,10 +3973,11 @@
 
   // Pin colours per site type
   var TYPE_COLOURS = {
-    'Unit Base':    '#006766',
-    'Crew Parking': '#E8A020',
-    'Base Camp':    '#2563eb',
-    'Other':        '#888888'
+    'Unit Base':         '#006766',
+    'Crew Parking':      '#E8A020',
+    'Base Camp':         '#2563eb',
+    'Production Space':  '#2563eb',
+    'Other':             '#888888'
   };
 
   function getSiteTypeColour(type) {
@@ -4335,15 +4327,7 @@
 
   function setQuickType(type) {
     quickTypeFilter = type;
-    // Update button states
-    ['all','ub','cp'].forEach(function(k){
-      var btn = document.getElementById('qtf_' + k);
-      if (btn) btn.classList.remove('qtf-active');
-    });
-    var map = { 'all':'qtf_all', 'Unit Base':'qtf_ub', 'Crew Parking':'qtf_cp' };
-    var btn = document.getElementById(map[type] || 'qtf_all');
-    if (btn) btn.classList.add('qtf-active');
-    // Also update the main type filter on the map
+    // Drive the map activeFilters directly
     if (mapInstance) {
       Object.keys(activeFilters).forEach(function(t){
         activeFilters[t] = (type === 'all' || t === type);
@@ -4656,6 +4640,23 @@
     } catch(e) { showToast('Could not delete task', 'error'); }
   }
 
+  async function saveTaskNotes(el) {
+    var taskId = el.dataset.taskid;
+    var owner  = el.dataset.owner;
+    var task   = allTasks.find(function(t){ return t.id === taskId; });
+    if (!task) return;
+    var newDetails = el.innerText || '';
+    if (newDetails === task.details) return; // no change
+    task.details = newDetails;
+    try {
+      await fetch(WORKER_URL + '/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: owner, task: task })
+      });
+    } catch(e) { showToast('Could not save notes', 'error'); }
+  }
+
   function buildTaskCard(t) {
     var today     = new Date().toISOString().slice(0,10);
     var isOverdue = !t.done && t.due && t.due < today;
@@ -4672,7 +4673,7 @@
       + (t.note ? '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + escHtml(t.note) + '</div>' : '')
       + (t.details ? '<div style="margin-top:6px;">'
         + '<button onclick="(function(el){el.nextElementSibling.style.display=el.nextElementSibling.style.display===\'none\'?\'block\':\'none\';el.textContent=el.nextElementSibling.style.display===\'none\'?\'▸ Show notes\':\'▾ Hide notes\';})(this)" style="background:none;border:none;padding:0;font-size:11px;color:#006766;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">▸ Show notes</button>'
-        + '<div style="display:none;font-size:12px;color:#555;margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:2px solid var(--border);white-space:pre-wrap;line-height:1.5;">' + escHtml(t.details) + '</div>'
+        + '<div contenteditable="true" data-taskid="' + t.id + '" data-owner="' + t.owner + '" onblur="saveTaskNotes(this)" style="display:none;font-size:12px;color:#555;margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:2px solid var(--border);white-space:pre-wrap;line-height:1.5;outline:none;min-height:40px;" title="Click to edit notes">' + escHtml(t.details) + '</div>'
         + '</div>' : '')
       + '<div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap;">'
       + (dueStr ? '<span style="font-size:10px;font-weight:600;color:' + (isOverdue ? '#e53935' : '#006766') + ';">\uD83D\uDCC5 ' + dueStr + (isOverdue ? ' \u2014 Overdue' : '') + '</span>' : '')
