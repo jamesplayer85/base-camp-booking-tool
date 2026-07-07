@@ -4670,7 +4670,10 @@
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;color:' + (t.done ? 'var(--muted)' : 'var(--dark)') + ';' + (t.done ? 'text-decoration:line-through;' : '') + '">' + escHtml(t.title) + '</div>'
       + (t.note ? '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + escHtml(t.note) + '</div>' : '')
-      + (t.details ? '<div style="font-size:12px;color:#555;margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:2px solid var(--border);white-space:pre-wrap;line-height:1.5;">' + escHtml(t.details) + '</div>' : '')
+      + (t.details ? '<div style="margin-top:6px;">'
+        + '<button onclick="(function(el){el.nextElementSibling.style.display=el.nextElementSibling.style.display===\'none\'?\'block\':\'none\';el.textContent=el.nextElementSibling.style.display===\'none\'?\'▸ Show notes\':\'▾ Hide notes\';})(this)" style="background:none;border:none;padding:0;font-size:11px;color:#006766;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">▸ Show notes</button>'
+        + '<div style="display:none;font-size:12px;color:#555;margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:2px solid var(--border);white-space:pre-wrap;line-height:1.5;">' + escHtml(t.details) + '</div>'
+        + '</div>' : '')
       + '<div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap;">'
       + (dueStr ? '<span style="font-size:10px;font-weight:600;color:' + (isOverdue ? '#e53935' : '#006766') + ';">\uD83D\uDCC5 ' + dueStr + (isOverdue ? ' \u2014 Overdue' : '') + '</span>' : '')
       + (t.shared ? '<span style="font-size:10px;color:#7c3aed;">\uD83D\uDC65 Shared</span>' : '')
@@ -5866,13 +5869,6 @@
       'INSERT SITE PLAN BELOW':   '\x00SITEPLAN\x00',
     };
   }
-
-</script>
-
-</body></html>
-
-    el.innerHTML = html;
-  } // end renderTodoList
 
   // ── Booking Data / Financial Tab ──────────────────────────────────
   var financeLoaded   = false;
