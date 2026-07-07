@@ -298,7 +298,7 @@
     </div>
 
     <!-- Mode tabs -->
-    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
+    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
       <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
       <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
       <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
@@ -308,6 +308,7 @@
       <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Calendars</button>
       <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Master Map</button>
       <button class="mode-tab" id="tab-finance" onclick="switchMode('finance')">📊 Booking Data</button>
+      <button class="mode-tab" id="tab-todo" onclick="switchMode('todo')">✅ To Do</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -1019,6 +1020,52 @@
 
     </div><!-- /section-finance -->
 
+    <!-- ══════════════════════════════════
+         TO DO MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-todo">
+
+      <div class="site-selector">
+        <label>Viewing tasks for</label>
+        <select id="todo_user" onchange="onTodoUserChange()">
+          <option value="">— Select your name —</option>
+          <option value="james">James</option>
+          <option value="tom">Tom</option>
+          <option value="ben">Ben</option>
+        </select>
+      </div>
+
+      <div class="form-card" id="todo_add_card" style="display:none;">
+        <h2>Add task</h2>
+        <div class="field">
+          <label>Task</label>
+          <input type="text" id="todo_title" placeholder="What needs doing?" onkeydown="if(event.key==='Enter')addTodoTask()">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Due date <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+            <input type="date" id="todo_due">
+          </div>
+          <div class="field">
+            <label>Note <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+            <input type="text" id="todo_note" placeholder="Any details…">
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+            <input type="checkbox" id="todo_shared" style="width:15px;height:15px;accent-color:#006766;">
+            <span>Shared task <span style="color:var(--muted); font-size:11px;">(visible to all)</span></span>
+          </label>
+          <button onclick="addTodoTask()" style="background:#006766;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Add task</button>
+        </div>
+      </div>
+
+      <div class="form-card" id="todo_placeholder" style="text-align:center; color:var(--muted); font-size:13px;">
+        Select your name above to view your tasks
+      </div>
+
+    </div><!-- /section-todo -->
+
     <!-- Per-tab history panels -->
     <div class="history-panel" id="history-prod" style="display:none;">
       <div class="history-header" onclick="toggleHistory('prod')">
@@ -1275,6 +1322,26 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- To Do panel -->
+    <div id="rp_todo" style="display:none; height:100%; flex-direction:column; background:var(--bg); overflow-y:auto;">
+      <div style="padding:20px; border-bottom:1px solid var(--border); background:#fff; flex-shrink:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <h3 style="margin:0; font-size:14px; font-weight:700; color:var(--dark);" id="todo_panel_title">Tasks</h3>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); cursor:pointer;">
+            <input type="checkbox" id="todo_show_archived" onchange="renderTodoList()" style="accent-color:#006766;">
+            Show archived
+          </label>
+        </div>
+        <!-- Filter tabs -->
+        <div style="display:flex; gap:6px;">
+          <button onclick="setTodoFilter('mine')"   id="tdf_mine"   class="qtf-btn qtf-active" style="font-size:11px;">My tasks</button>
+          <button onclick="setTodoFilter('shared')" id="tdf_shared" class="qtf-btn"             style="font-size:11px;">Shared</button>
+          <button onclick="setTodoFilter('all')"    id="tdf_all"    class="qtf-btn"             style="font-size:11px;">All</button>
+        </div>
+      </div>
+      <div id="todo_list" style="padding:16px; flex:1;"></div>
     </div>
 
     <!-- Finance panel -->
@@ -2377,7 +2444,7 @@
   // Old land extra contact functions removed — replaced by addLandContact/getLandContacts above
 
   function updateRightPanel(mode) {
-    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary','rp_map','rp_finance'].forEach(function(id) {
+    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary','rp_map','rp_finance','rp_todo'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -2387,9 +2454,10 @@
                : mode === 'diary'   ? 'rp_diary'
                : mode === 'map'     ? 'rp_map'
                : mode === 'finance' ? 'rp_finance'
+               : mode === 'todo'    ? 'rp_todo'
                : 'rp_email';
     var show = document.getElementById(target);
-    if (show) show.style.display = (mode === 'diary' || mode === 'map' || mode === 'finance') ? 'flex' : 'block';
+    if (show) show.style.display = (mode === 'diary' || mode === 'map' || mode === 'finance' || mode === 'todo') ? 'flex' : 'block';
 
     ['prod','land','info'].forEach(function(t) {
       var b = document.getElementById('rp_banner_' + t);
@@ -2405,12 +2473,12 @@
   var currentMode = 'prod';
   function switchMode(mode) {
     currentMode = mode;
-    ['prod','land','info','qrgen','po','agree','diary','map','finance'].forEach(function(m) {
+    ['prod','land','info','qrgen','po','agree','diary','map','finance','todo'].forEach(function(m) {
       document.getElementById('section-' + m).classList.toggle('active', m === mode);
       var tab = document.getElementById('tab-' + m);
       if (tab) tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map', finance: 'Booking Data' };
+    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map', finance: 'Booking Data', todo: 'To Do' };
     document.getElementById('modeTitle').textContent = titles[mode];
     updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
@@ -4472,6 +4540,165 @@
     el.innerHTML = html;
   }
 
+  // ── To Do Tab ──────────────────────────────────────────────────────
+  var todoUser       = '';
+  var todoFilter     = 'mine';
+  var allTasks       = [];
+  var todoLoading    = false;
+
+  function onTodoUserChange() {
+    todoUser = document.getElementById('todo_user').value;
+    var addCard   = document.getElementById('todo_add_card');
+    var placeholder = document.getElementById('todo_placeholder');
+    if (todoUser) {
+      addCard.style.display   = 'block';
+      placeholder.style.display = 'none';
+      document.getElementById('todo_panel_title').textContent = todoUser.charAt(0).toUpperCase() + todoUser.slice(1) + '\'s Tasks';
+      loadTasks();
+    } else {
+      addCard.style.display   = 'none';
+      placeholder.style.display = 'block';
+    }
+  }
+
+  function setTodoFilter(f) {
+    todoFilter = f;
+    ['mine','shared','all'].forEach(function(k){
+      var btn = document.getElementById('tdf_' + k);
+      if (btn) btn.classList.toggle('qtf-active', k === f);
+    });
+    renderTodoList();
+  }
+
+  async function loadTasks() {
+    if (!todoUser) return;
+    document.getElementById('todo_list').innerHTML = '<div style="color:var(--muted);font-size:13px;">Loading…</div>';
+    try {
+      var res  = await fetch(WORKER_URL + '/tasks?user=' + todoUser);
+      var json = await res.json();
+      allTasks = json.tasks || [];
+      renderTodoList();
+    } catch(e) {
+      document.getElementById('todo_list').innerHTML = '<div style="color:#e53935;font-size:13px;">Could not load tasks.</div>';
+    }
+  }
+
+  async function addTodoTask() {
+    var title = (document.getElementById('todo_title').value || '').trim();
+    if (!title) { document.getElementById('todo_title').focus(); return; }
+    var task = {
+      id:       'task_' + Date.now(),
+      title:    title,
+      note:     (document.getElementById('todo_note').value || '').trim(),
+      due:      document.getElementById('todo_due').value || '',
+      shared:   document.getElementById('todo_shared').checked,
+      owner:    todoUser,
+      done:     false,
+      created:  new Date().toISOString()
+    };
+    try {
+      await fetch(WORKER_URL + '/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: todoUser, task: task })
+      });
+      // Clear form
+      document.getElementById('todo_title').value = '';
+      document.getElementById('todo_note').value  = '';
+      document.getElementById('todo_due').value   = '';
+      document.getElementById('todo_shared').checked = false;
+      document.getElementById('todo_title').focus();
+      allTasks.unshift(task);
+      renderTodoList();
+      showToast('Task added', 'success');
+    } catch(e) { showToast('Could not save task', 'error'); }
+  }
+
+  async function toggleTodoDone(taskId) {
+    var task = allTasks.find(function(t){ return t.id === taskId; });
+    if (!task) return;
+    task.done      = !task.done;
+    task.doneAt    = task.done ? new Date().toISOString() : '';
+    try {
+      await fetch(WORKER_URL + '/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: task.owner, task: task })
+      });
+      renderTodoList();
+    } catch(e) { showToast('Could not update task', 'error'); }
+  }
+
+  async function deleteTodoTask(taskId) {
+    if (!confirm('Delete this task permanently?')) return;
+    var task = allTasks.find(function(t){ return t.id === taskId; });
+    if (!task) return;
+    try {
+      await fetch(WORKER_URL + '/tasks?user=' + task.owner + '&id=' + taskId, { method: 'DELETE' });
+      allTasks = allTasks.filter(function(t){ return t.id !== taskId; });
+      renderTodoList();
+      showToast('Task deleted', 'success');
+    } catch(e) { showToast('Could not delete task', 'error'); }
+  }
+
+  function renderTodoList() {
+    var showArchived = document.getElementById('todo_show_archived') && document.getElementById('todo_show_archived').checked;
+    var today        = new Date().toISOString().slice(0,10);
+
+    var visible = allTasks.filter(function(t) {
+      if (!showArchived && t.done) return false;
+      if (todoFilter === 'mine')   return t.owner === todoUser && !t.shared;
+      if (todoFilter === 'shared') return t.shared;
+      return true; // all
+    });
+
+    var el = document.getElementById('todo_list');
+    if (!el) return;
+
+    if (!visible.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px 0;">'
+        + (showArchived ? 'No tasks found.' : 'No tasks — add one on the left.') + '</div>';
+      return;
+    }
+
+    // Group: active first, done at bottom
+    var active   = visible.filter(function(t){ return !t.done; });
+    var archived = visible.filter(function(t){ return t.done; });
+
+    function taskCard(t) {
+      var isOverdue = !t.done && t.due && t.due < today;
+      var dueStr    = t.due ? (function(){
+        var p = t.due.split('-');
+        return p[2] + '/' + p[1] + '/' + p[0];
+      })() : '';
+
+      return '<div style="background:#fff;border-radius:8px;border:1px solid '
+        + (isOverdue ? '#fee2e2' : 'var(--border)') + ';padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;'
+        + (t.done ? 'opacity:0.6;' : '') + '">'
+        + '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' onchange="toggleTodoDone(\'' + t.id + '\')" style="margin-top:3px;width:16px;height:16px;accent-color:#006766;cursor:pointer;flex-shrink:0;">'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:13px;font-weight:600;color:' + (t.done ? 'var(--muted)' : 'var(--dark)') + ';' + (t.done ? 'text-decoration:line-through;' : '') + '">' + escHtml(t.title) + '</div>'
+        + (t.note ? '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + escHtml(t.note) + '</div>' : '')
+        + '<div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap;">'
+        + (dueStr ? '<span style="font-size:10px;font-weight:600;color:' + (isOverdue ? '#e53935' : '#006766') + ';">📅 ' + dueStr + (isOverdue ? ' — Overdue' : '') + '</span>' : '')
+        + (t.shared ? '<span style="font-size:10px;color:#7c3aed;">👥 Shared</span>' : '')
+        + (t.owner !== todoUser ? '<span style="font-size:10px;color:var(--muted);">From ' + t.owner.charAt(0).toUpperCase()+t.owner.slice(1) + '</span>' : '')
+        + (t.done && t.doneAt ? '<span style="font-size:10px;color:var(--muted);">Done ' + t.doneAt.slice(0,10).split('-').reverse().join('/') + '</span>' : '')
+        + '</div>'
+        + '</div>'
+        + '<button onclick="deleteTodoTask(\'' + t.id + '\')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;padding:0;flex-shrink:0;" onmouseover="this.style.color=\'#e53935\'" onmouseout="this.style.color=\'#ccc\'">✕</button>'
+        + '</div>';
+    }
+
+    var html = '';
+    if (active.length) html += active.map(taskCard).join('');
+    if (archived.length && showArchived) {
+      html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:16px 0 8px;">Archived</div>';
+      html += archived.map(taskCard).join('');
+    }
+    el.innerHTML = html;
+  }
+
   // ── Booking Data / Financial Tab ──────────────────────────────────
   var financeLoaded   = false;
   var financeCharts   = {};
@@ -5192,7 +5419,7 @@
     var wrap = document.getElementById('productionSelectorWrap');
     if (wrap) wrap.style.display = (mode === 'prod' || mode === 'land' || mode === 'agree') ? 'block' : 'none';
     var siteWrap = document.getElementById('siteSelect');
-    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map' || mode === 'finance') ? 'none' : '';
+    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map' || mode === 'finance' || mode === 'todo') ? 'none' : '';
     if (mode === 'map')     initSiteMap();
     if (mode === 'finance') initFinanceTab();
   }
