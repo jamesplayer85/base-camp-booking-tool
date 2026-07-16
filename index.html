@@ -140,6 +140,7 @@
     .mode-tab:not([class*="active"]):hover { background: #1A2A26; color: #fff; }
     .mode-section { display: none; }
     .mode-section.active { display: block; }
+    .mode-section.active.grid-layout { display: grid; }
 
     .history-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-top: 32px; overflow: hidden; }
     .history-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; border-bottom: 1px solid var(--border); }
@@ -1079,7 +1080,7 @@
     <!-- ══════════════════════════════════
          VEHICLE REG MODE
     ══════════════════════════════════ -->
-    <div class="mode-section" id="section-vreg" style="display:grid;grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 120px);overflow:hidden;">
+    <div class="mode-section" id="section-vreg" class="mode-section grid-layout" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
 
       <!-- LEFT: Create form + form list -->
       <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
@@ -1145,12 +1146,23 @@
                 <div style="background:#006766;color:#fff;border-radius:6px;padding:8px 10px;font-size:11px;font-weight:700;text-align:center;">Register vehicle</div>
               </div>
             </div>
-            <!-- QR canvas -->
+            <!-- QR canvas (small, in preview) -->
             <div style="padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-              <canvas id="vregQrCanvas" width="148" height="148" style="border:3px solid var(--teal);border-radius:6px;"></canvas>
+              <canvas id="vregQrCanvasSmall" width="140" height="140" style="border:3px solid var(--teal);border-radius:6px;"></canvas>
               <div id="vregQrRef" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;word-break:break-all;"></div>
             </div>
           </div>
+        </div>
+
+        <!-- Full size QR below preview -->
+        <div id="vregQrFullWrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:14px;">QR Code — scan to register</div>
+          <canvas id="vregQrCanvas" width="280" height="280" style="border:4px solid var(--teal);border-radius:8px;display:block;margin:0 auto;"></canvas>
+          <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+            <button onclick="copyVregUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
+            <button onclick="downloadVregQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Download QR</button>
+          </div>
+          <div id="vregQrUrl" style="margin-top:8px;font-size:10px;color:var(--muted);word-break:break-all;"></div>
         </div>
 
         <!-- Bottom: submission log -->
@@ -1176,7 +1188,7 @@
     <!-- ══════════════════════════════════
          PCN MODE
     ══════════════════════════════════ -->
-    <div class="mode-section" id="section-pcn" style="display:grid;grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 120px);overflow:hidden;">
+    <div class="mode-section" id="section-pcn" class="mode-section grid-layout" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
 
       <!-- LEFT: Create form + form list -->
       <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
@@ -1246,10 +1258,21 @@
               </div>
             </div>
             <div style="padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-              <canvas id="pcnQrCanvas" width="148" height="148" style="border:3px solid var(--teal);border-radius:6px;"></canvas>
+              <canvas id="pcnQrCanvasSmall" width="140" height="140" style="border:3px solid var(--teal);border-radius:6px;"></canvas>
               <div id="pcnQrRef" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;word-break:break-all;"></div>
             </div>
           </div>
+        </div>
+
+        <!-- Full size PCN QR -->
+        <div id="pcnQrFullWrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:14px;">QR Code — scan to submit PCN</div>
+          <canvas id="pcnQrCanvas" width="280" height="280" style="border:4px solid var(--teal);border-radius:8px;display:block;margin:0 auto;"></canvas>
+          <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+            <button onclick="copyPcnUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
+            <button onclick="downloadPcnQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Download QR</button>
+          </div>
+          <div id="pcnQrUrl" style="margin-top:8px;font-size:10px;color:var(--muted);word-break:break-all;"></div>
         </div>
 
         <!-- Bottom: PCN log -->
@@ -1362,7 +1385,7 @@
 
   </div><!-- /form-panel -->
 
-  <div class="preview-panel" id="rightPanel">
+  <div class="preview-panel right-panel-wrap" id="rightPanel">
 
     <!-- Email preview — prod / land / info -->
     <div id="rp_email" style="display:block;">
@@ -2647,6 +2670,10 @@
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
+    // vreg and pcn have their own internal right panels — hide the global right panel
+    var rightWrap = document.querySelector('.right-panel-wrap');
+    if (rightWrap) rightWrap.style.display = (mode === 'vreg' || mode === 'pcn') ? 'none' : '';
+    if (mode === 'vreg' || mode === 'pcn') return;
     var target = mode === 'qrgen'   ? 'rp_qr'
                : mode === 'po'      ? 'rp_po'
                : mode === 'agree'   ? 'rp_agree'
@@ -5093,8 +5120,11 @@
       vregCurrentRef  = data.form.ref;
       vregCurrentForm = data.form;
       var url = 'https://vehiclereg.thebasecampco.com?ref=' + data.form.ref;
-      drawQr('vregQrCanvas', url, 148);
+      drawQr('vregQrCanvasSmall', url, 140);
+      drawQr('vregQrCanvas', url, 280);
       document.getElementById('vregQrRef').textContent = data.form.ref;
+      document.getElementById('vregQrUrl').textContent = url;
+      document.getElementById('vregQrFullWrap').style.display = '';
       document.getElementById('vregActionBtns').style.display = 'flex';
       loadVregSubmissions();
       loadVregFormList();
@@ -5159,8 +5189,11 @@
       } else { parkingEl.style.display = 'none'; }
     }
     var url = 'https://vehiclereg.thebasecampco.com?ref=' + ref;
-    drawQr('vregQrCanvas', url, 148);
+    drawQr('vregQrCanvasSmall', url, 140);
+    drawQr('vregQrCanvas', url, 280);
     document.getElementById('vregQrRef').textContent = ref;
+    document.getElementById('vregQrUrl').textContent = url;
+    document.getElementById('vregQrFullWrap').style.display = '';
     document.getElementById('vregActionBtns').style.display = 'flex';
     renderVregFormList();
     loadVregSubmissions();
@@ -5277,8 +5310,11 @@
       statusEl.style.color = 'var(--teal)';
       pcnCurrentRef = data.form.ref;
       var url = 'https://pcn.thebasecampco.com?ref=' + data.form.ref;
-      drawQr('pcnQrCanvas', url, 148);
+      drawQr('pcnQrCanvasSmall', url, 140);
+      drawQr('pcnQrCanvas', url, 280);
       document.getElementById('pcnQrRef').textContent = data.form.ref;
+      document.getElementById('pcnQrUrl').textContent = url;
+      document.getElementById('pcnQrFullWrap').style.display = '';
       var ab = document.getElementById('pcnActionBtns');
       if (ab) { ab.style.display = 'flex'; }
       updatePcnPreview();
@@ -5320,8 +5356,11 @@
       setSafe('pp_dates', 'Booking dates: ' + dates.map(fmtDateShort).join(', '));
     }
     var url = 'https://pcn.thebasecampco.com?ref=' + ref;
-    drawQr('pcnQrCanvas', url, 148);
+    drawQr('pcnQrCanvasSmall', url, 140);
+    drawQr('pcnQrCanvas', url, 280);
     document.getElementById('pcnQrRef').textContent = ref;
+    document.getElementById('pcnQrUrl').textContent = url;
+    document.getElementById('pcnQrFullWrap').style.display = '';
     var ab = document.getElementById('pcnActionBtns');
     if (ab) ab.style.display = 'flex';
     loadPcnSubs(ref);
@@ -6130,7 +6169,7 @@
     var wrap = document.getElementById('productionSelectorWrap');
     if (wrap) wrap.style.display = (mode === 'prod' || mode === 'land' || mode === 'agree') ? 'block' : 'none';
     var siteWrap = document.getElementById('siteSelect');
-    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map' || mode === 'finance' || mode === 'todo') ? 'none' : '';
+    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map' || mode === 'finance' || mode === 'todo' || mode === 'vreg' || mode === 'pcn') ? 'none' : '';
     if (mode === 'map')     initSiteMap();
     if (mode === 'finance') initFinanceTab();
   }
@@ -7259,7 +7298,7 @@
     var wrap = document.getElementById('productionSelectorWrap');
     if (wrap) wrap.style.display = (mode === 'prod' || mode === 'land' || mode === 'agree') ? 'block' : 'none';
     var siteWrap = document.getElementById('siteSelect');
-    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map' || mode === 'finance' || mode === 'todo') ? 'none' : '';
+    if (siteWrap) siteWrap.closest('.site-selector').style.display = (mode === 'diary' || mode === 'map' || mode === 'finance' || mode === 'todo' || mode === 'vreg' || mode === 'pcn') ? 'none' : '';
     if (mode === 'map')     initSiteMap();
     if (mode === 'finance') initFinanceTab();
   }
