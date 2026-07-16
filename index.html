@@ -1083,7 +1083,7 @@
     <!-- ══════════════════════════════════
          VEHICLE REG MODE
     ══════════════════════════════════ -->
-    <div class="mode-section grid-layout" id="section-vreg" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
+    <div class="mode-section grid-layout" id="section-vreg" style="grid-template-columns:400px 1fr;gap:20px;overflow:hidden;flex:1;min-height:0;">
 
       <!-- LEFT: Create form + form list -->
       <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
@@ -1195,7 +1195,7 @@
     <!-- ══════════════════════════════════
          PCN MODE
     ══════════════════════════════════ -->
-    <div class="mode-section grid-layout" id="section-pcn" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
+    <div class="mode-section grid-layout" id="section-pcn" style="grid-template-columns:400px 1fr;gap:20px;overflow:hidden;flex:1;min-height:0;">
 
       <!-- LEFT: Create form + form list -->
       <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
@@ -2679,12 +2679,28 @@
     });
     // vreg and pcn have their own internal right panels — hide the global right panel
     var layout = document.querySelector('.layout');
+    var formPanel = document.querySelector('.form-panel');
     var isFullWidth = (mode === 'vreg' || mode === 'pcn');
     if (layout) {
       if (isFullWidth) {
         layout.style.gridTemplateColumns = '1fr';
       } else {
         layout.style.gridTemplateColumns = '';
+      }
+    }
+    if (formPanel) {
+      if (isFullWidth) {
+        formPanel.style.overflow = 'hidden';
+        formPanel.style.padding = '24px';
+        formPanel.style.height = 'calc(100vh - 60px)';
+        formPanel.style.display = 'flex';
+        formPanel.style.flexDirection = 'column';
+      } else {
+        formPanel.style.overflow = '';
+        formPanel.style.padding = '';
+        formPanel.style.height = '';
+        formPanel.style.display = '';
+        formPanel.style.flexDirection = '';
       }
     }
     var rightWrap = document.querySelector('.right-panel-wrap');
@@ -5090,27 +5106,27 @@
   function drawQr(canvasId, url, size) {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    var s = size || canvas.width;
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, s, s);
-    // Use qrcode.js if available (already on page from QR Generator tab)
-    if (window.QRCode) {
+    var s = size || 280;
+    canvas.width = s; canvas.height = s;
+    function render() {
+      var ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, s, s);
       var tmp = document.createElement('div');
+      tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+      document.body.appendChild(tmp);
       new QRCode(tmp, {text: url, width: s, height: s, colorDark: '#006766', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H});
       setTimeout(function() {
-        var img = tmp.querySelector('img') || tmp.querySelector('canvas');
-        if (img && img.tagName === 'IMG') {
-          var i = new Image(); i.onload = function() { ctx.drawImage(i, 0, 0, s, s); }; i.src = img.src;
-        } else if (img && img.tagName === 'CANVAS') {
-          ctx.drawImage(img, 0, 0, s, s);
+        var src = tmp.querySelector('canvas');
+        if (src) {
+          ctx.drawImage(src, 0, 0, s, s);
+        } else {
+          var img = tmp.querySelector('img');
+          if (img) { var i = new Image(); i.onload = function() { ctx.drawImage(i, 0, 0, s, s); }; i.src = img.src; }
         }
-      }, 100);
-    } else {
-      ctx.fillStyle = '#006766'; ctx.fillRect(0,0,s,s);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
-      ctx.fillText('QR', s/2, s/2);
+        if (tmp.parentNode) document.body.removeChild(tmp);
+      }, 300);
     }
+    if (window.QRCode) { render(); } else { loadQRLib().then(render); }
   }
 
   async function createVregForm() {
