@@ -33,6 +33,11 @@
     .status-dot.live { background: var(--green); }
 
     .layout { display: grid; grid-template-columns: 60% 40%; min-height: calc(100vh - 60px); }
+    .layout.full-width { grid-template-columns: 1fr 0; }
+    .layout.full-width .preview-panel { display: none; }
+    .layout.full-width .form-panel { overflow: visible; padding: 24px; }
+    .layout.full-width .mode-section.grid-layout.active { display: grid !important; height: calc(100vh - 140px); }
+    .layout.full-width .mode-section.active:not(.grid-layout) { display: none !important; }
 
     .form-panel { padding: 36px 44px; overflow-y: auto; }
     .panel-header { margin-bottom: 28px; }
@@ -1083,7 +1088,7 @@
     <div class="mode-section" id="section-vreg" class="mode-section grid-layout" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
 
       <!-- LEFT: Create form + form list -->
-      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
         <div class="form-card">
           <h2>Create vehicle reg form</h2>
           <div class="field"><label>Site name</label><input type="text" id="vreg_site" placeholder="e.g. CitiPark Barbican" oninput="updateVregPreview()"></div>
@@ -1097,6 +1102,10 @@
             <label>Parking areas <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
             <div id="vregParkingAreas"></div>
             <button type="button" onclick="addVregParkingArea()" style="margin-top:6px;background:none;border:1px dashed var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--teal);cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;">+ Add parking area</button>
+          </div>
+          <div class="field">
+            <label>Registration notice text <span style="font-weight:400;color:var(--muted);">(shown on form)</span></label>
+            <textarea id="vreg_disclaimer" rows="4" style="width:100%;resize:vertical;font-family:'DM Sans',sans-serif;font-size:12px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;line-height:1.5;background:var(--bg);outline:none;" oninput="updateVregPreview()">Please fill in the form below to register your vehicle on site. Make sure to log your vehicle when arriving on site or ahead of arrival each day. It is the responsibility of the production to ensure all vehicles are logged each day including unit cars and minibuses, deliveries, taxis etc. Failure to register vehicles will result in PCN charges being issued.</textarea>
           </div>
           <div class="field"><label>Landlord email <span style="font-weight:400;color:var(--muted);">(for export)</span></label><input type="email" id="vreg_landlord_email" placeholder="landlord@example.com"></div>
           <div style="display:flex;gap:8px;margin-top:4px;">
@@ -1137,7 +1146,7 @@
               <div id="vp_site" style="font-size:18px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:4px;color:#1A1A1A;">Site Name<br>Vehicle Registration</div>
               <div id="vp_prod" style="text-align:center;font-size:12px;color:#666;margin-bottom:2px;">Production: —</div>
               <div id="vp_dates" style="text-align:center;font-size:11px;color:#999;margin-bottom:12px;">Crew Parking Dates: —</div>
-              <div style="background:#F2F1ED;border-radius:6px;padding:10px 12px;font-size:11px;color:#666;line-height:1.5;margin-bottom:12px;text-align:center;">Please fill in the form below to register your vehicle on site…</div>
+              <div id="vp_disclaimer" style="background:#F2F1ED;border-radius:6px;padding:10px 12px;font-size:11px;color:#666;line-height:1.5;margin-bottom:12px;text-align:center;">Please fill in the form below to register your vehicle on site…</div>
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Name *</div>
                 <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Vehicle Registration *</div>
@@ -1191,7 +1200,7 @@
     <div class="mode-section" id="section-pcn" class="mode-section grid-layout" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
 
       <!-- LEFT: Create form + form list -->
-      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
         <div class="form-card">
           <h2>Create PCN form</h2>
           <div class="field"><label>Site name</label><input type="text" id="pcn_site" placeholder="e.g. CitiPark Barbican" oninput="updatePcnPreview()"></div>
@@ -2671,6 +2680,8 @@
       if (el) el.style.display = 'none';
     });
     // vreg and pcn have their own internal right panels — hide the global right panel
+    var layout = document.querySelector('.layout');
+    if (layout) layout.classList.toggle('full-width', mode === 'vreg' || mode === 'pcn');
     var rightWrap = document.querySelector('.right-panel-wrap');
     if (rightWrap) rightWrap.style.display = (mode === 'vreg' || mode === 'pcn') ? 'none' : '';
     if (mode === 'vreg' || mode === 'pcn') return;
@@ -5053,6 +5064,8 @@
   }
 
   function clearVregForm() {
+    var disclaimerDefault = 'Please fill in the form below to register your vehicle on site. Make sure to log your vehicle when arriving on site or ahead of arrival each day. It is the responsibility of the production to ensure all vehicles are logged each day including unit cars and minibuses, deliveries, taxis etc. Failure to register vehicles will result in PCN charges being issued.';
+    var dEl = document.getElementById('vreg_disclaimer'); if (dEl) dEl.value = disclaimerDefault;
     ['vreg_site','vreg_production','vreg_ref','vreg_start','vreg_end','vreg_landlord_email'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
@@ -5111,7 +5124,7 @@
     try {
       var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/create', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({site, production, bookingRef, startDate, endDate, parkingAreas: areas, landlordEmail: landlord})
+        body: JSON.stringify({site, production, bookingRef, startDate, endDate, parkingAreas: areas, landlordEmail: landlord, disclaimer: (document.getElementById('vreg_disclaimer')||{}).value || ''})
       });
       var data = await res.json();
       if (!data.ok) throw new Error(data.error);
