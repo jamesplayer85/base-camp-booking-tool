@@ -33,11 +33,9 @@
     .status-dot.live { background: var(--green); }
 
     .layout { display: grid; grid-template-columns: 60% 40%; min-height: calc(100vh - 60px); }
-    .layout.full-width { grid-template-columns: 1fr 0; }
     .layout.full-width .preview-panel { display: none; }
-    .layout.full-width .form-panel { overflow: visible; padding: 24px; }
-    .layout.full-width .mode-section.grid-layout.active { display: grid !important; height: calc(100vh - 140px); }
-    .layout.full-width .mode-section.active:not(.grid-layout) { display: none !important; }
+    .layout.full-width .form-panel { overflow: visible; padding: 24px; grid-column: 1 / -1; }
+    .mode-section.grid-layout.active { display: grid !important; }
 
     .form-panel { padding: 36px 44px; overflow-y: auto; }
     .panel-header { margin-bottom: 28px; }
@@ -1085,7 +1083,7 @@
     <!-- ══════════════════════════════════
          VEHICLE REG MODE
     ══════════════════════════════════ -->
-    <div class="mode-section" id="section-vreg" class="mode-section grid-layout" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
+    <div class="mode-section grid-layout" id="section-vreg" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
 
       <!-- LEFT: Create form + form list -->
       <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
@@ -1197,7 +1195,7 @@
     <!-- ══════════════════════════════════
          PCN MODE
     ══════════════════════════════════ -->
-    <div class="mode-section" id="section-pcn" class="mode-section grid-layout" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
+    <div class="mode-section grid-layout" id="section-pcn" style="grid-template-columns:400px 1fr;gap:20px;height:calc(100vh - 160px);overflow:hidden;">
 
       <!-- LEFT: Create form + form list -->
       <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
@@ -2681,10 +2679,17 @@
     });
     // vreg and pcn have their own internal right panels — hide the global right panel
     var layout = document.querySelector('.layout');
-    if (layout) layout.classList.toggle('full-width', mode === 'vreg' || mode === 'pcn');
+    var isFullWidth = (mode === 'vreg' || mode === 'pcn');
+    if (layout) {
+      if (isFullWidth) {
+        layout.style.gridTemplateColumns = '1fr';
+      } else {
+        layout.style.gridTemplateColumns = '';
+      }
+    }
     var rightWrap = document.querySelector('.right-panel-wrap');
-    if (rightWrap) rightWrap.style.display = (mode === 'vreg' || mode === 'pcn') ? 'none' : '';
-    if (mode === 'vreg' || mode === 'pcn') return;
+    if (rightWrap) rightWrap.style.display = isFullWidth ? 'none' : '';
+    if (isFullWidth) return;
     var target = mode === 'qrgen'   ? 'rp_qr'
                : mode === 'po'      ? 'rp_po'
                : mode === 'agree'   ? 'rp_agree'
