@@ -125,8 +125,9 @@
     .setup-link { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; margin-top:12px; text-decoration:underline; font-family:'DM Sans',sans-serif; }
     .setup-link:hover { color:var(--teal); }
     /* ── Mode tabs ── */
-    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; background: var(--dark); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
-    .mode-tab { padding: 13px 10px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
+    .mode-tabs { display: flex; gap: 0; background: var(--dark); overflow: hidden; }
+    .mode-tabs::-webkit-scrollbar { display: none; }
+    .mode-tab { padding: 13px 14px; flex-shrink: 0; white-space: nowrap; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
     .mode-tab:last-child { border-right: none; }
     .mode-tab.active-prod,
     .mode-tab.active-land,
@@ -298,17 +299,23 @@
     </div>
 
     <!-- Mode tabs -->
-    <div class="mode-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;">
-      <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
-      <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
-      <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
-      <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Generator</button>
-      <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 PO Generator</button>
-      <button class="mode-tab" id="tab-agree" onclick="switchMode('agree')">📝 Hire Agreement</button>
-      <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Calendars</button>
-      <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Master Map</button>
-      <button class="mode-tab" id="tab-finance" onclick="switchMode('finance')">📊 Booking Data</button>
-      <button class="mode-tab" id="tab-todo" onclick="switchMode('todo')">✅ To Do</button>
+    <div style="display:flex;align-items:center;gap:0;background:var(--dark);border-radius:10px;overflow:hidden;margin-bottom:24px;">
+      <button onclick="scrollTabs(-1)" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:0 14px;cursor:pointer;font-size:18px;height:100%;flex-shrink:0;min-height:44px;transition:.15s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">‹</button>
+      <div class="mode-tabs" id="modeTabsScroll" style="display:flex;overflow-x:auto;flex:1;scrollbar-width:none;-ms-overflow-style:none;scroll-behavior:smooth;">
+        <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
+        <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
+        <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
+        <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Generator</button>
+        <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 PO Generator</button>
+        <button class="mode-tab" id="tab-agree" onclick="switchMode('agree')">📝 Hire Agreement</button>
+        <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Calendars</button>
+        <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Master Map</button>
+        <button class="mode-tab" id="tab-finance" onclick="switchMode('finance')">📊 Booking Data</button>
+        <button class="mode-tab" id="tab-todo" onclick="switchMode('todo')">✅ To Do</button>
+        <button class="mode-tab" id="tab-vreg" onclick="switchMode('vreg')">🚗 Vehicle Reg</button>
+        <button class="mode-tab" id="tab-pcn" onclick="switchMode('pcn')">⚠️ PCN</button>
+      </div>
+      <button onclick="scrollTabs(1)" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:0 14px;cursor:pointer;font-size:18px;height:100%;flex-shrink:0;min-height:44px;transition:.15s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">›</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -1066,7 +1073,137 @@
         Select your name above to view your tasks
       </div>
 
+
     </div><!-- /section-todo -->
+
+    <!-- ══════════════════════════════════
+         VEHICLE REG MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-vreg">
+      <div style="display:grid;grid-template-columns:380px 1fr;gap:24px;height:100%;">
+
+        <!-- Left: create/list forms -->
+        <div>
+          <div class="form-card" id="vregCreateCard">
+            <h2>Create vehicle reg form</h2>
+            <div class="field"><label>Site name</label><input type="text" id="vreg_site" placeholder="e.g. CitiPark Barbican"></div>
+            <div class="field"><label>Production / company</label><input type="text" id="vreg_production" placeholder="e.g. Clover"></div>
+            <div class="field"><label>Booking reference</label><input type="text" id="vreg_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;"></div>
+            <div class="field-row">
+              <div class="field"><label>Start date</label><input type="date" id="vreg_start"></div>
+              <div class="field"><label>End date</label><input type="date" id="vreg_end"></div>
+            </div>
+            <div class="field">
+              <label>Parking areas <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+              <div id="vregParkingAreas"></div>
+              <button type="button" onclick="addVregParkingArea()" style="margin-top:6px;background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:12px;color:var(--teal);cursor:pointer;font-family:'DM Sans',sans-serif;">+ Add parking area</button>
+            </div>
+            <div class="field"><label>Landlord email <span style="font-weight:400;color:var(--muted);">(optional)</span></label><input type="email" id="vreg_landlord_email" placeholder="landlord@example.com"></div>
+            <div style="margin-top:12px;">
+              <button onclick="createVregForm()" class="btn-teal" style="width:100%;">Create form + generate QR</button>
+            </div>
+            <div id="vregCreateStatus" style="margin-top:8px;font-size:12px;"></div>
+          </div>
+
+          <div class="form-card" style="margin-top:16px;">
+            <h2>Existing forms</h2>
+            <div id="vregFormList"><div style="color:var(--muted);font-size:13px;">Loading…</div></div>
+          </div>
+        </div>
+
+        <!-- Right: submissions view -->
+        <div id="vregRightPanel" style="background:#fff;border-radius:10px;border:1px solid var(--border);padding:20px;overflow-y:auto;">
+          <div id="vregQrPanel" style="display:none;text-align:center;">
+            <canvas id="vregQrCanvas" width="400" height="400" style="max-width:320px;border:4px solid var(--teal);border-radius:8px;"></canvas>
+            <div style="margin-top:12px;">
+              <button onclick="downloadVregQr()" class="btn-teal" style="margin-right:8px;">↓ Download QR</button>
+              <button onclick="copyVregUrl()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy URL</button>
+            </div>
+            <div id="vregFormUrl" style="margin-top:8px;font-size:11px;color:var(--muted);word-break:break-all;"></div>
+          </div>
+
+          <div id="vregSubmissionsPanel" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+              <div>
+                <h3 id="vregSubsTitle" style="margin:0;font-size:15px;font-weight:700;"></h3>
+                <p id="vregSubsCount" style="margin:4px 0 0;font-size:12px;color:var(--muted);"></p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <select id="vregDateFilter" onchange="loadVregSubmissions()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;"></select>
+                <input type="text" id="vregSearch" placeholder="Search name or reg…" oninput="loadVregSubmissions()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;width:160px;">
+                <button onclick="downloadVregExcel()" class="btn-teal" style="font-size:12px;padding:7px 14px;">↓ Excel</button>
+                <button onclick="emailVregToLandlord()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">✉ Email landlord</button>
+              </div>
+            </div>
+            <div id="vregSubsTable"></div>
+          </div>
+
+          <div id="vregWelcome" style="color:var(--muted);font-size:13px;text-align:center;padding:40px 0;">
+            Create a form or select one from the list to view submissions
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /section-vreg -->
+
+    <!-- ══════════════════════════════════
+         PCN MODE
+    ══════════════════════════════════ -->
+    <div class="mode-section" id="section-pcn">
+      <div style="display:grid;grid-template-columns:380px 1fr;gap:24px;">
+
+        <!-- Left -->
+        <div>
+          <div class="form-card">
+            <h2>Create PCN form</h2>
+            <div class="field"><label>Site name</label><input type="text" id="pcn_site" placeholder="e.g. CitiPark Barbican"></div>
+            <div class="field"><label>Production / company</label><input type="text" id="pcn_production" placeholder="e.g. Clover"></div>
+            <div class="field"><label>Booking reference <span style="font-weight:400;color:var(--muted);">(to cross-reference vehicle log)</span></label><input type="text" id="pcn_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;"></div>
+            <div class="field-row">
+              <div class="field"><label>Start date</label><input type="date" id="pcn_start"></div>
+              <div class="field"><label>End date</label><input type="date" id="pcn_end"></div>
+            </div>
+            <button onclick="createPcnForm()" class="btn-teal" style="width:100%;margin-top:4px;">Create PCN form + QR</button>
+            <div id="pcnCreateStatus" style="margin-top:8px;font-size:12px;"></div>
+          </div>
+
+          <div class="form-card" style="margin-top:16px;">
+            <h2>PCN forms</h2>
+            <div id="pcnFormList"><div style="color:var(--muted);font-size:13px;">Loading…</div></div>
+          </div>
+
+          <div class="form-card" style="margin-top:16px;">
+            <h2>Search all PCNs</h2>
+            <div class="field">
+              <input type="text" id="pcnGlobalSearch" placeholder="Search by reg, name or PCN ref…" oninput="loadAllPcns()" style="width:100%;">
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+              <button onclick="setPcnStatusFilter('')"       id="pcnf_all"      class="qtf-btn qtf-active" style="font-size:11px;">All</button>
+              <button onclick="setPcnStatusFilter('active')" id="pcnf_active"   class="qtf-btn"            style="font-size:11px;">Active</button>
+              <button onclick="setPcnStatusFilter('submitted')" id="pcnf_sub"   class="qtf-btn"            style="font-size:11px;">Submitted</button>
+              <button onclick="setPcnStatusFilter('cancelled')" id="pcnf_can"   class="qtf-btn"            style="font-size:11px;">Cancelled</button>
+              <button onclick="setPcnStatusFilter('paid')"   id="pcnf_paid"     class="qtf-btn"            style="font-size:11px;">Paid</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right -->
+        <div style="background:#fff;border-radius:10px;border:1px solid var(--border);padding:20px;overflow-y:auto;max-height:calc(100vh - 200px);">
+          <div id="pcnQrPanel" style="display:none;text-align:center;margin-bottom:20px;">
+            <canvas id="pcnQrCanvas" width="400" height="400" style="max-width:280px;border:4px solid var(--teal);border-radius:8px;"></canvas>
+            <div style="margin-top:10px;">
+              <button onclick="downloadPcnQr()" class="btn-teal" style="margin-right:8px;font-size:12px;padding:7px 14px;">↓ Download QR</button>
+              <button onclick="copyPcnUrl()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy URL</button>
+            </div>
+            <div id="pcnFormUrl" style="margin-top:6px;font-size:11px;color:var(--muted);word-break:break-all;"></div>
+          </div>
+          <div id="pcnSubsContent">
+            <div style="color:var(--muted);font-size:13px;text-align:center;padding:40px 0;">Create a form or select one to view PCN submissions</div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /section-pcn -->
 
     <!-- Per-tab history panels -->
     <div class="history-panel" id="history-prod" style="display:none;">
@@ -2475,12 +2612,12 @@
   var currentMode = 'prod';
   function switchMode(mode) {
     currentMode = mode;
-    ['prod','land','info','qrgen','po','agree','diary','map','finance','todo'].forEach(function(m) {
+    ['prod','land','info','qrgen','po','agree','diary','map','finance','todo','vreg','pcn'].forEach(function(m) {
       document.getElementById('section-' + m).classList.toggle('active', m === mode);
       var tab = document.getElementById('tab-' + m);
       if (tab) tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map', finance: 'Booking Data', todo: 'To Do' };
+    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map', finance: 'Booking Data', todo: 'To Do', vreg: 'Vehicle Reg', pcn: 'PCN' };
     document.getElementById('modeTitle').textContent = titles[mode];
     updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
@@ -4339,6 +4476,11 @@
     if (searchLatLng) showNearestSites(searchLatLng, document.getElementById('mapPostcode').value || 'your location');
   }
 
+  function scrollTabs(dir) {
+    var el = document.getElementById('modeTabsScroll');
+    if (el) el.scrollBy({ left: dir * 200, behavior: 'smooth' });
+  }
+
   function onMapSiteSelect() {
     var name = document.getElementById('mapSiteSelect').value;
     if (!name) return;
@@ -4741,6 +4883,380 @@
     el.innerHTML = html;
   }
 
+
+
+  // ── Vehicle Reg Tab ────────────────────────────────────────────────────
+  var vregCurrentRef  = null;
+  var vregCurrentForm = null;
+  var vregAllSubs     = [];
+  var pcnStatusFilter = '';
+  var pcnCurrentRef   = null;
+
+  function addVregParkingArea(val) {
+    var wrap = document.getElementById('vregParkingAreas');
+    var row  = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
+    row.innerHTML = '<input type="text" placeholder="e.g. Above Ground Car Park" value="'+(val||'')+'" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">'
+      + '<button type="button" onclick="this.parentNode.remove()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:0 10px;font-size:14px;color:#e53935;cursor:pointer;">✕</button>';
+    wrap.appendChild(row);
+  }
+
+  function getVregParkingAreas() {
+    return Array.from(document.querySelectorAll('#vregParkingAreas input')).map(i => i.value.trim()).filter(Boolean);
+  }
+
+  function getDatesInRange(start, end) {
+    var dates = [], d = new Date(start);
+    var e = new Date(end);
+    while (d <= e) {
+      dates.push(d.toISOString().slice(0,10));
+      d.setDate(d.getDate()+1);
+    }
+    return dates;
+  }
+
+  function formatDateLabel(dateStr) {
+    var parts = dateStr.split('-').map(Number);
+    return new Intl.DateTimeFormat('en-GB', {day:'numeric',month:'long',year:'numeric'}).format(new Date(parts[0],parts[1]-1,parts[2]));
+  }
+
+  async function createVregForm() {
+    var site       = document.getElementById('vreg_site').value.trim();
+    var production = document.getElementById('vreg_production').value.trim();
+    var bookingRef = document.getElementById('vreg_ref').value.trim().toUpperCase();
+    var startDate  = document.getElementById('vreg_start').value;
+    var endDate    = document.getElementById('vreg_end').value;
+    var landlord   = document.getElementById('vreg_landlord_email').value.trim();
+    var areas      = getVregParkingAreas();
+    var statusEl   = document.getElementById('vregCreateStatus');
+    if (!site || !production || !startDate || !endDate) { statusEl.textContent = 'Please fill in all required fields.'; statusEl.style.color='#e53935'; return; }
+
+    try {
+      var res = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/create', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({site,production,bookingRef,startDate,endDate,parkingAreas:areas,landlordEmail:landlord})
+      });
+      var data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      statusEl.textContent = 'Form created: ' + data.form.ref;
+      statusEl.style.color = 'var(--teal)';
+      showVregQr(data.form);
+      loadVregFormList();
+    } catch(e) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color='#e53935'; }
+  }
+
+  function showVregQr(form) {
+    vregCurrentForm = form;
+    vregCurrentRef  = form.ref;
+    var url = 'https://vehiclereg.thebasecampco.com?ref=' + form.ref;
+    document.getElementById('vregFormUrl').textContent = url;
+    document.getElementById('vregWelcome').style.display = 'none';
+    document.getElementById('vregQrPanel').style.display = 'block';
+    document.getElementById('vregSubmissionsPanel').style.display = 'none';
+
+    // Generate QR using the same QR library as the QR tab
+    var canvas = document.getElementById('vregQrCanvas');
+    if (window.QRCode) {
+      var qr = new QRCode(canvas, {text:url,width:400,height:400,colorDark:'#006766',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+    } else {
+      // Draw placeholder
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#006766';
+      ctx.fillRect(0,0,400,400);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(url, 200, 200);
+    }
+  }
+
+  function downloadVregQr() {
+    var canvas = document.getElementById('vregQrCanvas');
+    var link = document.createElement('a');
+    link.download = 'VehicleReg-QR-' + (vregCurrentRef||'form') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function copyVregUrl() {
+    navigator.clipboard.writeText('https://vehiclereg.thebasecampco.com?ref=' + vregCurrentRef);
+    showToast('URL copied', 'success');
+  }
+
+  async function loadVregFormList() {
+    try {
+      var res = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/list');
+      var data = await res.json();
+      var el = document.getElementById('vregFormList');
+      if (!data.forms || !data.forms.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No forms yet.</div>'; return; }
+      el.innerHTML = data.forms.map(function(f) {
+        return '<div onclick="selectVregForm(\'' + f.ref + '\')" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff;" onmouseover="this.style.borderColor=\'var(--teal)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+          + '<div style="font-size:13px;font-weight:600;color:var(--dark);">' + escHtml(f.site) + ' — ' + escHtml(f.production) + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);">' + f.ref + ' · ' + formatDateLabel(f.startDate) + (f.startDate !== f.endDate ? ' → ' + formatDateLabel(f.endDate) : '') + '</div>'
+          + '</div>';
+      }).join('');
+    } catch(e) { console.error('loadVregFormList:', e); }
+  }
+
+  async function selectVregForm(ref) {
+    var res = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/get?ref=' + encodeURIComponent(ref));
+    var data = await res.json();
+    if (!data.ok) return;
+    vregCurrentForm = data.form;
+    vregCurrentRef  = ref;
+    // Populate date filter
+    var sel = document.getElementById('vregDateFilter');
+    var dates = getDatesInRange(data.form.startDate, data.form.endDate);
+    sel.innerHTML = '<option value="">All dates</option>' + dates.map(function(d) {
+      return '<option value="' + d + '">' + formatDateLabel(d) + '</option>';
+    }).join('');
+    document.getElementById('vregSubsTitle').textContent = data.form.site + ' — ' + data.form.production;
+    document.getElementById('vregWelcome').style.display = 'none';
+    document.getElementById('vregQrPanel').style.display = 'none';
+    document.getElementById('vregSubmissionsPanel').style.display = 'block';
+    loadVregSubmissions();
+  }
+
+  async function loadVregSubmissions() {
+    if (!vregCurrentRef) return;
+    var date   = document.getElementById('vregDateFilter').value;
+    var search = document.getElementById('vregSearch').value;
+    var url    = 'https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/submissions?ref=' + encodeURIComponent(vregCurrentRef);
+    if (date)   url += '&date='   + encodeURIComponent(date);
+    if (search) url += '&search=' + encodeURIComponent(search);
+    try {
+      var res  = await fetch(url);
+      var data = await res.json();
+      vregAllSubs = data.submissions || [];
+      renderVregTable(vregAllSubs);
+    } catch(e) { console.error(e); }
+  }
+
+  var DATE_COLOURS = ['#e8f4fd','#fef9e7','#eafaf1','#fdf2f8','#f4ecf7','#fef5e4','#e8f8f5','#fdedec','#eaf2ff','#f0fff4'];
+  function renderVregTable(subs) {
+    var el = document.getElementById('vregSubsTable');
+    document.getElementById('vregSubsCount').textContent = subs.length + ' entr' + (subs.length===1?'y':'ies');
+    if (!subs.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">No submissions yet.</div>'; return; }
+    // Build date→colour map
+    var dates = [...new Set(subs.map(s => s.dateOfEntry))].sort();
+    var colourMap = {};
+    dates.forEach(function(d,i) { colourMap[d] = DATE_COLOURS[i % DATE_COLOURS.length]; });
+    var rows = subs.map(function(s) {
+      var bg = colourMap[s.dateOfEntry] || '#fff';
+      return '<tr style="background:' + bg + ';">'
+        + '<td style="padding:8px 10px;font-weight:600;">' + escHtml(s.name) + '</td>'
+        + '<td style="padding:8px 10px;font-family:monospace;font-weight:700;">' + escHtml(s.vehicleReg) + '</td>'
+        + '<td style="padding:8px 10px;">' + formatDateLabel(s.dateOfEntry) + '</td>'
+        + '<td style="padding:8px 10px;color:var(--muted);">' + escHtml(s.parkingArea||'—') + '</td>'
+        + '<td style="padding:8px 10px;color:var(--muted);font-size:11px;">' + new Date(s.submittedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + '</td>'
+        + '</tr>';
+    }).join('');
+    el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+      + '<thead><tr style="background:var(--dark);color:#fff;">'
+      + '<th style="padding:8px 10px;text-align:left;">Name</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Vehicle Reg</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Date</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Parking Area</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Time</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  async function downloadVregExcel() {
+    if (!vregCurrentForm) return;
+    var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/submissions?ref=' + encodeURIComponent(vregCurrentRef));
+    var data = await res.json();
+    var subs = data.submissions || [];
+    var f    = vregCurrentForm;
+    // Build CSV with BOM for Excel
+    var rows = [['Name','Vehicle Registration','Date Of Entry','Parking Area','Submitted At']];
+    subs.forEach(function(s) { rows.push([s.name,s.vehicleReg,formatDateLabel(s.dateOfEntry),s.parkingArea||'',s.submittedAt]); });
+    var csv = '\uFEFF' + rows.map(function(r) { return r.map(function(c) { return '"' + String(c||'').replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url;
+    a.download = f.ref + '-' + f.production.replace(/[^a-zA-Z0-9]/g,'-') + '-VehicleReg.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function emailVregToLandlord() {
+    if (!vregCurrentForm || !vregCurrentForm.landlordEmail) {
+      showToast('No landlord email set for this form', 'error');
+      return;
+    }
+    showToast('Sending to ' + vregCurrentForm.landlordEmail + '…', 'success');
+    // TODO: implement email route on worker
+  }
+
+  // ── PCN Tab ────────────────────────────────────────────────────────────
+  function setPcnStatusFilter(status) {
+    pcnStatusFilter = status;
+    ['all','active','sub','can','paid'].forEach(function(k) {
+      var btn = document.getElementById('pcnf_' + k);
+      if (btn) btn.classList.toggle('qtf-active', (k==='all' && !status) || k===status.slice(0,3));
+    });
+    loadAllPcns();
+  }
+
+  async function createPcnForm() {
+    var site       = document.getElementById('pcn_site').value.trim();
+    var production = document.getElementById('pcn_production').value.trim();
+    var bookingRef = document.getElementById('pcn_ref').value.trim().toUpperCase();
+    var startDate  = document.getElementById('pcn_start').value;
+    var endDate    = document.getElementById('pcn_end').value;
+    var statusEl   = document.getElementById('pcnCreateStatus');
+    if (!site || !production || !startDate || !endDate) { statusEl.textContent = 'Please fill in all required fields.'; statusEl.style.color='#e53935'; return; }
+    try {
+      var res = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/create', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({site,production,bookingRef,startDate,endDate})
+      });
+      var data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      statusEl.textContent = 'PCN form created: ' + data.form.ref;
+      statusEl.style.color = 'var(--teal)';
+      showPcnQr(data.form);
+      loadPcnFormList();
+    } catch(e) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color='#e53935'; }
+  }
+
+  function showPcnQr(form) {
+    pcnCurrentRef = form.ref;
+    var url = 'https://pcn.thebasecampco.com?ref=' + form.ref;
+    document.getElementById('pcnFormUrl').textContent = url;
+    document.getElementById('pcnQrPanel').style.display = 'block';
+    var canvas = document.getElementById('pcnQrCanvas');
+    if (window.QRCode) {
+      canvas.getContext('2d').clearRect(0,0,400,400);
+      new QRCode(canvas, {text:url,width:400,height:400,colorDark:'#006766',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+    }
+  }
+
+  function downloadPcnQr() {
+    var canvas = document.getElementById('pcnQrCanvas');
+    var link = document.createElement('a');
+    link.download = 'PCN-QR-' + (pcnCurrentRef||'form') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function copyPcnUrl() {
+    navigator.clipboard.writeText('https://pcn.thebasecampco.com?ref=' + pcnCurrentRef);
+    showToast('URL copied', 'success');
+  }
+
+  async function loadPcnFormList() {
+    try {
+      var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/list');
+      var data = await res.json();
+      var el   = document.getElementById('pcnFormList');
+      if (!data.forms || !data.forms.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No forms yet.</div>'; return; }
+      el.innerHTML = data.forms.map(function(f) {
+        return '<div onclick="selectPcnForm(\'' + f.ref + '\')" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff;" onmouseover="this.style.borderColor=\'var(--teal)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+          + '<div style="font-size:13px;font-weight:600;color:var(--dark);">' + escHtml(f.site) + ' — ' + escHtml(f.production) + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);">' + f.ref + ' · ' + formatDateLabel(f.startDate) + (f.startDate !== f.endDate ? ' → ' + formatDateLabel(f.endDate) : '') + '</div>'
+          + '</div>';
+      }).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function selectPcnForm(ref) {
+    pcnCurrentRef = ref;
+    var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/get?ref=' + encodeURIComponent(ref));
+    var data = await res.json();
+    if (!data.ok) return;
+    showPcnQr(data.form);
+    loadPcnSubs(ref);
+  }
+
+  async function loadPcnSubs(ref) {
+    var url = 'https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/submissions?ref=' + encodeURIComponent(ref||pcnCurrentRef);
+    try {
+      var res  = await fetch(url);
+      var data = await res.json();
+      renderPcnTable(data.submissions || []);
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadAllPcns() {
+    var search = document.getElementById('pcnGlobalSearch').value;
+    var url = 'https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/submissions?';
+    if (pcnStatusFilter) url += 'status=' + encodeURIComponent(pcnStatusFilter) + '&';
+    if (search) url += 'search=' + encodeURIComponent(search);
+    try {
+      var res  = await fetch(url);
+      var data = await res.json();
+      renderPcnTable(data.submissions || []);
+    } catch(e) { console.error(e); }
+  }
+
+  var PCN_STATUS_COLOURS = {
+    active:    '#fee2e2',
+    submitted: '#fef9c3',
+    cancelled: '#dcfce7',
+    paid:      '#e0e7ff'
+  };
+  var PCN_STATUS_TEXT = {
+    active:'Active', submitted:'Submitted for cancellation', cancelled:'Cancelled', paid:'Paid'
+  };
+
+  function renderPcnTable(subs) {
+    var el = document.getElementById('pcnSubsContent');
+    if (!subs.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px 0;">No PCNs found.</div>';
+      return;
+    }
+    var rows = subs.map(function(s) {
+      var bg = PCN_STATUS_COLOURS[s.status] || '#fff';
+      var regCheck = s.registered
+        ? '<span style="color:#059669;font-weight:700;" title="Vehicle was registered on this date">✓ Registered</span>'
+        : '<span style="color:#e53935;font-weight:700;" title="Vehicle not found in vehicle log">✗ Not found</span>';
+      return '<tr style="background:' + bg + ';">'
+        + '<td style="padding:8px 10px;">' + escHtml(s.name) + '<br><span style="font-size:10px;color:var(--muted);">' + escHtml(s.email) + '</span></td>'
+        + '<td style="padding:8px 10px;font-family:monospace;font-weight:700;">' + escHtml(s.vehicleReg) + '</td>'
+        + '<td style="padding:8px 10px;font-size:11px;">' + escHtml(s.pcnRef) + '<br><span style="color:var(--muted);">' + escHtml(s.issuingAuthority||'') + '</span></td>'
+        + '<td style="padding:8px 10px;">' + formatDateLabel(s.dateOfOffence) + '</td>'
+        + '<td style="padding:8px 10px;">' + regCheck + '</td>'
+        + '<td style="padding:8px 10px;">'
+        + '<select onchange="updatePcnStatus(\'' + s.formRef + '\',\'' + s.id + '\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--border);border-radius:6px;font-family:inherit;">'
+        + ['active','submitted','cancelled','paid'].map(function(st) {
+            return '<option value="' + st + '"' + (s.status===st?' selected':'') + '>' + PCN_STATUS_TEXT[st] + '</option>';
+          }).join('')
+        + '</select>'
+        + '</td>'
+        + '<td style="padding:8px 10px;">' + (s.fileUrl ? '<a href="' + s.fileUrl + '" target="_blank" style="color:var(--teal);font-size:11px;font-weight:600;">View file</a>' : '<span style="color:var(--muted);font-size:11px;">No file</span>') + '</td>'
+        + '</tr>';
+    }).join('');
+    el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+      + '<thead><tr style="background:var(--dark);color:#fff;">'
+      + '<th style="padding:8px 10px;text-align:left;">Name / Email</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Vehicle Reg</th>'
+      + '<th style="padding:8px 10px;text-align:left;">PCN Ref</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Date</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Reg check</th>'
+      + '<th style="padding:8px 10px;text-align:left;">Status</th>'
+      + '<th style="padding:8px 10px;text-align:left;">File</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  async function updatePcnStatus(formRef, id, status) {
+    try {
+      await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/update', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({formRef, id, status})
+      });
+      showToast('Status updated', 'success');
+    } catch(e) { showToast('Update failed: ' + e.message, 'error'); }
+  }
+
+  // Load lists when tabs are switched
+  var _origSwitchMode = switchMode;
+  switchMode = function(mode) {
+    _origSwitchMode(mode);
+    if (mode === 'vreg') { loadVregFormList(); }
+    if (mode === 'pcn')  { loadPcnFormList(); loadAllPcns(); }
+  };
 
   // ── Booking Data / Financial Tab ──────────────────────────────────
   var financeLoaded   = false;
