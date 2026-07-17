@@ -35,7 +35,7 @@
     .layout { display: grid; grid-template-columns: 60% 40%; min-height: calc(100vh - 60px); }
     .layout.full-width .preview-panel { display: none; }
     .layout.full-width .form-panel { overflow: visible; padding: 24px; grid-column: 1 / -1; }
-    .mode-section.grid-layout.active { display: grid !important; }
+
 
     .form-panel { padding: 36px 44px; overflow-y: auto; }
     .panel-header { margin-bottom: 28px; }
@@ -128,8 +128,7 @@
     .setup-link { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; margin-top:12px; text-decoration:underline; font-family:'DM Sans',sans-serif; }
     .setup-link:hover { color:var(--teal); }
     /* ── Mode tabs ── */
-    .mode-tabs { display: flex; gap: 0; background: var(--dark); overflow: hidden; }
-    .mode-tabs::-webkit-scrollbar { display: none; }
+    .mode-tabs { display: grid; gap: 0; background: var(--dark); overflow: hidden; }
     .mode-tab { padding: 13px 14px; flex-shrink: 0; white-space: nowrap; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
     .mode-tab:last-child { border-right: none; }
     .mode-tab.active-prod,
@@ -140,10 +139,14 @@
     .mode-tab.active-agree,
     .mode-tab.active-diary,
     .mode-tab.active-map   { background: #006766; color: #fff; }
+    .mode-tab.active-finance,
+    .mode-tab.active-todo,
+    .mode-tab.active-vreg,
+    .mode-tab.active-pcn  { background: #006766; color: #fff; }
     .mode-tab:not([class*="active"]):hover { background: #1A2A26; color: #fff; }
     .mode-section { display: none; }
     .mode-section.active { display: block; }
-    .mode-section.active.grid-layout { display: grid; }
+
 
     .history-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-top: 32px; overflow: hidden; }
     .history-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; border-bottom: 1px solid var(--border); }
@@ -303,15 +306,16 @@
     </div>
 
     <!-- Mode tabs -->
-    <div style="display:flex;align-items:center;gap:0;background:var(--dark);border-radius:10px;overflow:hidden;margin-bottom:24px;">
-      <button onclick="scrollTabs(-1)" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:0 14px;cursor:pointer;font-size:18px;height:100%;flex-shrink:0;min-height:44px;transition:.15s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">‹</button>
-      <div class="mode-tabs" id="modeTabsScroll" style="display:flex;overflow-x:auto;flex:1;scrollbar-width:none;-ms-overflow-style:none;scroll-behavior:smooth;">
-        <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production Confirmation</button>
-        <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord Confirmation</button>
+    <div style="background:var(--dark);border-radius:10px;overflow:hidden;margin-bottom:24px;">
+      <div class="mode-tabs" style="display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid #1A2A26;">
+        <button class="mode-tab active-prod" id="tab-prod" onclick="switchMode('prod')">📋 Production</button>
+        <button class="mode-tab" id="tab-land" onclick="switchMode('land')">💷 Landlord</button>
         <button class="mode-tab" id="tab-info" onclick="switchMode('info')">📍 Info Sheet</button>
         <button class="mode-tab" id="tab-qrgen" onclick="switchMode('qrgen')">🔲 QR Generator</button>
         <button class="mode-tab" id="tab-po" onclick="switchMode('po')">📄 PO Generator</button>
         <button class="mode-tab" id="tab-agree" onclick="switchMode('agree')">📝 Hire Agreement</button>
+      </div>
+      <div class="mode-tabs" style="display:grid;grid-template-columns:repeat(6,1fr);">
         <button class="mode-tab" id="tab-diary" onclick="switchMode('diary')">📅 Calendars</button>
         <button class="mode-tab" id="tab-map" onclick="switchMode('map')">🗺️ Master Map</button>
         <button class="mode-tab" id="tab-finance" onclick="switchMode('finance')">📊 Booking Data</button>
@@ -319,7 +323,6 @@
         <button class="mode-tab" id="tab-vreg" onclick="switchMode('vreg')">🚗 Vehicle Reg</button>
         <button class="mode-tab" id="tab-pcn" onclick="switchMode('pcn')">⚠️ PCN</button>
       </div>
-      <button onclick="scrollTabs(1)" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:0 14px;cursor:pointer;font-size:18px;height:100%;flex-shrink:0;min-height:44px;transition:.15s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">›</button>
     </div>
 
     <!-- Site selector (shared across all modes) -->
@@ -1083,216 +1086,98 @@
     <!-- ══════════════════════════════════
          VEHICLE REG MODE
     ══════════════════════════════════ -->
-    <div class="mode-section grid-layout" id="section-vreg" style="grid-template-columns:400px 1fr;gap:20px;overflow:hidden;flex:1;min-height:0;">
+    <div class="mode-section" id="section-vreg">
 
-      <!-- LEFT: Create form + form list -->
-      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
-        <div class="form-card">
-          <h2>Create vehicle reg form</h2>
-          <div class="field"><label>Site name</label><input type="text" id="vreg_site" placeholder="e.g. CitiPark Barbican" oninput="updateVregPreview()"></div>
-          <div class="field"><label>Production / company</label><input type="text" id="vreg_production" placeholder="e.g. Clover" oninput="updateVregPreview()"></div>
-          <div class="field"><label>Booking reference</label><input type="text" id="vreg_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;" oninput="updateVregPreview()"></div>
-          <div class="field-row">
-            <div class="field"><label>Start date</label><input type="date" id="vreg_start" onchange="updateVregPreview()"></div>
-            <div class="field"><label>End date</label><input type="date" id="vreg_end" onchange="updateVregPreview()"></div>
-          </div>
-          <div class="field">
-            <label>Parking areas <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
-            <div id="vregParkingAreas"></div>
-            <button type="button" onclick="addVregParkingArea()" style="margin-top:6px;background:none;border:1px dashed var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--teal);cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;">+ Add parking area</button>
-          </div>
-          <div class="field">
-            <label>Registration notice text <span style="font-weight:400;color:var(--muted);">(shown on form)</span></label>
-            <textarea id="vreg_disclaimer" rows="4" style="width:100%;resize:vertical;font-family:'DM Sans',sans-serif;font-size:12px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;line-height:1.5;background:var(--bg);outline:none;" oninput="updateVregPreview()">Please fill in the form below to register your vehicle on site. Make sure to log your vehicle when arriving on site or ahead of arrival each day. It is the responsibility of the production to ensure all vehicles are logged each day including unit cars and minibuses, deliveries, taxis etc. Failure to register vehicles will result in PCN charges being issued.</textarea>
-          </div>
-          <div class="field"><label>Landlord email <span style="font-weight:400;color:var(--muted);">(for export)</span></label><input type="email" id="vreg_landlord_email" placeholder="landlord@example.com"></div>
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button onclick="createVregForm()" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create form + QR</button>
-            <button onclick="clearVregForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Clear</button>
-          </div>
-          <div id="vregCreateStatus" style="margin-top:8px;font-size:12px;"></div>
+      <div class="form-card">
+        <h2>Create vehicle reg form</h2>
+        <div class="field"><label>Site name</label><input type="text" id="vreg_site" placeholder="e.g. CitiPark Barbican" oninput="updateVregPreview()"></div>
+        <div class="field"><label>Production / company</label><input type="text" id="vreg_production" placeholder="e.g. Clover" oninput="updateVregPreview()"></div>
+        <div class="field"><label>Booking reference</label><input type="text" id="vreg_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;" oninput="updateVregPreview()"></div>
+        <div class="field-row">
+          <div class="field"><label>Start date</label><input type="date" id="vreg_start" onchange="updateVregPreview()"></div>
+          <div class="field"><label>End date</label><input type="date" id="vreg_end" onchange="updateVregPreview()"></div>
         </div>
-
-        <div class="form-card">
-          <h2>Forms</h2>
-          <div style="display:flex;gap:6px;margin-bottom:12px;">
-            <button onclick="setVregListFilter('active')" id="vregf_active" class="qtf-btn qtf-active" style="font-size:11px;">Active</button>
-            <button onclick="setVregListFilter('archived')" id="vregf_archived" class="qtf-btn" style="font-size:11px;">Archived</button>
-          </div>
-          <div id="vregFormList"><div style="color:var(--muted);font-size:12px;">Loading…</div></div>
+        <div class="field">
+          <label>Parking areas <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+          <div id="vregParkingAreas"></div>
+          <button type="button" onclick="addVregParkingArea()" style="margin-top:6px;background:none;border:1px dashed var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--teal);cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;">+ Add parking area</button>
         </div>
+        <div class="field">
+          <label>Registration notice text <span style="font-weight:400;color:var(--muted);">(editable — shown on form)</span></label>
+          <textarea id="vreg_disclaimer" rows="3" style="width:100%;resize:vertical;font-family:'DM Sans',sans-serif;font-size:12px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;line-height:1.5;outline:none;" oninput="updateVregPreview()">Please fill in the form below to register your vehicle on site. Make sure to log your vehicle when arriving on site or ahead of arrival each day. It is the responsibility of the production to ensure all vehicles are logged each day including unit cars and minibuses, deliveries, taxis etc. Failure to register vehicles will result in PCN charges being issued.</textarea>
+        </div>
+        <div class="field"><label>Landlord email <span style="font-weight:400;color:var(--muted);">(for export)</span></label><input type="email" id="vreg_landlord_email" placeholder="landlord@example.com"></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button onclick="createVregForm()" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create form + QR</button>
+          <button onclick="clearVregForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Clear</button>
+        </div>
+        <div id="vregCreateStatus" style="margin-top:8px;font-size:12px;"></div>
       </div>
 
-      <!-- RIGHT: Preview top + log bottom -->
-      <div style="display:flex;flex-direction:column;gap:16px;overflow:hidden;height:100%;">
-
-        <!-- Top: live form preview -->
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:0 0 auto;">
-          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);">Form preview</span>
-            <div id="vregActionBtns" style="display:none;gap:8px;display:flex;">
-              <button onclick="copyVregUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
-              <button onclick="downloadVregQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ QR code</button>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 180px;gap:0;">
-            <!-- Form preview -->
-            <div id="vregFormPreview" style="padding:20px;border-right:1px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;">
-              <div style="text-align:center;margin-bottom:16px;">
-                <img src="https://pub-3e81d3d6e43444f19a79eb95fb50622b.r2.dev/base-camp-logo.png" style="height:36px;width:auto;">
-              </div>
-              <div id="vp_site" style="font-size:18px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:4px;color:#1A1A1A;">Site Name<br>Vehicle Registration</div>
-              <div id="vp_prod" style="text-align:center;font-size:12px;color:#666;margin-bottom:2px;">Production: —</div>
-              <div id="vp_dates" style="text-align:center;font-size:11px;color:#999;margin-bottom:12px;">Crew Parking Dates: —</div>
-              <div id="vp_disclaimer" style="background:#F2F1ED;border-radius:6px;padding:10px 12px;font-size:11px;color:#666;line-height:1.5;margin-bottom:12px;text-align:center;">Please fill in the form below to register your vehicle on site…</div>
-              <div style="display:flex;flex-direction:column;gap:8px;">
-                <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Name *</div>
-                <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Vehicle Registration *</div>
-                <div id="vp_dates_select" style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Date of Entry ▾</div>
-                <div id="vp_parking" style="display:none;border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Parking Area ▾</div>
-                <div style="background:#006766;color:#fff;border-radius:6px;padding:8px 10px;font-size:11px;font-weight:700;text-align:center;">Register vehicle</div>
-              </div>
-            </div>
-            <!-- QR canvas (small, in preview) -->
-            <div style="padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-              <canvas id="vregQrCanvasSmall" width="140" height="140" style="border:3px solid var(--teal);border-radius:6px;"></canvas>
-              <div id="vregQrRef" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;word-break:break-all;"></div>
-            </div>
-          </div>
+      <div class="form-card" style="margin-top:16px;">
+        <h2>Forms</h2>
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <button onclick="setVregListFilter('active')"   id="vregf_active"   class="qtf-btn qtf-active" style="font-size:11px;">Active</button>
+          <button onclick="setVregListFilter('archived')" id="vregf_archived" class="qtf-btn"            style="font-size:11px;">Archived</button>
         </div>
-
-        <!-- Full size QR below preview -->
-        <div id="vregQrFullWrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:14px;">QR Code — scan to register</div>
-          <canvas id="vregQrCanvas" width="280" height="280" style="border:4px solid var(--teal);border-radius:8px;display:block;margin:0 auto;"></canvas>
-          <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
-            <button onclick="copyVregUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
-            <button onclick="downloadVregQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Download QR</button>
-          </div>
-          <div id="vregQrUrl" style="margin-top:8px;font-size:10px;color:var(--muted);word-break:break-all;"></div>
-        </div>
-
-        <!-- Bottom: submission log -->
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
-          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);" id="vregLogTitle">Submission log</span>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <select id="vregDateFilter" onchange="loadVregSubmissions()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;display:none;">
-                <option value="">All dates</option>
-              </select>
-              <input type="text" id="vregSearch" placeholder="Search name or reg…" oninput="loadVregSubmissions()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;width:140px;">
-              <button onclick="downloadVregCsv()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ CSV</button>
-            </div>
-          </div>
-          <div id="vregSubsTable" style="overflow-y:auto;flex:1;padding:0;">
-            <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;">Select a form to view submissions</div>
-          </div>
-        </div>
-
+        <div id="vregFormList"><div style="color:var(--muted);font-size:12px;">Loading…</div></div>
       </div>
+
+      <div class="form-card" style="margin-top:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <h2 id="vregLogTitle" style="margin:0;">Submission log</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="vregDateFilter" onchange="loadVregSubmissions()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;display:none;"><option value="">All dates</option></select>
+            <input type="text" id="vregSearch" placeholder="Search name or reg…" oninput="loadVregSubmissions()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;width:150px;">
+            <button onclick="downloadVregCsv()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ CSV</button>
+          </div>
+        </div>
+        <div id="vregSubsTable"><div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Select a form above to view submissions</div></div>
+      </div>
+
     </div><!-- /section-vreg -->
 
     <!-- ══════════════════════════════════
          PCN MODE
     ══════════════════════════════════ -->
-    <div class="mode-section grid-layout" id="section-pcn" style="grid-template-columns:400px 1fr;gap:20px;overflow:hidden;flex:1;min-height:0;">
+    <div class="mode-section" id="section-pcn">
 
-      <!-- LEFT: Create form + form list -->
-      <div style="overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px;">
-        <div class="form-card">
-          <h2>Create PCN form</h2>
-          <div class="field"><label>Site name</label><input type="text" id="pcn_site" placeholder="e.g. CitiPark Barbican" oninput="updatePcnPreview()"></div>
-          <div class="field"><label>Production / company</label><input type="text" id="pcn_production" placeholder="e.g. Clover" oninput="updatePcnPreview()"></div>
-          <div class="field"><label>Booking reference <span style="font-weight:400;color:var(--muted);">(matches vehicle reg form)</span></label><input type="text" id="pcn_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;" oninput="updatePcnPreview()"></div>
-          <div class="field-row">
-            <div class="field"><label>Start date</label><input type="date" id="pcn_start" onchange="updatePcnPreview()"></div>
-            <div class="field"><label>End date</label><input type="date" id="pcn_end" onchange="updatePcnPreview()"></div>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button onclick="createPcnForm()" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create PCN form + QR</button>
-            <button onclick="clearPcnForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Clear</button>
-          </div>
-          <div id="pcnCreateStatus" style="margin-top:8px;font-size:12px;"></div>
+      <div class="form-card">
+        <h2>Create PCN form</h2>
+        <div class="field"><label>Site name</label><input type="text" id="pcn_site" placeholder="e.g. CitiPark Barbican" oninput="updatePcnPreview()"></div>
+        <div class="field"><label>Production / company</label><input type="text" id="pcn_production" placeholder="e.g. Clover" oninput="updatePcnPreview()"></div>
+        <div class="field"><label>Booking reference <span style="font-weight:400;color:var(--muted);">(matches vehicle reg form for cross-reference)</span></label><input type="text" id="pcn_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;" oninput="updatePcnPreview()"></div>
+        <div class="field-row">
+          <div class="field"><label>Start date</label><input type="date" id="pcn_start" onchange="updatePcnPreview()"></div>
+          <div class="field"><label>End date</label><input type="date" id="pcn_end" onchange="updatePcnPreview()"></div>
         </div>
-
-        <div class="form-card">
-          <h2>PCN forms</h2>
-          <div id="pcnFormList"><div style="color:var(--muted);font-size:12px;">Loading…</div></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button onclick="createPcnForm()" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create PCN form + QR</button>
+          <button onclick="clearPcnForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Clear</button>
         </div>
-
-        <div class="form-card">
-          <h2>Search all PCNs</h2>
-          <div class="field" style="margin-bottom:10px;">
-            <input type="text" id="pcnGlobalSearch" placeholder="Search by reg, name or PCN ref…" oninput="loadAllPcns()" style="width:100%;">
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button onclick="setPcnStatusFilter('')"          id="pcnf_all"    class="qtf-btn qtf-active" style="font-size:11px;">All</button>
-            <button onclick="setPcnStatusFilter('active')"    id="pcnf_active" class="qtf-btn"            style="font-size:11px;">Active</button>
-            <button onclick="setPcnStatusFilter('submitted')" id="pcnf_sub"    class="qtf-btn"            style="font-size:11px;">Submitted</button>
-            <button onclick="setPcnStatusFilter('cancelled')" id="pcnf_can"    class="qtf-btn"            style="font-size:11px;">Cancelled</button>
-            <button onclick="setPcnStatusFilter('paid')"      id="pcnf_paid"   class="qtf-btn"            style="font-size:11px;">Paid</button>
-          </div>
-        </div>
+        <div id="pcnCreateStatus" style="margin-top:8px;font-size:12px;"></div>
       </div>
 
-      <!-- RIGHT: Preview + log -->
-      <div style="display:flex;flex-direction:column;gap:16px;overflow:hidden;height:100%;">
-
-        <!-- Top: live form preview -->
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:0 0 auto;">
-          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);">Form preview</span>
-            <div id="pcnActionBtns" style="display:none;gap:8px;" class="pcn-action-btns">
-              <button onclick="copyPcnUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
-              <button onclick="downloadPcnQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ QR code</button>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 180px;gap:0;">
-            <div id="pcnFormPreview" style="padding:20px;border-right:1px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;">
-              <div style="text-align:center;margin-bottom:16px;">
-                <img src="https://pub-3e81d3d6e43444f19a79eb95fb50622b.r2.dev/base-camp-logo.png" style="height:36px;width:auto;">
-              </div>
-              <div id="pp_site" style="font-size:18px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:4px;color:#1A1A1A;">Site Name<br>PCN Submission</div>
-              <div id="pp_prod" style="text-align:center;font-size:12px;color:#666;margin-bottom:2px;">Production: —</div>
-              <div id="pp_dates" style="text-align:center;font-size:11px;color:#999;margin-bottom:12px;">Booking dates: —</div>
-              <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 10px;font-size:11px;color:#666;line-height:1.5;margin-bottom:12px;text-align:center;">⚠️ If you have received a PCN while parked at this site, please complete this form…</div>
-              <div style="display:flex;flex-direction:column;gap:8px;">
-                <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Name *</div>
-                <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Email address *</div>
-                <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">Vehicle Registration *</div>
-                <div style="border:1px solid #E0DED8;border-radius:6px;padding:8px 10px;font-size:11px;color:#999;">PCN Reference *</div>
-                <div style="background:#006766;color:#fff;border-radius:6px;padding:8px 10px;font-size:11px;font-weight:700;text-align:center;">Submit PCN</div>
-              </div>
-            </div>
-            <div style="padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-              <canvas id="pcnQrCanvasSmall" width="140" height="140" style="border:3px solid var(--teal);border-radius:6px;"></canvas>
-              <div id="pcnQrRef" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;word-break:break-all;"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Full size PCN QR -->
-        <div id="pcnQrFullWrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:14px;">QR Code — scan to submit PCN</div>
-          <canvas id="pcnQrCanvas" width="280" height="280" style="border:4px solid var(--teal);border-radius:8px;display:block;margin:0 auto;"></canvas>
-          <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
-            <button onclick="copyPcnUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
-            <button onclick="downloadPcnQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Download QR</button>
-          </div>
-          <div id="pcnQrUrl" style="margin-top:8px;font-size:10px;color:var(--muted);word-break:break-all;"></div>
-        </div>
-
-        <!-- Bottom: PCN log -->
-        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
-          <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);">PCN log</span>
-          </div>
-          <div id="pcnSubsContent" style="overflow-y:auto;flex:1;padding:0;">
-            <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;">Select a form or search to view PCNs</div>
-          </div>
-        </div>
-
+      <div class="form-card" style="margin-top:16px;">
+        <h2>PCN forms</h2>
+        <div id="pcnFormList"><div style="color:var(--muted);font-size:12px;">Loading…</div></div>
       </div>
+
+      <div class="form-card" style="margin-top:16px;">
+        <h2>Search all PCNs</h2>
+        <div class="field" style="margin-bottom:10px;">
+          <input type="text" id="pcnGlobalSearch" placeholder="Search by reg, name or PCN ref…" oninput="loadAllPcns()" style="width:100%;">
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button onclick="setPcnStatusFilter('')"          id="pcnf_all"    class="qtf-btn qtf-active" style="font-size:11px;">All</button>
+          <button onclick="setPcnStatusFilter('active')"    id="pcnf_active" class="qtf-btn"            style="font-size:11px;">Active</button>
+          <button onclick="setPcnStatusFilter('submitted')" id="pcnf_sub"    class="qtf-btn"            style="font-size:11px;">Submitted</button>
+          <button onclick="setPcnStatusFilter('cancelled')" id="pcnf_can"    class="qtf-btn"            style="font-size:11px;">Cancelled</button>
+          <button onclick="setPcnStatusFilter('paid')"      id="pcnf_paid"   class="qtf-btn"            style="font-size:11px;">Paid</button>
+        </div>
+        <div id="pcnSubsContent" style="margin-top:16px;"><div style="color:var(--muted);font-size:13px;text-align:center;padding:16px 0;">Select a form or search above</div></div>
+      </div>
+
     </div><!-- /section-pcn -->
 
     <!-- Per-tab history panels -->
@@ -1655,6 +1540,92 @@
         <p style="font-size:13px; margin:0;">Select a site calendar from the left to view its diary</p>
       </div>
       <iframe id="calendarIframe" src="" style="display:none; flex:1; border:none; width:100%; height:100%;" allowfullscreen></iframe>
+    </div>
+
+    <!-- Vehicle Reg right panel -->
+    <div id="rp_vreg" style="display:none; padding:20px; overflow-y:auto; height:100%;">
+      <h2 style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Form Preview</h2>
+
+      <!-- Mini form preview card -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:1fr 120px;min-height:260px;">
+          <div id="vregFormPreview" style="padding:16px;border-right:1px solid var(--border);font-family:'DM Sans',sans-serif;font-size:12px;">
+            <div style="text-align:center;margin-bottom:10px;">
+              <img src="https://pub-3e81d3d6e43444f19a79eb95fb50622b.r2.dev/base-camp-logo.png" style="height:28px;width:auto;" onerror="this.style.display='none'">
+            </div>
+            <div id="vp_site" style="font-size:14px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:3px;color:#1A1A1A;">Site Name<br>Vehicle Registration</div>
+            <div id="vp_prod" style="text-align:center;font-size:11px;color:#666;margin-bottom:2px;">Production: —</div>
+            <div id="vp_dates" style="text-align:center;font-size:10px;color:#999;margin-bottom:8px;">Crew Parking Dates: —</div>
+            <div id="vp_disclaimer" style="background:#F2F1ED;border-radius:4px;padding:7px 9px;font-size:10px;color:#666;line-height:1.5;margin-bottom:8px;text-align:center;">Please fill in the form below…</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Name *</div>
+              <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Vehicle Registration *</div>
+              <div id="vp_dates_select" style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Date of Entry ▾</div>
+              <div id="vp_parking" style="display:none;border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Parking Area ▾</div>
+              <div style="background:#006766;color:#fff;border-radius:4px;padding:5px 8px;font-size:10px;font-weight:700;text-align:center;">Register vehicle</div>
+            </div>
+          </div>
+          <!-- Small QR -->
+          <div style="padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+            <canvas id="vregQrCanvasSmall" width="96" height="96" style="border:2px solid var(--teal);border-radius:4px;"></canvas>
+            <div id="vregQrRef" style="font-size:9px;color:var(--muted);text-align:center;word-break:break-all;"></div>
+          </div>
+        </div>
+        <!-- Action buttons -->
+        <div id="vregActionBtns" style="display:none;padding:10px 16px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;flex-direction:row;">
+          <button onclick="copyVregUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
+          <button onclick="downloadVregQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Download QR</button>
+        </div>
+      </div>
+
+      <!-- Full size QR -->
+      <div id="vregQrFullWrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:12px;">QR Code — scan to register</div>
+        <canvas id="vregQrCanvas" width="240" height="240" style="border:4px solid var(--teal);border-radius:8px;display:block;margin:0 auto;"></canvas>
+        <div id="vregQrUrl" style="margin-top:8px;font-size:10px;color:var(--muted);word-break:break-all;"></div>
+      </div>
+    </div>
+
+    <!-- PCN right panel -->
+    <div id="rp_pcn" style="display:none; padding:20px; overflow-y:auto; height:100%;">
+      <h2 style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Form Preview</h2>
+
+      <!-- Mini PCN form preview -->
+      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:1fr 120px;min-height:260px;">
+          <div id="pcnFormPreview" style="padding:16px;border-right:1px solid var(--border);font-family:'DM Sans',sans-serif;font-size:12px;">
+            <div style="text-align:center;margin-bottom:10px;">
+              <img src="https://pub-3e81d3d6e43444f19a79eb95fb50622b.r2.dev/base-camp-logo.png" style="height:28px;width:auto;" onerror="this.style.display='none'">
+            </div>
+            <div id="pp_site" style="font-size:14px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:3px;color:#1A1A1A;">Site Name<br>PCN Submission</div>
+            <div id="pp_prod" style="text-align:center;font-size:11px;color:#666;margin-bottom:2px;">Production: —</div>
+            <div id="pp_dates" style="text-align:center;font-size:10px;color:#999;margin-bottom:8px;">Booking dates: —</div>
+            <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:4px;padding:7px 9px;font-size:10px;color:#666;line-height:1.4;margin-bottom:8px;text-align:center;">⚠️ If you have received a PCN while parked at this site…</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Name *</div>
+              <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Email address *</div>
+              <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Vehicle Registration *</div>
+              <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">PCN Reference *</div>
+              <div style="background:#006766;color:#fff;border-radius:4px;padding:5px 8px;font-size:10px;font-weight:700;text-align:center;">Submit PCN</div>
+            </div>
+          </div>
+          <div style="padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+            <canvas id="pcnQrCanvasSmall" width="96" height="96" style="border:2px solid var(--teal);border-radius:4px;"></canvas>
+            <div id="pcnQrRef" style="font-size:9px;color:var(--muted);text-align:center;word-break:break-all;"></div>
+          </div>
+        </div>
+        <div id="pcnActionBtns" style="display:none;padding:10px 16px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;flex-direction:row;">
+          <button onclick="copyPcnUrl()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copy link</button>
+          <button onclick="downloadPcnQr()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Download QR</button>
+        </div>
+      </div>
+
+      <!-- Full size PCN QR -->
+      <div id="pcnQrFullWrap" style="display:none;background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);margin-bottom:12px;">QR Code — scan to submit PCN</div>
+        <canvas id="pcnQrCanvas" width="240" height="240" style="border:4px solid var(--teal);border-radius:8px;display:block;margin:0 auto;"></canvas>
+        <div id="pcnQrUrl" style="margin-top:8px;font-size:10px;color:var(--muted);word-break:break-all;"></div>
+      </div>
     </div>
 
   </div>
@@ -2673,39 +2644,14 @@
   // Old land extra contact functions removed — replaced by addLandContact/getLandContacts above
 
   function updateRightPanel(mode) {
-    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary','rp_map','rp_finance','rp_todo'].forEach(function(id) {
+    ['rp_email','rp_qr','rp_po','rp_agree','rp_diary','rp_map','rp_finance','rp_todo','rp_vreg','rp_pcn'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
     // vreg and pcn have their own internal right panels — hide the global right panel
-    var layout = document.querySelector('.layout');
-    var formPanel = document.querySelector('.form-panel');
-    var isFullWidth = (mode === 'vreg' || mode === 'pcn');
-    if (layout) {
-      if (isFullWidth) {
-        layout.style.gridTemplateColumns = '1fr';
-      } else {
-        layout.style.gridTemplateColumns = '';
-      }
-    }
-    if (formPanel) {
-      if (isFullWidth) {
-        formPanel.style.overflow = 'hidden';
-        formPanel.style.padding = '24px';
-        formPanel.style.height = 'calc(100vh - 60px)';
-        formPanel.style.display = 'flex';
-        formPanel.style.flexDirection = 'column';
-      } else {
-        formPanel.style.overflow = '';
-        formPanel.style.padding = '';
-        formPanel.style.height = '';
-        formPanel.style.display = '';
-        formPanel.style.flexDirection = '';
-      }
-    }
+    // All tabs including vreg/pcn use the normal two-panel layout
     var rightWrap = document.querySelector('.right-panel-wrap');
-    if (rightWrap) rightWrap.style.display = isFullWidth ? 'none' : '';
-    if (isFullWidth) return;
+    if (rightWrap) rightWrap.style.display = '';
     var target = mode === 'qrgen'   ? 'rp_qr'
                : mode === 'po'      ? 'rp_po'
                : mode === 'agree'   ? 'rp_agree'
@@ -2713,6 +2659,8 @@
                : mode === 'map'     ? 'rp_map'
                : mode === 'finance' ? 'rp_finance'
                : mode === 'todo'    ? 'rp_todo'
+               : mode === 'vreg'    ? 'rp_vreg'
+               : mode === 'pcn'     ? 'rp_pcn'
                : 'rp_email';
     var show = document.getElementById(target);
     if (show) show.style.display = (mode === 'diary' || mode === 'map' || mode === 'finance' || mode === 'todo') ? 'flex' : 'block';
@@ -4595,11 +4543,6 @@
     if (searchLatLng) showNearestSites(searchLatLng, document.getElementById('mapPostcode').value || 'your location');
   }
 
-  function scrollTabs(dir) {
-    var el = document.getElementById('modeTabsScroll');
-    if (el) el.scrollBy({ left: dir * 200, behavior: 'smooth' });
-  }
-
   function onMapSiteSelect() {
     var name = document.getElementById('mapSiteSelect').value;
     if (!name) return;
@@ -5159,7 +5102,7 @@
       document.getElementById('vregQrRef').textContent = data.form.ref;
       document.getElementById('vregQrUrl').textContent = url;
       document.getElementById('vregQrFullWrap').style.display = '';
-      document.getElementById('vregActionBtns').style.display = 'flex';
+      var vab = document.getElementById('vregActionBtns'); if(vab){vab.style.display='flex';}
       loadVregSubmissions();
       loadVregFormList();
     } catch(e) {
@@ -5228,7 +5171,7 @@
     document.getElementById('vregQrRef').textContent = ref;
     document.getElementById('vregQrUrl').textContent = url;
     document.getElementById('vregQrFullWrap').style.display = '';
-    document.getElementById('vregActionBtns').style.display = 'flex';
+    var vab = document.getElementById('vregActionBtns'); if(vab){vab.style.display='flex';}
     renderVregFormList();
     loadVregSubmissions();
   }
