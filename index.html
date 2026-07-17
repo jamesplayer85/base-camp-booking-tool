@@ -1554,8 +1554,8 @@
               <img src="https://pub-3e81d3d6e43444f19a79eb95fb50622b.r2.dev/base-camp-logo.png" style="height:28px;width:auto;" onerror="this.style.display='none'">
             </div>
             <div id="vp_site" style="font-size:14px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:3px;color:#1A1A1A;">Site Name<br>Vehicle Registration</div>
-            <div id="vp_prod" style="text-align:center;font-size:11px;color:#666;margin-bottom:2px;">Production: —</div>
-            <div id="vp_dates" style="text-align:center;font-size:10px;color:#999;margin-bottom:8px;">Crew Parking Dates: —</div>
+            <div id="vp_prod" style="text-align:center;font-size:11px;font-weight:700;color:#333;margin-bottom:2px;">Production: —</div>
+            <div id="vp_dates" style="text-align:center;font-size:10px;font-weight:700;color:#333;margin-bottom:8px;">Crew Parking Dates: —</div>
             <div id="vp_disclaimer" style="background:#F2F1ED;border-radius:4px;padding:7px 9px;font-size:10px;color:#666;line-height:1.5;margin-bottom:8px;text-align:center;">Please fill in the form below…</div>
             <div style="display:flex;flex-direction:column;gap:5px;">
               <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Name *</div>
@@ -5001,11 +5001,11 @@
     var end   = (document.getElementById('vreg_end')||{}).value;
     var areas = getVregParkingAreas();
     var el;
-    if ((el = document.getElementById('vp_site'))) el.textContent = site + '\nVehicle Registration';
-    if ((el = document.getElementById('vp_prod'))) el.textContent = 'Production: ' + prod;
+    if ((el = document.getElementById('vp_site'))) el.innerHTML = escHtml(site) + '<br>Vehicle Registration';
+    if ((el = document.getElementById('vp_prod'))) el.innerHTML = '<strong>Production:</strong> ' + escHtml(prod);
     if (start && end) {
       var dates = getDatesInRange(start, end);
-      if ((el = document.getElementById('vp_dates'))) el.textContent = 'Crew Parking Dates: ' + dates.map(fmtDateShort).join(', ');
+      if ((el = document.getElementById('vp_dates'))) el.innerHTML = '<strong>Crew Parking Dates:</strong> ' + dates.map(fmtDateShort).join(', ');
       if ((el = document.getElementById('vp_dates_select'))) el.textContent = dates.length > 1 ? 'Date of Entry (' + dates.length + ' dates) ▾' : 'Date of Entry ▾';
     }
     var parkingEl = document.getElementById('vp_parking');
@@ -5144,11 +5144,11 @@
     // Update preview
     var f = data.form;
     var setSafe = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
-    setSafe('vp_site', (f.site || 'Site') + '\nVehicle Registration');
+    var siteEl = document.getElementById('vp_site'); if(siteEl) siteEl.innerHTML = escHtml(f.site||'Site') + '<br>Vehicle Registration';
     setSafe('vp_prod', 'Production: ' + (f.production || ''));
     if (f.startDate && f.endDate) {
       var dates = getDatesInRange(f.startDate, f.endDate);
-      setSafe('vp_dates', 'Crew Parking Dates: ' + dates.map(fmtDateShort).join(', '));
+      var datesEl = document.getElementById('vp_dates'); if(datesEl) datesEl.innerHTML = '<strong>Crew Parking Dates:</strong> ' + dates.map(fmtDateShort).join(', ');
       setSafe('vp_dates_select', 'Date of Entry (' + dates.length + ' dates) ▾');
       // Populate date filter
       var sel = document.getElementById('vregDateFilter');
