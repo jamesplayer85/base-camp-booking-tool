@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Base Camp Co. — Booking Tool</title>
+  <title>The Base Camp Co. — Admin Console</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -129,7 +129,7 @@
     .setup-link:hover { color:var(--teal); }
     /* ── Mode tabs ── */
     .mode-tabs { display: grid; gap: 0; background: var(--dark); overflow: hidden; }
-    .mode-tab { padding: 10px 10px; flex-shrink: 0; white-space: normal; word-break: normal; line-height: 1.3; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
+    .mode-tab { padding: 10px 10px; flex-shrink: 0; white-space: normal; word-break: normal; line-height: 1.3; min-height: 48px; display: flex; align-items: center; justify-content: center; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
     .mode-tab:last-child { border-right: none; }
     .mode-tab.active-prod,
     .mode-tab.active-land,
@@ -1129,7 +1129,7 @@
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <select id="vregDateFilter" onchange="loadVregSubmissions()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;display:none;"><option value="">All dates</option></select>
             <input type="text" id="vregSearch" placeholder="Search name or reg…" oninput="loadVregSubmissions()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;width:150px;">
-            <button onclick="downloadVregCsv()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ CSV</button>
+            <button onclick="downloadVregXlsx()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Excel</button>
           </div>
         </div>
         <div id="vregSubsTable"><div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Select a form above to view submissions</div></div>
@@ -1164,7 +1164,10 @@
       </div>
 
       <div class="form-card" style="margin-top:16px;">
-        <h2>Search all PCNs</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <h2 style="margin:0;">Search all PCNs</h2>
+          <button onclick="downloadPcnXlsx()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Excel</button>
+        </div>
         <div class="field" style="margin-bottom:10px;">
           <input type="text" id="pcnGlobalSearch" placeholder="Search by reg, name or PCN ref…" oninput="loadAllPcns()" style="width:100%;">
         </div>
@@ -3518,6 +3521,16 @@
     });
   }
 
+  function loadExcelLib() {
+    return new Promise(function(resolve) {
+      if (window.ExcelJS) { resolve(); return; }
+      var script  = document.createElement('script');
+      script.src  = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+      script.onload = resolve;
+      document.head.appendChild(script);
+    });
+  }
+
   function updateQRCard() {
     clearTimeout(qrCardTimeout);
     qrCardTimeout = setTimeout(renderQRCard, 500);
@@ -5362,17 +5375,39 @@
     a.href = canvas.toDataURL('image/png'); a.click();
   }
 
-  async function downloadVregCsv() {
+  async function downloadVregXlsx() {
     if (!vregCurrentRef || !vregCurrentForm) return;
     var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/submissions?ref=' + encodeURIComponent(vregCurrentRef));
     var data = await res.json();
     var subs = data.submissions || [];
-    var rows = [['Name','Vehicle Registration','Date Of Entry','Parking Area','Submitted At']];
-    subs.forEach(function(s) { rows.push([s.name, s.vehicleReg, fmtDateLong(s.dateOfEntry), s.parkingArea||'', s.submittedAt]); });
-    var csv = '\uFEFF' + rows.map(function(r) { return r.map(function(c) { return '"' + String(c||'').replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
+    await loadExcelLib();
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet('Vehicle Registrations');
+    ws.columns = [
+      { header: 'Name',               key: 'name',    width: 24 },
+      { header: 'Vehicle Registration', key: 'reg',    width: 20 },
+      { header: 'Date Of Entry',      key: 'date',    width: 18 },
+      { header: 'Parking Area',       key: 'parking', width: 24 },
+      { header: 'Submitted At',       key: 'ts',      width: 22 }
+    ];
+    subs.forEach(function(s) {
+      ws.addRow({ name: s.name, reg: s.vehicleReg, date: fmtDateLong(s.dateOfEntry), parking: s.parkingArea||'', ts: new Date(s.submittedAt).toLocaleString('en-GB') });
+    });
+    var headerRow = ws.getRow(1);
+    headerRow.eachCell(function(cell) {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF006766' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    });
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    ws.autoFilter = { from: 'A1', to: 'E1' };
+    for (var r = 2; r <= ws.rowCount; r++) {
+      ws.getRow(r).eachCell(function(cell) { cell.border = { bottom: { style: 'thin', color: { argb: 'FFE0DED8' } } }; });
+    }
+    var buf = await wb.xlsx.writeBuffer();
     var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
-    a.download = vregCurrentRef + '-VehicleReg.csv'; a.click();
+    a.href = URL.createObjectURL(new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download = vregCurrentRef + '-VehicleReg.xlsx'; a.click();
   }
 
   // ── PCN Tab ────────────────────────────────────────────────────────────
@@ -5502,6 +5537,7 @@
   }
 
   var pcnTableScope = null; // null = master view; otherwise { ref, label }
+  var pcnLastSubs   = [];
 
   async function selectPcnForm(ref) {
     pcnCurrentRef = ref;
@@ -5549,6 +5585,7 @@
   var PCN_STATUS_TEXT    = { active:'Active', submitted:'Submitted for cancellation', cancelled:'Cancelled', paid:'Paid' };
 
   function renderPcnTable(subs) {
+    pcnLastSubs = subs || [];
     var el = document.getElementById('pcnSubsContent');
     if (!el) return;
     var banner = '';
@@ -5603,6 +5640,54 @@
       });
       showToast('Status updated', 'success');
     } catch(e) { showToast('Update failed: ' + e.message, 'error'); }
+  }
+
+  async function downloadPcnXlsx() {
+    var subs = pcnLastSubs || [];
+    if (!subs.length) { showToast('No PCNs to export', 'error'); return; }
+    await loadExcelLib();
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet('PCNs');
+    ws.columns = [
+      { header: 'Name',                key: 'name',    width: 22 },
+      { header: 'Email',                key: 'email',   width: 26 },
+      { header: 'Vehicle Registration', key: 'reg',     width: 18 },
+      { header: 'PCN Reference',        key: 'pcnRef',  width: 18 },
+      { header: 'Date Of Incident',     key: 'date',    width: 18 },
+      { header: 'Enforcement Company',  key: 'company', width: 22 },
+      { header: 'Status',               key: 'status',  width: 14 },
+      { header: 'Submitted At',         key: 'ts',      width: 20 }
+    ];
+    subs.forEach(function(s) {
+      ws.addRow({
+        name: s.name, email: s.email, reg: s.vehicleReg, pcnRef: s.pcnRef,
+        date: fmtDateLong(s.dateOfIncident), company: s.enforcementCompany||'',
+        status: PCN_STATUS_TEXT[s.status] || s.status,
+        ts: new Date(s.submittedAt).toLocaleString('en-GB')
+      });
+    });
+    var headerRow = ws.getRow(1);
+    headerRow.eachCell(function(cell) {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF006766' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    });
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    ws.autoFilter = { from: 'A1', to: 'H1' };
+    var statusFillMap = { active: 'FFFECACA', submitted: 'FFFED7AA', cancelled: 'FFBBF7D0', paid: 'FFBFDBFE' };
+    subs.forEach(function(s, i) {
+      var row = ws.getRow(i + 2);
+      var fill = statusFillMap[s.status];
+      row.eachCell(function(cell) {
+        cell.border = { bottom: { style: 'thin', color: { argb: 'FFE0DED8' } } };
+        if (fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+      });
+    });
+    var buf = await wb.xlsx.writeBuffer();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    var filename = pcnTableScope ? (pcnTableScope.ref + '-PCNs.xlsx') : 'All-PCNs-' + new Date().toISOString().slice(0,10) + '.xlsx';
+    a.download = filename; a.click();
   }
 
   var _origSwitchMode = switchMode;
