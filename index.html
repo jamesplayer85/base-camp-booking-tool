@@ -5411,9 +5411,21 @@ Please note: Cancellation requests can only be processed for vehicles that were 
     });
     ws.views = [{ state: 'frozen', ySplit: 1 }];
     ws.autoFilter = { from: 'A1', to: 'E1' };
-    for (var r = 2; r <= ws.rowCount; r++) {
-      ws.getRow(r).eachCell(function(cell) { cell.border = { bottom: { style: 'thin', color: { argb: 'FFE0DED8' } } }; });
-    }
+    var uniqueDates = [];
+    subs.forEach(function(s) { if (uniqueDates.indexOf(s.dateOfEntry) === -1) uniqueDates.push(s.dateOfEntry); });
+    uniqueDates.sort();
+    var dateArgbMap = {};
+    uniqueDates.forEach(function(d, i) {
+      dateArgbMap[d] = 'FF' + DATE_COLOURS[i % DATE_COLOURS.length].replace('#','').toUpperCase();
+    });
+    subs.forEach(function(s, i) {
+      var row  = ws.getRow(i + 2);
+      var fill = dateArgbMap[s.dateOfEntry];
+      row.eachCell(function(cell) {
+        cell.border = { bottom: { style: 'thin', color: { argb: 'FFE0DED8' } } };
+        if (fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+      });
+    });
     var buf = await wb.xlsx.writeBuffer();
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
@@ -5627,6 +5639,7 @@ Please note: Cancellation requests can only be processed for vehicles that were 
         + '<td style="padding:8px 10px;font-family:monospace;font-weight:700;font-size:12px;">' + escHtml(s.vehicleReg) + '</td>'
         + '<td style="padding:8px 10px;font-size:11px;">' + escHtml(s.pcnRef) + '<div style="color:var(--muted);font-size:10px;">' + escHtml(s.enforcementCompany||'') + '</div></td>'
         + '<td style="padding:8px 10px;font-size:11px;">' + fmtDateShort(s.dateOfIncident) + '</td>'
+        + '<td style="padding:8px 10px;font-size:11px;color:var(--muted);">' + new Date(s.submittedAt).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) + '</td>'
         + '<td style="padding:8px 10px;"><select onchange="updatePcnStatus(\'' + escHtml(s.formRef) + '\',\'' + s.id + '\',this.value,this)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-family:inherit;">'
         + ['active','submitted','cancelled','paid'].map(function(st) {
             return '<option value="' + st + '"' + (s.status===st?' selected':'') + '>' + PCN_STATUS_TEXT[st] + '</option>';
@@ -5635,7 +5648,7 @@ Please note: Cancellation requests can only be processed for vehicles that were 
         + '</tr>';
     }).join('');
     el.innerHTML = banner + '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
-      + '<thead><tr style="background:var(--dark);color:#fff;position:sticky;top:0;"><th style="padding:8px 10px;text-align:left;font-weight:600;">Name</th><th style="padding:8px 10px;text-align:left;font-weight:600;">Reg</th><th style="padding:8px 10px;text-align:left;font-weight:600;">PCN Ref</th><th style="padding:8px 10px;text-align:left;font-weight:600;">Date</th><th style="padding:8px 10px;text-align:left;font-weight:600;">Status</th><th style="padding:8px 10px;text-align:left;font-weight:600;">File</th></tr></thead>'
+      + '<thead><tr style="background:var(--dark);color:#fff;position:sticky;top:0;"><th style="padding:8px 10px;text-align:left;font-weight:600;">Name</th><th style="padding:8px 10px;text-align:left;font-weight:600;">Reg</th><th style="padding:8px 10px;text-align:left;font-weight:600;">PCN Ref</th><th style="padding:8px 10px;text-align:left;font-weight:600;">Date</th><th style="padding:8px 10px;text-align:left;font-weight:600;">Submitted</th><th style="padding:8px 10px;text-align:left;font-weight:600;">Status</th><th style="padding:8px 10px;text-align:left;font-weight:600;">File</th></tr></thead>'
       + '<tbody>' + rows + '</tbody></table>';
   }
 
