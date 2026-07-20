@@ -129,7 +129,7 @@
     .setup-link:hover { color:var(--teal); }
     /* ── Mode tabs ── */
     .mode-tabs { display: grid; gap: 0; background: var(--dark); overflow: hidden; }
-    .mode-tab { padding: 13px 14px; flex-shrink: 0; white-space: nowrap; font-family: 'Bebas Neue', 'DM Sans', sans-serif; font-size: 15px; font-weight: 400; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.04em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
+    .mode-tab { padding: 13px 14px; flex-shrink: 0; white-space: nowrap; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; border: none; background: none; color: var(--muted); letter-spacing: 0.03em; transition: background 0.15s, color 0.15s; border-right: 1px solid #1A2A26; }
     .mode-tab:last-child { border-right: none; }
     .mode-tab.active-prod,
     .mode-tab.active-land,
@@ -1089,13 +1089,13 @@
     <div class="mode-section" id="section-vreg">
 
       <div class="form-card">
-        <h2>Create vehicle reg form</h2>
+        <h2 id="vregFormHeading">Create vehicle reg form</h2>
         <div class="field"><label>Site name</label><input type="text" id="vreg_site" placeholder="e.g. CitiPark Barbican" oninput="updateVregPreview()"></div>
         <div class="field"><label>Production / company</label><input type="text" id="vreg_production" placeholder="e.g. Clover" oninput="updateVregPreview()"></div>
         <div class="field"><label>Booking reference</label><input type="text" id="vreg_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;" oninput="updateVregPreview()"></div>
         <div class="field-row">
-          <div class="field"><label>Start date</label><input type="date" id="vreg_start" onchange="updateVregPreview()"></div>
-          <div class="field"><label>End date</label><input type="date" id="vreg_end" onchange="updateVregPreview()"></div>
+          <div class="field"><label>Start date</label><input type="text" id="vreg_start" placeholder="e.g. 20th July 2026" oninput="updateVregPreview()"></div>
+          <div class="field"><label>End date</label><input type="text" id="vreg_end" placeholder="e.g. 23rd July 2026" oninput="updateVregPreview()"></div>
         </div>
         <div class="field">
           <label>Parking areas <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
@@ -1108,7 +1108,7 @@
         </div>
         <div class="field"><label>Landlord email <span style="font-weight:400;color:var(--muted);">(for export)</span></label><input type="email" id="vreg_landlord_email" placeholder="landlord@example.com"></div>
         <div style="display:flex;gap:8px;margin-top:4px;">
-          <button onclick="createVregForm()" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create form + QR</button>
+          <button onclick="createVregForm()" id="vregCreateBtn" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create form + QR</button>
           <button onclick="clearVregForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Clear</button>
         </div>
         <div id="vregCreateStatus" style="margin-top:8px;font-size:12px;"></div>
@@ -1143,7 +1143,7 @@
     <div class="mode-section" id="section-pcn">
 
       <div class="form-card">
-        <h2>Create PCN form</h2>
+        <h2 id="pcnFormHeading">Create PCN form</h2>
         <div class="field"><label>Site name</label><input type="text" id="pcn_site" placeholder="e.g. CitiPark Barbican" oninput="updatePcnPreview()"></div>
         <div class="field"><label>Production / company</label><input type="text" id="pcn_production" placeholder="e.g. Clover" oninput="updatePcnPreview()"></div>
         <div class="field"><label>Booking reference</label><input type="text" id="pcn_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;" oninput="updatePcnPreview()"></div>
@@ -1152,7 +1152,7 @@
           <textarea id="pcn_disclaimer" rows="3" style="width:100%;resize:vertical;font-family:'DM Sans',sans-serif;font-size:12px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;line-height:1.5;outline:none;" oninput="updatePcnPreview()">If you have received a Penalty Charge Notice (PCN) or Parking Charge Notice while parked at this site during your booking, please submit the details below along with a photo of the notice so we can arrange for it to be cancelled.</textarea>
         </div>
         <div style="display:flex;gap:8px;margin-top:4px;">
-          <button onclick="createPcnForm()" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create PCN form</button>
+          <button onclick="createPcnForm()" id="pcnCreateBtn" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create PCN form</button>
           <button onclick="clearPcnForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Clear</button>
         </div>
         <div id="pcnCreateStatus" style="margin-top:8px;font-size:12px;"></div>
@@ -2674,7 +2674,7 @@
       var tab = document.getElementById('tab-' + m);
       if (tab) tab.className = 'mode-tab' + (m === mode ? ' active-' + m : '');
     });
-    var titles = { prod: 'Production Confirmation', land: 'Landlord Confirmation', info: 'Info Sheet', qrgen: 'QR Generator', po: 'PO Generator', agree: 'Hire Agreement', diary: 'Calendars', map: 'Master Map', finance: 'Booking Data', todo: 'To Do', vreg: 'Vehicle Reg', pcn: 'PCN' };
+    var titles = { prod: 'Production Booking Confirmation', land: 'Landlord Booking Confirmation', info: 'Info Sheet Generator', qrgen: 'QR Code Generator', po: 'Purchase Order Generator', agree: 'Hire Agreement Generator', diary: 'Booking Calendars', map: 'Master Site Map', finance: 'Booking Data', todo: 'To Do Lists', vreg: 'Vehicle Registration Log', pcn: 'PCN Charge Log' };
     document.getElementById('modeTitle').textContent = titles[mode];
     updateProductionSelectorVisibility(mode);
     if (currentSite) populateModeFromSite();
@@ -4948,8 +4948,11 @@
   var vregCurrentForm  = null;
   var vregListFilter   = 'active';
   var vregAllForms     = [];
+  var vregEditingRef   = null;
   var pcnCurrentRef    = null;
   var pcnStatusFilter  = '';
+  var pcnAllForms      = [];
+  var pcnEditingRef    = null;
 
   function setVregListFilter(f) {
     vregListFilter = f;
@@ -4999,11 +5002,10 @@
     var el;
     if ((el = document.getElementById('vp_site'))) el.innerHTML = escHtml(site) + '<br>Vehicle Registration';
     if ((el = document.getElementById('vp_prod'))) el.innerHTML = '<strong>Production:</strong> ' + escHtml(prod);
-    if (start && end) {
-      var dates = getDatesInRange(start, end);
-      if ((el = document.getElementById('vp_dates'))) el.innerHTML = '<strong>Crew Parking Dates:</strong> ' + dates.map(fmtDateShort).join(', ');
-      if ((el = document.getElementById('vp_dates_select'))) el.textContent = dates.length > 1 ? 'Date of Entry (' + dates.length + ' dates) ▾' : 'Date of Entry ▾';
+    if (start || end) {
+      if ((el = document.getElementById('vp_dates'))) el.innerHTML = '<strong>Crew Parking Dates:</strong> ' + escHtml(start) + (end ? ' – ' + escHtml(end) : '');
     }
+    if ((el = document.getElementById('vp_dates_select'))) el.textContent = 'Date of Entry 📅';
     var parkingEl = document.getElementById('vp_parking');
     if (parkingEl) parkingEl.style.display = areas.length ? '' : 'none';
     if (parkingEl && areas.length) parkingEl.textContent = 'Parking Area (' + areas.length + ' options) ▾';
@@ -5026,6 +5028,9 @@
       var el = document.getElementById(id); if (el) el.value = '';
     });
     var wrap = document.getElementById('vregParkingAreas'); if (wrap) wrap.innerHTML = '';
+    vregEditingRef = null;
+    document.getElementById('vregFormHeading').textContent = 'Create vehicle reg form';
+    document.getElementById('vregCreateBtn').textContent = 'Create form + QR';
     updateVregPreview();
     document.getElementById('vregCreateStatus').textContent = '';
   }
@@ -5036,6 +5041,9 @@
     ['pcn_site','pcn_production','pcn_ref'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
+    pcnEditingRef = null;
+    document.getElementById('pcnFormHeading').textContent = 'Create PCN form';
+    document.getElementById('pcnCreateBtn').textContent = 'Create PCN form';
     updatePcnPreview();
     document.getElementById('pcnCreateStatus').textContent = '';
   }
@@ -5070,8 +5078,8 @@
     var site       = document.getElementById('vreg_site').value.trim();
     var production = document.getElementById('vreg_production').value.trim();
     var bookingRef = document.getElementById('vreg_ref').value.trim().toUpperCase();
-    var startDate  = document.getElementById('vreg_start').value;
-    var endDate    = document.getElementById('vreg_end').value;
+    var startDate  = document.getElementById('vreg_start').value.trim();
+    var endDate    = document.getElementById('vreg_end').value.trim();
     var landlord   = document.getElementById('vreg_landlord_email').value.trim();
     var areas      = getVregParkingAreas();
     var statusEl   = document.getElementById('vregCreateStatus');
@@ -5079,19 +5087,23 @@
       statusEl.textContent = 'Please fill in site, production and dates.';
       statusEl.style.color = '#e53935'; return;
     }
+    var payload = {site, production, bookingRef, startDate, endDate, parkingAreas: areas, landlordEmail: landlord, disclaimer: (document.getElementById('vreg_disclaimer')||{}).value || ''};
+    var isEdit  = !!vregEditingRef;
+    if (isEdit) payload.ref = vregEditingRef;
     try {
-      var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/create', {
+      var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/' + (isEdit ? 'update' : 'create'), {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({site, production, bookingRef, startDate, endDate, parkingAreas: areas, landlordEmail: landlord, disclaimer: (document.getElementById('vreg_disclaimer')||{}).value || ''})
+        body: JSON.stringify(payload)
       });
       var data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      statusEl.textContent = '✓ Created: ' + data.form.ref;
+      statusEl.textContent = isEdit ? '✓ Updated: ' + data.form.ref : '✓ Created: ' + data.form.ref;
       statusEl.style.color = 'var(--teal)';
       vregCurrentRef  = data.form.ref;
       vregCurrentForm = data.form;
+      if (isEdit) cancelVregEdit(false);
       var url = 'https://vehiclereg.thebasecampco.com?ref=' + data.form.ref;
-      var dateStr = (startDate && endDate) ? fmtDateShort(startDate) + ' - ' + fmtDateShort(endDate) : '';
+      var dateStr = (startDate && endDate) ? (startDate + ' – ' + endDate) : '';
       await drawBrandedQRCard(document.getElementById('vregQrCanvas'), url, site, production, dateStr);
       document.getElementById('vregQrUrl').textContent = url;
       document.getElementById('vregQrFullWrap').style.display = '';
@@ -5101,6 +5113,58 @@
     } catch(e) {
       statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = '#e53935';
     }
+  }
+
+  function editVregForm(ref) {
+    fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/get?ref=' + encodeURIComponent(ref))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.ok) return;
+        var f = data.form;
+        vregEditingRef = ref;
+        document.getElementById('vreg_site').value = f.site || '';
+        document.getElementById('vreg_production').value = f.production || '';
+        document.getElementById('vreg_ref').value = f.bookingRef || '';
+        document.getElementById('vreg_start').value = f.startDate || '';
+        document.getElementById('vreg_end').value = f.endDate || '';
+        document.getElementById('vreg_landlord_email').value = f.landlordEmail || '';
+        document.getElementById('vreg_disclaimer').value = f.disclaimer || '';
+        var wrap = document.getElementById('vregParkingAreas'); if (wrap) wrap.innerHTML = '';
+        (f.parkingAreas||[]).forEach(function(a) { addVregParkingArea(a); });
+        document.getElementById('vregFormHeading').textContent = 'Edit vehicle reg form — ' + ref;
+        document.getElementById('vregCreateBtn').textContent = 'Save changes';
+        updateVregPreview();
+        document.getElementById('vregCreateStatus').textContent = '';
+      }).catch(function(e) { console.error(e); });
+  }
+
+  function cancelVregEdit(clearFields) {
+    vregEditingRef = null;
+    document.getElementById('vregFormHeading').textContent = 'Create vehicle reg form';
+    document.getElementById('vregCreateBtn').textContent = 'Create form + QR';
+    if (clearFields !== false) clearVregForm();
+  }
+
+  function duplicateVregForm(ref) {
+    fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/get?ref=' + encodeURIComponent(ref))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.ok) return;
+        var f = data.form;
+        cancelVregEdit(true);
+        document.getElementById('vreg_site').value = f.site || '';
+        document.getElementById('vreg_production').value = f.production || '';
+        document.getElementById('vreg_ref').value = f.bookingRef || '';
+        document.getElementById('vreg_start').value = f.startDate || '';
+        document.getElementById('vreg_end').value = f.endDate || '';
+        document.getElementById('vreg_landlord_email').value = f.landlordEmail || '';
+        document.getElementById('vreg_disclaimer').value = f.disclaimer || '';
+        var wrap = document.getElementById('vregParkingAreas'); if (wrap) wrap.innerHTML = '';
+        (f.parkingAreas||[]).forEach(function(a) { addVregParkingArea(a); });
+        updateVregPreview();
+        document.getElementById('vregCreateStatus').textContent = 'Editing a duplicate — review and click Create to save as a new form.';
+        document.getElementById('vregCreateStatus').style.color = 'var(--muted)';
+      }).catch(function(e) { console.error(e); });
   }
 
   async function loadVregFormList() {
@@ -5121,11 +5185,45 @@
     if (!forms.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No ' + vregListFilter + ' forms.</div>'; return; }
     el.innerHTML = forms.map(function(f) {
       var active = vregCurrentRef === f.ref;
+      var titleRef = f.bookingRef || f.ref;
+      var actionBtn = function(icon, label, fn) {
+        return '<button type="button" title="' + label + '" onclick="event.stopPropagation(); ' + fn + '" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:\'DM Sans\',sans-serif;color:var(--mid);">' + icon + '</button>';
+      };
       return '<div onclick="selectVregForm(\'' + f.ref + '\')" style="padding:10px 12px;border:1px solid ' + (active ? 'var(--teal)' : 'var(--border)') + ';border-radius:8px;margin-bottom:6px;cursor:pointer;background:' + (active ? 'var(--teal-light)' : '#fff') + ';transition:.15s;">'
-        + '<div style="font-size:12px;font-weight:700;color:var(--dark);">' + escHtml(f.site) + ' — ' + escHtml(f.production) + '</div>'
-        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + f.ref + ' · ' + fmtDateShort(f.startDate) + (f.startDate !== f.endDate ? ' → ' + fmtDateShort(f.endDate) : '') + '</div>'
+        + '<div style="font-size:12px;font-weight:700;color:var(--dark);">' + escHtml(f.site) + ' - ' + escHtml(f.production) + ' - ' + escHtml(titleRef) + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px;margin-bottom:8px;">' + escHtml(f.startDate||'') + (f.endDate ? ' – ' + escHtml(f.endDate) : '') + '</div>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+        + actionBtn('✎', 'Edit', "editVregForm('" + f.ref + "')")
+        + actionBtn('⧉', 'Duplicate', "duplicateVregForm('" + f.ref + "')")
+        + actionBtn('↗', 'View form', "viewVregForm('" + f.ref + "')")
+        + actionBtn('📋', 'Copy link', "quickCopyVregLink('" + f.ref + "')")
+        + actionBtn('↓ QR', 'Download QR', "quickDownloadVregQr('" + f.ref + "')")
+        + '</div>'
         + '</div>';
     }).join('');
+  }
+
+  function viewVregForm(ref) {
+    window.open('https://vehiclereg.thebasecampco.com?ref=' + ref, '_blank');
+  }
+
+  function quickCopyVregLink(ref) {
+    copyTextToClipboard('https://vehiclereg.thebasecampco.com?ref=' + ref)
+      .then(function() { showToast('Link copied', 'success'); })
+      .catch(function() { showToast('Could not copy link', 'error'); });
+  }
+
+  async function quickDownloadVregQr(ref) {
+    var f = vregAllForms.find(function(x) { return x.ref === ref; });
+    if (!f) return;
+    var canvas = document.createElement('canvas');
+    var url = 'https://vehiclereg.thebasecampco.com?ref=' + ref;
+    var dateStr = (f.startDate && f.endDate) ? (f.startDate + ' – ' + f.endDate) : '';
+    await drawBrandedQRCard(canvas, url, f.site||'', f.production||'', dateStr);
+    var a = document.createElement('a');
+    a.download = 'VehicleReg-QR-' + ref + '.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
   }
 
   async function selectVregForm(ref) {
@@ -5139,18 +5237,9 @@
     var setSafe = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
     var siteEl = document.getElementById('vp_site'); if(siteEl) siteEl.innerHTML = escHtml(f.site||'Site') + '<br>Vehicle Registration';
     setSafe('vp_prod', 'Production: ' + (f.production || ''));
-    if (f.startDate && f.endDate) {
-      var dates = getDatesInRange(f.startDate, f.endDate);
-      var datesEl = document.getElementById('vp_dates'); if(datesEl) datesEl.innerHTML = '<strong>Crew Parking Dates:</strong> ' + dates.map(fmtDateShort).join(', ');
-      setSafe('vp_dates_select', 'Date of Entry (' + dates.length + ' dates) ▾');
-      // Populate date filter
-      var sel = document.getElementById('vregDateFilter');
-      if (sel) {
-        sel.innerHTML = '<option value="">All dates</option>' + dates.map(function(d) {
-          return '<option value="' + d + '">' + fmtDateLong(d) + '</option>';
-        }).join('');
-        sel.style.display = '';
-      }
+    if (f.startDate || f.endDate) {
+      var datesEl = document.getElementById('vp_dates'); if(datesEl) datesEl.innerHTML = '<strong>Crew Parking Dates:</strong> ' + escHtml(f.startDate||'') + (f.endDate ? ' – ' + escHtml(f.endDate) : '');
+      setSafe('vp_dates_select', 'Date of Entry 📅');
     }
     var parkingEl = document.getElementById('vp_parking');
     if (parkingEl) {
@@ -5159,13 +5248,34 @@
       } else { parkingEl.style.display = 'none'; }
     }
     var url = 'https://vehiclereg.thebasecampco.com?ref=' + ref;
-    var dateStr = (f.startDate && f.endDate) ? fmtDateShort(f.startDate) + ' - ' + fmtDateShort(f.endDate) : '';
+    var dateStr = (f.startDate && f.endDate) ? (f.startDate + ' – ' + f.endDate) : '';
     await drawBrandedQRCard(document.getElementById('vregQrCanvas'), url, f.site||'', f.production||'', dateStr);
     document.getElementById('vregQrUrl').textContent = url;
     document.getElementById('vregQrFullWrap').style.display = '';
     var vab = document.getElementById('vregActionBtns'); if(vab){vab.style.display='flex';}
     renderVregFormList();
     loadVregSubmissions();
+    populateVregDateFilter(ref);
+  }
+
+  async function populateVregDateFilter(ref) {
+    try {
+      var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/vreg/submissions?ref=' + encodeURIComponent(ref));
+      var data = await res.json();
+      var subs = data.submissions || [];
+      var dates = [];
+      subs.forEach(function(s) { if (dates.indexOf(s.dateOfEntry) === -1) dates.push(s.dateOfEntry); });
+      dates.sort();
+      var sel = document.getElementById('vregDateFilter');
+      if (sel) {
+        var current = sel.value;
+        sel.innerHTML = '<option value="">All dates</option>' + dates.map(function(d) {
+          return '<option value="' + d + '">' + fmtDateLong(d) + '</option>';
+        }).join('');
+        sel.style.display = dates.length ? '' : 'none';
+        if (dates.indexOf(current) !== -1) sel.value = current;
+      }
+    } catch(e) { console.error(e); }
   }
 
   async function loadVregSubmissions() {
@@ -5218,10 +5328,30 @@
       + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Fallback for contexts where the Clipboard API is blocked/unavailable
+    return new Promise(function(resolve, reject) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error('execCommand copy failed'));
+      } catch (e) { reject(e); }
+    });
+  }
+
   function copyVregUrl() {
     if (!vregCurrentRef) return;
-    navigator.clipboard.writeText('https://vehiclereg.thebasecampco.com?ref=' + vregCurrentRef);
-    showToast('Link copied', 'success');
+    copyTextToClipboard('https://vehiclereg.thebasecampco.com?ref=' + vregCurrentRef)
+      .then(function() { showToast('Link copied', 'success'); })
+      .catch(function() { showToast('Could not copy link — copy it manually from the box below', 'error'); });
   }
 
   function downloadVregQr() {
@@ -5265,16 +5395,20 @@
       statusEl.textContent = 'Please fill in site and production.';
       statusEl.style.color = '#e53935'; return;
     }
+    var payload = {site, production, bookingRef, disclaimer};
+    var isEdit  = !!pcnEditingRef;
+    if (isEdit) payload.ref = pcnEditingRef;
     try {
-      var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/create', {
+      var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/' + (isEdit ? 'form-update' : 'create'), {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({site, production, bookingRef, disclaimer})
+        body: JSON.stringify(payload)
       });
       var data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      statusEl.textContent = '✓ Created: ' + data.form.ref;
+      statusEl.textContent = isEdit ? '✓ Updated: ' + data.form.ref : '✓ Created: ' + data.form.ref;
       statusEl.style.color = 'var(--teal)';
       pcnCurrentRef = data.form.ref;
+      if (isEdit) cancelPcnEdit(false);
       var url = 'https://pcn.thebasecampco.com?ref=' + data.form.ref;
       document.getElementById('pcnLinkRef').textContent = site + ' — ' + production;
       document.getElementById('pcnLinkUrl').textContent  = url;
@@ -5288,22 +5422,83 @@
     }
   }
 
+  function editPcnForm(ref) {
+    fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/get?ref=' + encodeURIComponent(ref))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.ok) return;
+        var f = data.form;
+        pcnEditingRef = ref;
+        document.getElementById('pcn_site').value = f.site || '';
+        document.getElementById('pcn_production').value = f.production || '';
+        document.getElementById('pcn_ref').value = f.bookingRef || '';
+        document.getElementById('pcn_disclaimer').value = f.disclaimer || '';
+        document.getElementById('pcnFormHeading').textContent = 'Edit PCN form — ' + ref;
+        document.getElementById('pcnCreateBtn').textContent = 'Save changes';
+        updatePcnPreview();
+        document.getElementById('pcnCreateStatus').textContent = '';
+      }).catch(function(e) { console.error(e); });
+  }
+
+  function cancelPcnEdit(clearFields) {
+    pcnEditingRef = null;
+    document.getElementById('pcnFormHeading').textContent = 'Create PCN form';
+    document.getElementById('pcnCreateBtn').textContent = 'Create PCN form';
+    if (clearFields !== false) clearPcnForm();
+  }
+
+  function duplicatePcnForm(ref) {
+    fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/get?ref=' + encodeURIComponent(ref))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.ok) return;
+        var f = data.form;
+        cancelPcnEdit(true);
+        document.getElementById('pcn_site').value = f.site || '';
+        document.getElementById('pcn_production').value = f.production || '';
+        document.getElementById('pcn_ref').value = f.bookingRef || '';
+        document.getElementById('pcn_disclaimer').value = f.disclaimer || '';
+        updatePcnPreview();
+        document.getElementById('pcnCreateStatus').textContent = 'Editing a duplicate — review and click Create to save as a new form.';
+        document.getElementById('pcnCreateStatus').style.color = 'var(--muted)';
+      }).catch(function(e) { console.error(e); });
+  }
+
   async function loadPcnFormList() {
     try {
       var res  = await fetch('https://basecamp-proxy.bt7frcbfh2.workers.dev/v2/pcn/list');
       var data = await res.json();
+      pcnAllForms = data.forms || [];
       var el   = document.getElementById('pcnFormList');
       if (!el) return;
-      var forms = data.forms || [];
-      if (!forms.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No PCN forms yet.</div>'; return; }
-      el.innerHTML = forms.map(function(f) {
+      if (!pcnAllForms.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">No PCN forms yet.</div>'; return; }
+      el.innerHTML = pcnAllForms.map(function(f) {
         var active = pcnCurrentRef === f.ref;
+        var titleRef = f.bookingRef || f.ref;
+        var actionBtn = function(icon, label, fn) {
+          return '<button type="button" title="' + label + '" onclick="event.stopPropagation(); ' + fn + '" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:\'DM Sans\',sans-serif;color:var(--mid);">' + icon + '</button>';
+        };
         return '<div onclick="selectPcnForm(\'' + f.ref + '\')" style="padding:10px 12px;border:1px solid ' + (active?'var(--teal)':'var(--border)') + ';border-radius:8px;margin-bottom:6px;cursor:pointer;background:' + (active?'var(--teal-light)':'#fff') + ';transition:.15s;">'
-          + '<div style="font-size:12px;font-weight:700;color:var(--dark);">' + escHtml(f.site) + ' — ' + escHtml(f.production) + '</div>'
-          + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + f.ref + (f.bookingRef ? ' · ' + escHtml(f.bookingRef) : '') + '</div>'
+          + '<div style="font-size:12px;font-weight:700;color:var(--dark);">' + escHtml(f.site) + ' - ' + escHtml(f.production) + ' - ' + escHtml(titleRef) + '</div>'
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+          + actionBtn('✎', 'Edit', "editPcnForm('" + f.ref + "')")
+          + actionBtn('⧉', 'Duplicate', "duplicatePcnForm('" + f.ref + "')")
+          + actionBtn('↗', 'View form', "viewPcnForm('" + f.ref + "')")
+          + actionBtn('📋', 'Copy link', "quickCopyPcnLink('" + f.ref + "')")
+          + '</div>'
           + '</div>';
       }).join('');
     } catch(e) { console.error(e); }
+  }
+
+  function viewPcnForm(ref) {
+    window.open('https://pcn.thebasecampco.com?ref=' + ref, '_blank');
+  }
+
+  function quickCopyPcnLink(ref) {
+    copyTextToClipboard('https://pcn.thebasecampco.com?ref=' + ref)
+      .then(function() { showToast('Link copied', 'success'); })
+      .catch(function() { showToast('Could not copy link', 'error'); });
   }
 
   async function selectPcnForm(ref) {
@@ -5375,8 +5570,9 @@
 
   function copyPcnUrl() {
     if (!pcnCurrentRef) return;
-    navigator.clipboard.writeText('https://pcn.thebasecampco.com?ref=' + pcnCurrentRef);
-    showToast('Link copied', 'success');
+    copyTextToClipboard('https://pcn.thebasecampco.com?ref=' + pcnCurrentRef)
+      .then(function() { showToast('Link copied', 'success'); })
+      .catch(function() { showToast('Could not copy link — copy it manually from the box below', 'error'); });
   }
 
   async function updatePcnStatus(formRef, id, status) {
