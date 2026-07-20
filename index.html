@@ -1147,9 +1147,15 @@
         <div class="field"><label>Site name</label><input type="text" id="pcn_site" placeholder="e.g. CitiPark Barbican" oninput="updatePcnPreview()"></div>
         <div class="field"><label>Production / company</label><input type="text" id="pcn_production" placeholder="e.g. Clover" oninput="updatePcnPreview()"></div>
         <div class="field"><label>Booking reference</label><input type="text" id="pcn_ref" placeholder="e.g. BC-CP2501" style="text-transform:uppercase;" oninput="updatePcnPreview()"></div>
+        <div class="field-row">
+          <div class="field"><label>Start date <span style="font-weight:400;color:var(--muted);">(optional)</span></label><input type="text" id="pcn_start" placeholder="e.g. 20th July 2026" oninput="updatePcnPreview()"></div>
+          <div class="field"><label>End date <span style="font-weight:400;color:var(--muted);">(optional)</span></label><input type="text" id="pcn_end" placeholder="e.g. 23rd July 2026" oninput="updatePcnPreview()"></div>
+        </div>
         <div class="field">
           <label>Form notice text <span style="font-weight:400;color:var(--muted);">(editable — shown on form)</span></label>
-          <textarea id="pcn_disclaimer" rows="3" style="width:100%;resize:vertical;font-family:'DM Sans',sans-serif;font-size:12px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;line-height:1.5;outline:none;" oninput="updatePcnPreview()">If you have received a Penalty Charge Notice (PCN) or Parking Charge Notice while parked at this site during your booking, please submit the details below along with a photo of the notice so we can arrange for it to be cancelled.</textarea>
+          <textarea id="pcn_disclaimer" rows="6" style="width:100%;resize:vertical;font-family:'DM Sans',sans-serif;font-size:12px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;line-height:1.5;outline:none;" oninput="updatePcnPreview()">If you have received a Penalty Charge Notice (PCN) while parked at this location during an authorised production booking, please complete the form below and where possible upload a clear photo of the PCN. We will review the details and arrange for the notice to be cancelled where applicable.
+
+Please note: Cancellation requests can only be processed for vehicles that were registered to park on site and where the Penalty Charge Notice (PCN) was issued in error. If your vehicle was not registered for the booking, it may not be possible to arrange cancellation of the notice.</textarea>
         </div>
         <div style="display:flex;gap:8px;margin-top:4px;">
           <button onclick="createPcnForm()" id="pcnCreateBtn" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Create PCN form</button>
@@ -1596,6 +1602,7 @@
           </div>
           <div id="pp_site" style="font-size:14px;font-weight:800;text-align:center;line-height:1.2;margin-bottom:3px;color:#1A1A1A;">Site Name<br>PCN Submission</div>
           <div id="pp_prod" style="text-align:center;font-size:11px;color:#666;margin-bottom:2px;">Production: —</div>
+          <div id="pp_dates" style="text-align:center;font-size:10px;color:#999;margin-bottom:2px;"></div>
           <div id="pp_disclaimer" style="background:#fff8e1;border:1px solid #ffe082;border-radius:4px;padding:7px 9px;font-size:10px;color:#666;line-height:1.4;margin:8px 0;text-align:center;">⚠️ If you have received a PCN while parked at this site…</div>
           <div style="display:flex;flex-direction:column;gap:5px;">
             <div style="border:1px solid #E0DED8;border-radius:4px;padding:5px 8px;font-size:10px;color:#999;">Name *</div>
@@ -5027,10 +5034,13 @@
   function updatePcnPreview() {
     var site       = (document.getElementById('pcn_site')||{}).value || 'Site Name';
     var prod       = (document.getElementById('pcn_production')||{}).value || '—';
+    var start      = (document.getElementById('pcn_start')||{}).value || '';
+    var end        = (document.getElementById('pcn_end')||{}).value || '';
     var disclaimer = (document.getElementById('pcn_disclaimer')||{}).value || '';
     var el;
     if ((el = document.getElementById('pp_site'))) el.innerHTML = escHtml(site) + '<br>PCN Submission';
     if ((el = document.getElementById('pp_prod'))) el.textContent = 'Production: ' + prod;
+    if ((el = document.getElementById('pp_dates'))) el.textContent = (start || end) ? ('Booking dates: ' + start + (end ? ' – ' + end : '')) : '';
     if ((el = document.getElementById('pp_disclaimer')) && disclaimer) el.textContent = '⚠️ ' + disclaimer;
   }
 
@@ -5049,9 +5059,9 @@
   }
 
   function clearPcnForm() {
-    var disclaimerDefault = 'If you have received a Penalty Charge Notice (PCN) or Parking Charge Notice while parked at this site during your booking, please submit the details below along with a photo of the notice so we can arrange for it to be cancelled.';
+    var disclaimerDefault = 'If you have received a Penalty Charge Notice (PCN) while parked at this location during an authorised production booking, please complete the form below and where possible upload a clear photo of the PCN. We will review the details and arrange for the notice to be cancelled where applicable.\n\nPlease note: Cancellation requests can only be processed for vehicles that were registered to park on site and where the Penalty Charge Notice (PCN) was issued in error. If your vehicle was not registered for the booking, it may not be possible to arrange cancellation of the notice.';
     var dEl = document.getElementById('pcn_disclaimer'); if (dEl) dEl.value = disclaimerDefault;
-    ['pcn_site','pcn_production','pcn_ref'].forEach(function(id) {
+    ['pcn_site','pcn_production','pcn_ref','pcn_start','pcn_end'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
     pcnEditingRef = null;
@@ -5424,13 +5434,15 @@
     var site       = document.getElementById('pcn_site').value.trim();
     var production = document.getElementById('pcn_production').value.trim();
     var bookingRef = document.getElementById('pcn_ref').value.trim().toUpperCase();
+    var startDate  = document.getElementById('pcn_start').value.trim();
+    var endDate    = document.getElementById('pcn_end').value.trim();
     var disclaimer = document.getElementById('pcn_disclaimer').value;
     var statusEl   = document.getElementById('pcnCreateStatus');
     if (!site || !production) {
       statusEl.textContent = 'Please fill in site and production.';
       statusEl.style.color = '#e53935'; return;
     }
-    var payload = {site, production, bookingRef, disclaimer};
+    var payload = {site, production, bookingRef, startDate, endDate, disclaimer};
     var isEdit  = !!pcnEditingRef;
     if (isEdit) payload.ref = pcnEditingRef;
     try {
@@ -5467,6 +5479,8 @@
         document.getElementById('pcn_site').value = f.site || '';
         document.getElementById('pcn_production').value = f.production || '';
         document.getElementById('pcn_ref').value = f.bookingRef || '';
+        document.getElementById('pcn_start').value = f.startDate || '';
+        document.getElementById('pcn_end').value = f.endDate || '';
         document.getElementById('pcn_disclaimer').value = f.disclaimer || '';
         document.getElementById('pcnFormHeading').textContent = 'Edit PCN form — ' + ref;
         document.getElementById('pcnCreateBtn').textContent = 'Save changes';
@@ -5492,6 +5506,8 @@
         document.getElementById('pcn_site').value = f.site || '';
         document.getElementById('pcn_production').value = f.production || '';
         document.getElementById('pcn_ref').value = f.bookingRef || '';
+        document.getElementById('pcn_start').value = f.startDate || '';
+        document.getElementById('pcn_end').value = f.endDate || '';
         document.getElementById('pcn_disclaimer').value = f.disclaimer || '';
         updatePcnPreview();
         document.getElementById('pcnCreateStatus').textContent = 'Editing a duplicate — review and click Create to save as a new form.';
@@ -5515,6 +5531,7 @@
         };
         return '<div onclick="selectPcnForm(\'' + f.ref + '\')" style="padding:10px 12px;border:1px solid ' + (active?'var(--teal)':'var(--border)') + ';border-radius:8px;margin-bottom:6px;cursor:pointer;background:' + (active?'var(--teal-light)':'#fff') + ';transition:.15s;">'
           + '<div style="font-size:12px;font-weight:700;color:var(--dark);">' + escHtml(f.site) + ' - ' + escHtml(f.production) + ' - ' + escHtml(titleRef) + '</div>'
+          + (f.startDate || f.endDate ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + escHtml(f.startDate||'') + (f.endDate ? ' – ' + escHtml(f.endDate) : '') + '</div>' : '')
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
           + actionBtn('Edit', "editPcnForm('" + f.ref + "')")
           + actionBtn('Duplicate', "duplicatePcnForm('" + f.ref + "')")
@@ -5548,6 +5565,7 @@
     var setSafe = function(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
     var siteEl = document.getElementById('pp_site'); if (siteEl) siteEl.innerHTML = escHtml(f.site||'Site') + '<br>PCN Submission';
     setSafe('pp_prod', 'Production: ' + (f.production||''));
+    setSafe('pp_dates', (f.startDate || f.endDate) ? ('Booking dates: ' + (f.startDate||'') + (f.endDate ? ' – ' + f.endDate : '')) : '');
     if (f.disclaimer) setSafe('pp_disclaimer', '⚠️ ' + f.disclaimer);
     var url = 'https://pcn.thebasecampco.com?ref=' + ref;
     document.getElementById('pcnLinkRef').textContent = (f.site||'') + ' — ' + (f.production||'');
