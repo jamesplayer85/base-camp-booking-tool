@@ -1130,6 +1130,7 @@
             <select id="vregDateFilter" onchange="loadVregSubmissions()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;display:none;"><option value="">All dates</option></select>
             <input type="text" id="vregSearch" placeholder="Search name or reg…" oninput="loadVregSubmissions()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;width:150px;">
             <button onclick="downloadVregXlsx()" style="background:var(--teal);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">↓ Excel</button>
+            <button onclick="quickCopyVregResultsLink()" style="background:none;border:1px solid var(--teal);color:var(--teal);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">🔗 Live Results Link</button>
           </div>
         </div>
         <div id="vregSubsTable"><div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Select a form above to view submissions</div></div>
@@ -5233,6 +5234,13 @@ Please note: Cancellation requests can only be processed for vehicles that were 
   function quickCopyVregLink(ref) {
     copyTextToClipboard('https://vehiclereg.thebasecampco.com?ref=' + ref)
       .then(function() { showToast('Link copied', 'success'); })
+      .catch(function() { showToast('Could not copy link', 'error'); });
+  }
+
+  function quickCopyVregResultsLink() {
+    if (!vregCurrentRef) { showToast('Select a form first', 'error'); return; }
+    copyTextToClipboard('https://vehiclereg.thebasecampco.com/results.html?ref=' + vregCurrentRef)
+      .then(function() { showToast('Live results link copied', 'success'); })
       .catch(function() { showToast('Could not copy link', 'error'); });
   }
 
