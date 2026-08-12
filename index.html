@@ -1638,7 +1638,6 @@ Please note: Cancellation requests can only be processed for vehicles that were 
   // 
   var MONDAY_BOARD_ID = '18411582352';
   var MONDAY_PRODUCTIONS_BOARD_ID = '18414060671';
-  var MONDAY_CALENDARS_BOARD_ID = '18415456355';
   var MONDAY_FINANCIALS_BOARD_ID = '3180102740';
   var financialData = [];
   var calendars = [];
@@ -1745,10 +1744,14 @@ Please note: Cancellation requests can only be processed for vehicles that were 
           if (t === 'landlord address') s.landlord_address = col.text || '';
           if (t === 'coordinates')      s.coordinates      = col.text || '';
           if (t === 'site type')        s.site_type        = col.text || '';
+          if (t === 'calendar url' || t === 'calendar embed url' || t === 'embed url') s.calendar_url = col.text || '';
         });
         return s;
       }).filter(function(s){ return s.site_name; });
       populateSelect();
+      calendars = sites.map(function(s) { return { name: s.site_name, url: s.calendar_url || '' }; })
+        .sort(function(a,b){ return a.name.localeCompare(b.name); });
+      populateCalendarSelect();
       setStatus(true, sites.length + ' sites loaded from Monday.com');
     } catch(e) {
       setStatus(false, 'Could not reach Monday.com');
@@ -4084,7 +4087,7 @@ Please note: Cancellation requests can only be processed for vehicles that were 
     var headerUser = document.getElementById('headerUser');
     if (headerUser) headerUser.textContent = '👤 ' + currentUser.name;
     // Now check API keys and load data
-    if (checkSetup()) { loadSites(); loadProductions(); loadCalendars(); }
+    if (checkSetup()) { loadSites(); loadProductions(); }
     initDefaultContacts();
     updateProductionSelectorVisibility('prod');
   }
@@ -6099,32 +6102,6 @@ Please note: Cancellation requests can only be processed for vehicles that were 
       + '</tr></tbody>';
 
     tbl.innerHTML = html;
-  }
-
-  async function loadCalendars() {
-    var keys = getKeys();
-    if (!keys.monday) return;
-    var query = '{ boards(ids: ' + MONDAY_CALENDARS_BOARD_ID + ') { items_page(limit: 100) { items { name column_values { column { title } text } } } } }';
-    try {
-      var res = await fetch('https://api.monday.com/v2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': keys.monday, 'API-Version': '2024-01' },
-        body: JSON.stringify({ query: query })
-      });
-      var json = await res.json();
-      if (json.errors || !json.data) return;
-      var items = json.data.boards[0].items_page.items;
-      calendars = items.map(function(item) {
-        var c = { name: item.name, url: '' };
-        item.column_values.forEach(function(col) {
-          var t = col.column.title.toLowerCase().trim();
-          if (t === 'calendar url' || t === 'calendar embed url' || t === 'embed url') c.url = col.text || '';
-        });
-        return c;
-      }).filter(function(c){ return c.name; });
-      calendars.sort(function(a,b){ return a.name.localeCompare(b.name); });
-      populateCalendarSelect();
-    } catch(e) { console.warn('Could not load calendars:', e); }
   }
 
   function populateCalendarSelect() {
