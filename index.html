@@ -1744,12 +1744,12 @@ Please note: Cancellation requests can only be processed for vehicles that were 
           if (t === 'landlord address') s.landlord_address = col.text || '';
           if (t === 'coordinates')      s.coordinates      = col.text || '';
           if (t === 'site type')        s.site_type        = col.text || '';
-          if (t === 'calendar url' || t === 'calendar embed url' || t === 'embed url') s.calendar_url = col.text || '';
+          if (t === 'google calendar id') s.calendar_id = col.text || '';
         });
         return s;
       }).filter(function(s){ return s.site_name; });
       populateSelect();
-      calendars = sites.map(function(s) { return { name: s.site_name, url: s.calendar_url || '' }; })
+      calendars = sites.map(function(s) { return { name: s.site_name, url: s.calendar_id ? 'https://calendar.google.com/calendar/embed?src=' + encodeURIComponent(s.calendar_id) : '' }; })
         .sort(function(a,b){ return a.name.localeCompare(b.name); });
       populateCalendarSelect();
       setStatus(true, sites.length + ' sites loaded from Monday.com');
