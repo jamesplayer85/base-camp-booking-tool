@@ -1749,7 +1749,12 @@ Please note: Cancellation requests can only be processed for vehicles that were 
         return s;
       }).filter(function(s){ return s.site_name; });
       populateSelect();
-      calendars = sites.map(function(s) { return { name: s.site_name, url: s.calendar_id ? 'https://calendar.google.com/calendar/embed?src=' + encodeURIComponent(s.calendar_id) : '' }; })
+      calendars = sites.map(function(s) {
+        var raw = (s.calendar_id || '').trim();
+        var url = '';
+        if (raw) url = /^https?:\/\//i.test(raw) ? raw : ('https://calendar.google.com/calendar/embed?src=' + encodeURIComponent(raw));
+        return { name: s.site_name, url: url };
+      })
         .sort(function(a,b){ return a.name.localeCompare(b.name); });
       populateCalendarSelect();
       setStatus(true, sites.length + ' sites loaded from Monday.com');
